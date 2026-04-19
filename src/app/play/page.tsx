@@ -114,6 +114,11 @@ function PlayPageClient() {
   // 视频播放地址
   const [videoUrl, setVideoUrl] = useState('');
 
+  // 致命播放错误（用于展示重试浮层）
+  const [fatalError, setFatalError] = useState<string | null>(null);
+  // 重试计数，变化时强制重建播放器
+  const [retryNonce, setRetryNonce] = useState(0);
+
   // 总集数
   const totalEpisodes = detail?.episodes?.length || 0;
 
@@ -388,6 +393,40 @@ function PlayPageClient() {
     }
   };
 
+  // 将秒数格式化为 mm:ss
+  const formatTime = (sec: number) => {
+    const s = Math.max(0, Math.floor(sec));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${r.toString().padStart(2, '0')}`;
+  };
+
+  // 片头/片尾跳过标记（按源+ID隔离）
+  const skipMarksKey = () => `moontv_skip_${currentSource}_${currentId}`;
+  const getSkipMarks = (): { intro?: number; outro?: number } => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = localStorage.getItem(skipMarksKey());
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+  const setSkipMarks = (marks: { intro?: number; outro?: number }) => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (!marks.intro && !marks.outro) {
+        localStorage.removeItem(skipMarksKey());
+      } else {
+        localStorage.setItem(skipMarksKey(), JSON.stringify(marks));
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+  const skipMarksRef = useRef<{ intro?: number; outro?: number }>({});
+  const skippedIntroRef = useRef(false);
+
   const ensureVideoSource = (video: HTMLVideoElement | null, url: string) => {
     if (!video || !url) return;
     const sources = Array.from(video.getElementsByTagName('source'));
@@ -462,6 +501,12 @@ function PlayPageClient() {
   useEffect(() => {
     updateVideoUrl(detail, currentEpisodeIndex);
   }, [detail, currentEpisodeIndex]);
+
+  // 切换源或集数时，重新加载跳过标记
+  useEffect(() => {
+    skipMarksRef.current = getSkipMarks();
+    skippedIntroRef.current = false;
+  }, [currentSource, currentId, currentEpisodeIndex]);
 
   // 进入页面时直接获取全部源信息
   useEffect(() => {
@@ -1058,6 +1103,9 @@ function PlayPageClient() {
       artPlayerRef.current = null;
     }
 
+    // 每次重新创建播放器都清空致命错误浮层
+    setFatalError(null);
+
     try {
       // 创建新的播放器实例
       Artplayer.PLAYBACK_RATE = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
@@ -1074,7 +1122,7 @@ function PlayPageClient() {
         pip: true,
         autoSize: false,
         autoMini: false,
-        screenshot: false,
+        screenshot: true,
         setting: true,
         loop: false,
         flip: false,
@@ -1130,23 +1178,61 @@ function PlayPageClient() {
 
             ensureVideoSource(video, url);
 
+            // 解析到 manifest 后注入画质切换菜单
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+              try {
+                const levels = hls.levels || [];
+                if (!artPlayerRef.current || levels.length <= 1) return;
+                const selector = [
+                  { html: '自动', default: true, value: -1 },
+                  ...levels.map((lvl: any, idx: number) => ({
+                    html: lvl.height ? `${lvl.height}p` : `码率 ${idx + 1}`,
+                    value: idx,
+                  })),
+                ];
+                artPlayerRef.current.setting.add({
+                  html: '画质',
+                  tooltip: '自动',
+                  selector,
+                  onSelect: function (item: any) {
+                    hls.currentLevel = item.value;
+                    return item.html;
+                  },
+                });
+              } catch (e) {
+                console.warn('添加画质菜单失败:', e);
+              }
+            });
+
+            // 自动恢复失败次数，避免死循环
+            let networkRetries = 0;
+            let mediaRetries = 0;
             hls.on(Hls.Events.ERROR, function (event: any, data: any) {
               console.error('HLS Error:', event, data);
-              if (data.fatal) {
-                switch (data.type) {
-                  case Hls.ErrorTypes.NETWORK_ERROR:
-                    console.log('网络错误，尝试恢复...');
+              if (!data.fatal) return;
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  if (networkRetries++ < 3) {
+                    console.log(`网络错误，自动恢复 (${networkRetries}/3)`);
                     hls.startLoad();
-                    break;
-                  case Hls.ErrorTypes.MEDIA_ERROR:
-                    console.log('媒体错误，尝试恢复...');
-                    hls.recoverMediaError();
-                    break;
-                  default:
-                    console.log('无法恢复的错误');
+                  } else {
                     hls.destroy();
-                    break;
-                }
+                    setFatalError('网络异常，无法加载视频');
+                  }
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  if (mediaRetries++ < 2) {
+                    console.log(`媒体错误，自动恢复 (${mediaRetries}/2)`);
+                    hls.recoverMediaError();
+                  } else {
+                    hls.destroy();
+                    setFatalError('视频解码失败，请重试或切换播放源');
+                  }
+                  break;
+                default:
+                  hls.destroy();
+                  setFatalError('播放出错，请重试或切换播放源');
+                  break;
               }
             });
           },
@@ -1180,6 +1266,49 @@ function PlayPageClient() {
                 // ignore
               }
               return newVal ? '当前开启' : '当前关闭';
+            },
+          },
+          {
+            html: '标记片头',
+            tooltip: '标记当前时间为片头结束',
+            icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">头</text>',
+            onClick() {
+              if (!artPlayerRef.current) return '';
+              const t = Math.floor(artPlayerRef.current.currentTime || 0);
+              const marks = { ...skipMarksRef.current, intro: t };
+              skipMarksRef.current = marks;
+              skippedIntroRef.current = false;
+              setSkipMarks(marks);
+              artPlayerRef.current.notice.show = `片头已标记: ${formatTime(t)}`;
+              return `片头 ${formatTime(t)}`;
+            },
+          },
+          {
+            html: '标记片尾',
+            tooltip: '标记当前时间为片尾开始',
+            icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">尾</text>',
+            onClick() {
+              if (!artPlayerRef.current) return '';
+              const t = Math.floor(artPlayerRef.current.currentTime || 0);
+              const marks = { ...skipMarksRef.current, outro: t };
+              skipMarksRef.current = marks;
+              setSkipMarks(marks);
+              artPlayerRef.current.notice.show = `片尾已标记: ${formatTime(t)}`;
+              return `片尾 ${formatTime(t)}`;
+            },
+          },
+          {
+            html: '清除跳过',
+            tooltip: '清除片头/片尾标记',
+            icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">×</text>',
+            onClick() {
+              skipMarksRef.current = {};
+              skippedIntroRef.current = false;
+              setSkipMarks({});
+              if (artPlayerRef.current) {
+                artPlayerRef.current.notice.show = '已清除片头/片尾标记';
+              }
+              return '已清除';
             },
           },
         ],
@@ -1264,6 +1393,38 @@ function PlayPageClient() {
           saveCurrentPlayProgress();
           lastSaveTimeRef.current = now;
         }
+
+        // 片头/片尾自动跳过
+        const marks = skipMarksRef.current;
+        const cur = artPlayerRef.current?.currentTime || 0;
+        if (
+          !skippedIntroRef.current &&
+          marks.intro &&
+          cur > 0 &&
+          cur < marks.intro
+        ) {
+          skippedIntroRef.current = true;
+          try {
+            artPlayerRef.current.currentTime = marks.intro;
+            artPlayerRef.current.notice.show = `已跳过片头至 ${formatTime(
+              marks.intro
+            )}`;
+          } catch {
+            /* ignore */
+          }
+        }
+        if (marks.outro && cur >= marks.outro) {
+          const d = detailRef.current;
+          const idx = currentEpisodeIndexRef.current;
+          if (d && d.episodes && idx < d.episodes.length - 1) {
+            // 立即切下一集，避免重复触发
+            skipMarksRef.current = {
+              ...skipMarksRef.current,
+              outro: undefined,
+            };
+            setCurrentEpisodeIndex(idx + 1);
+          }
+        }
       });
 
       artPlayerRef.current.on('pause', () => {
@@ -1280,7 +1441,7 @@ function PlayPageClient() {
       console.error('创建播放器失败:', err);
       setError('播放器初始化失败');
     }
-  }, [Artplayer, Hls, videoUrl, loading, blockAdEnabled]);
+  }, [Artplayer, Hls, videoUrl, loading, blockAdEnabled, retryNonce]);
 
   // 当组件卸载时清理定时器
   useEffect(() => {
@@ -1526,6 +1687,34 @@ function PlayPageClient() {
                   ref={artRef}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
+
+                {/* 致命错误重试蒙层 */}
+                {fatalError && !isVideoLoading && (
+                  <div className='absolute inset-0 bg-black/85 backdrop-blur-sm rounded-xl flex items-center justify-center z-[600]'>
+                    <div className='text-center max-w-md mx-auto px-6'>
+                      <div className='mx-auto mb-5 w-16 h-16 rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center shadow-lg'>
+                        <span className='text-3xl'>⚠️</span>
+                      </div>
+                      <p className='text-white text-base font-medium mb-5'>
+                        {fatalError}
+                      </p>
+                      <div className='flex gap-2 justify-center'>
+                        <button
+                          onClick={() => setRetryNonce((n) => n + 1)}
+                          className='px-5 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors'
+                        >
+                          🔄 重试播放
+                        </button>
+                        <button
+                          onClick={() => setFatalError(null)}
+                          className='px-5 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium transition-colors'
+                        >
+                          关闭
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* 换源加载蒙层 */}
                 {isVideoLoading && (
