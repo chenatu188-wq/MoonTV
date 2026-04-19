@@ -3,6 +3,7 @@
 import Link from 'next/link';
 
 import { BackButton } from './BackButton';
+import { InstallPWA } from './InstallPWA';
 import { LogoutButton } from './LogoutButton';
 import { SettingsButton } from './SettingsButton';
 import { useSite } from './SiteProvider';
@@ -25,6 +26,7 @@ const MobileHeader = ({ showBackButton = false }: MobileHeaderProps) => {
 
         {/* 右侧按钮 */}
         <div className='flex items-center gap-2'>
+          <InstallPWA />
           <LogoutButton />
           <ThemeToggle />
         </div>

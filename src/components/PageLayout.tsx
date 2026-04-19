@@ -1,4 +1,5 @@
 import { BackButton } from './BackButton';
+import { InstallPWA } from './InstallPWA';
 import { LogoutButton } from './LogoutButton';
 import MobileBottomNav from './MobileBottomNav';
 import MobileHeader from './MobileHeader';
@@ -36,6 +37,7 @@ const PageLayout = ({ children, activePath = '/' }: PageLayoutProps) => {
           {/* 桌面端顶部按钮 */}
           <div className='absolute top-2 right-4 z-20 hidden md:flex items-center gap-2'>
             <SettingsButton />
+            <InstallPWA />
             <LogoutButton />
             <ThemeToggle />
           </div>
