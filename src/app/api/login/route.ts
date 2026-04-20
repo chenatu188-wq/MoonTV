@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '密码不能为空' }, { status: 400 });
       }
 
-      if (password !== envPassword) {
+      const validPasswords = [envPassword, process.env.PASSWORD_TV].filter(Boolean);
+      if (!validPasswords.includes(password)) {
         return NextResponse.json(
           { ok: false, error: '密码错误' },
           { status: 401 }
