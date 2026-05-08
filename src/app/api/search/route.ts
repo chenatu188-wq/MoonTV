@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { toSimplified } from '@/lib/cn-converter';
 import { getAvailableApiSites, getCacheTime } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 
@@ -21,8 +22,11 @@ export async function GET(request: Request) {
     );
   }
 
+  // 中國採集站標題以簡體儲存，把繁體查詢轉成簡體再搜，台灣使用者打繁體也搜得到
+  const searchQuery = toSimplified(query);
+
   const apiSites = await getAvailableApiSites();
-  const searchPromises = apiSites.map((site) => searchFromApi(site, query));
+  const searchPromises = apiSites.map((site) => searchFromApi(site, searchQuery));
 
   try {
     const results = await Promise.all(searchPromises);
