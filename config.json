@@ -6,11 +6,6 @@
       "name": "电影天堂资源",
       "detail": "http://caiji.dyttzyapi.com"
     },
-    "heimuer": {
-      "api": "https://json.heimuer.xyz/api.php/provide/vod",
-      "name": "黑木耳",
-      "detail": "https://heimuer.tv"
-    },
     "ruyi": {
       "api": "https://cj.rycjapi.com/api.php/provide/vod",
       "name": "如意资源"
@@ -32,10 +27,6 @@
       "api": "https://360zy.com/api.php/provide/vod",
       "name": "360资源"
     },
-    "iqiyi": {
-      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
-      "name": "iqiyi资源"
-    },
     "wolong": {
       "api": "https://wolongzyw.com/api.php/provide/vod",
       "name": "卧龙资源"
@@ -48,10 +39,6 @@
     "dbzy": {
       "api": "https://dbzy.tv/api.php/provide/vod",
       "name": "豆瓣资源"
-    },
-    "mozhua": {
-      "api": "https://mozhuazy.com/api.php/provide/vod",
-      "name": "魔爪资源"
     },
     "mdzy": {
       "api": "https://www.mdzyapi.com/api.php/provide/vod",
@@ -81,9 +68,50 @@
       "api": "https://cj.lziapi.com/api.php/provide/vod",
       "name": "量子资源站"
     },
-    "xiaomaomi": {
-      "api": "https://zy.xmm.hk/api.php/provide/vod",
-      "name": "小猫咪资源"
+    "bwzyz": {
+      "api": "https://api.bwzyz.com/api.php/provide/vod",
+      "name": "百万影视",
+      "detail": "https://api.bwzyz.com"
+    },
+    "hhzy": {
+      "api": "https://hhzyapi.com/api.php/provide/vod",
+      "name": "火火资源",
+      "detail": "https://hhzyapi.com"
+    },
+    "gszy": {
+      "api": "https://api.guangsuapi.com/api.php/provide/vod",
+      "name": "光速资源",
+      "detail": "https://api.guangsuapi.com"
+    },
+    "bdzy": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度资源",
+      "detail": "https://api.apibdzy.com"
+    },
+    "xlzy": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪资源",
+      "detail": "https://api.xinlangapi.com"
+    },
+    "hnzy": {
+      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
+      "name": "红牛资源",
+      "detail": "https://www.hongniuzy2.com"
+    },
+    "ukuzy": {
+      "api": "https://api.ukuapi.com/api.php/provide/vod",
+      "name": "U酷资源",
+      "detail": "https://api.ukuapi.com"
+    },
+    "fnzy": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟资源",
+      "detail": "https://hongniuzy3.com"
+    },
+    "dbzy2": {
+      "api": "https://caiji.dbzy5.com/api.php/provide/vod",
+      "name": "豆瓣电影2",
+      "detail": "https://caiji.dbzy5.com"
     }
   }
 }
