@@ -120,6 +120,14 @@ function PlayPageClient() {
   const [retryNonce, setRetryNonce] = useState(0);
   // 自动换源：記錄已失敗過的 source key（同一播放會話中不重試）
   const failedSourcesRef = useRef<Set<string>>(new Set());
+  // 載入逾時偵測：player 8 秒沒進度自動跳下一源
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 換源進度顯示給 user
+  const [fallbackProgress, setFallbackProgress] = useState<{
+    tried: number;
+    total: number;
+    sourceName: string;
+  } | null>(null);
 
   // 总集数
   const totalEpisodes = detail?.episodes?.length || 0;
@@ -764,24 +772,69 @@ function PlayPageClient() {
     }
   };
 
-  // 自動切換到下一個可用源（跳過已失敗的）
+  // 紀錄各源的健康度到 localStorage（成功 +1 / 失敗 +1，下次優先排成功率高的）
+  // key: moontv_source_health
+  const SOURCE_HEALTH_KEY = 'moontv_source_health_v1';
+  const recordSourceHealth = (source: string, success: boolean) => {
+    try {
+      const raw = localStorage.getItem(SOURCE_HEALTH_KEY);
+      const data: Record<string, { ok: number; fail: number }> = raw
+        ? JSON.parse(raw)
+        : {};
+      const stat = data[source] || { ok: 0, fail: 0 };
+      if (success) stat.ok += 1;
+      else stat.fail += 1;
+      data[source] = stat;
+      localStorage.setItem(SOURCE_HEALTH_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('source health record failed', e);
+    }
+  };
+
+  // 取得源的健康分數（success rate，新源預設 0.5）
+  const getSourceScore = (source: string): number => {
+    try {
+      const raw = localStorage.getItem(SOURCE_HEALTH_KEY);
+      if (!raw) return 0.5;
+      const data: Record<string, { ok: number; fail: number }> =
+        JSON.parse(raw);
+      const stat = data[source];
+      if (!stat || stat.ok + stat.fail < 2) return 0.5;
+      return stat.ok / (stat.ok + stat.fail);
+    } catch {
+      return 0.5;
+    }
+  };
+
+  // 自動切換到下一個可用源（跳過已失敗的，優先選歷史健康度高的）
   // 回傳：成功找到並切換 = true；無可用源 = false
   const tryNextAvailableSource = (reason: string): boolean => {
     const failed = failedSourcesRef.current;
     // 把當前正在播的標為失敗
     if (currentSourceRef.current && currentIdRef.current) {
       failed.add(`${currentSourceRef.current}|${currentIdRef.current}`);
+      recordSourceHealth(currentSourceRef.current, false);
     }
-    // 在可用源裡找第一個還沒試過的
-    const next = availableSources.find(
-      (s) => !failed.has(`${s.source}|${s.id}`)
-    );
+    // 在可用源裡找未失敗的，依健康度排序
+    const candidates = availableSources
+      .filter((s) => !failed.has(`${s.source}|${s.id}`))
+      .sort((a, b) => getSourceScore(b.source) - getSourceScore(a.source));
+    const next = candidates[0];
     if (!next) {
       console.warn(`[autoFallback] 所有源都試過了 (${reason})`);
+      setFallbackProgress(null);
       return false;
     }
+    // 顯示換源進度給 user
+    setFallbackProgress({
+      tried: failed.size,
+      total: availableSources.length,
+      sourceName: next.source_name || next.source,
+    });
     console.log(
-      `[autoFallback] 自動跳下一源 (${reason}): ${next.source_name || next.source}`
+      `[autoFallback] 自動跳下一源 (${reason}, 第 ${failed.size + 1}/${
+        availableSources.length
+      } 試): ${next.source_name || next.source}`
     );
     handleSourceChange(next.source, next.id, next.title);
     return true;
@@ -1202,6 +1255,48 @@ function PlayPageClient() {
             video.hls = hls;
 
             ensureVideoSource(video, url);
+
+            // 載入逾時偵測：8 秒內 video 沒有 timeupdate / playing 事件 → 視為卡死、自動跳下一源
+            // 這個案例（黑屏轉圈不動）HLS 不會丟 fatal error，所以要靠 watchdog
+            if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+            stallTimerRef.current = setTimeout(() => {
+              const v = video as HTMLVideoElement;
+              if (v.readyState < 2 || v.currentTime === 0) {
+                console.warn('[stallWatchdog] 8 秒沒進度，視為卡死');
+                try {
+                  hls.destroy();
+                } catch {
+                  // ignore
+                }
+                if (!tryNextAvailableSource('STALL_TIMEOUT')) {
+                  setFatalError('所有來源都連線超時，請稍後再試');
+                }
+              }
+            }, 8000);
+
+            const cancelStallWatchdog = () => {
+              if (stallTimerRef.current) {
+                clearTimeout(stallTimerRef.current);
+                stallTimerRef.current = null;
+              }
+            };
+            video.addEventListener('playing', cancelStallWatchdog, {
+              once: true,
+            });
+            video.addEventListener('timeupdate', cancelStallWatchdog, {
+              once: true,
+            });
+            // 播放開始 = 此源可用，記錄健康度 + 清掉換源進度
+            video.addEventListener(
+              'playing',
+              () => {
+                if (currentSourceRef.current) {
+                  recordSourceHealth(currentSourceRef.current, true);
+                }
+                setFallbackProgress(null);
+              },
+              { once: true }
+            );
 
             // 解析到 manifest 后注入画质切换菜单 + 偵測編碼是否瀏覽器支援
             hls.on(Hls.Events.MANIFEST_PARSED, function () {
@@ -1744,6 +1839,20 @@ function PlayPageClient() {
                   ref={artRef}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
+
+                {/* 自動換源進度提示（fallbackProgress 有值時顯示） */}
+                {fallbackProgress && !fatalError && (
+                  <div className='absolute top-3 left-1/2 -translate-x-1/2 z-[550] px-4 py-2 rounded-full bg-black/80 backdrop-blur-sm text-white text-sm flex items-center gap-2 shadow-lg'>
+                    <span className='inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse'></span>
+                    <span>
+                      正在切換來源 {fallbackProgress.tried + 1}/
+                      {fallbackProgress.total} ·{' '}
+                      <span className='font-medium'>
+                        {fallbackProgress.sourceName}
+                      </span>
+                    </span>
+                  </div>
+                )}
 
                 {/* 致命错误重试蒙层 */}
                 {fatalError && !isVideoLoading && (
