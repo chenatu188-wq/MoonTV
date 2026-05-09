@@ -118,6 +118,8 @@ function PlayPageClient() {
   const [fatalError, setFatalError] = useState<string | null>(null);
   // 重试计数，变化时强制重建播放器
   const [retryNonce, setRetryNonce] = useState(0);
+  // 自动换源：記錄已失敗過的 source key（同一播放會話中不重試）
+  const failedSourcesRef = useRef<Set<string>>(new Set());
 
   // 总集数
   const totalEpisodes = detail?.episodes?.length || 0;
@@ -762,6 +764,29 @@ function PlayPageClient() {
     }
   };
 
+  // 自動切換到下一個可用源（跳過已失敗的）
+  // 回傳：成功找到並切換 = true；無可用源 = false
+  const tryNextAvailableSource = (reason: string): boolean => {
+    const failed = failedSourcesRef.current;
+    // 把當前正在播的標為失敗
+    if (currentSourceRef.current && currentIdRef.current) {
+      failed.add(`${currentSourceRef.current}|${currentIdRef.current}`);
+    }
+    // 在可用源裡找第一個還沒試過的
+    const next = availableSources.find(
+      (s) => !failed.has(`${s.source}|${s.id}`)
+    );
+    if (!next) {
+      console.warn(`[autoFallback] 所有源都試過了 (${reason})`);
+      return false;
+    }
+    console.log(
+      `[autoFallback] 自動跳下一源 (${reason}): ${next.source_name || next.source}`
+    );
+    handleSourceChange(next.source, next.id, next.title);
+    return true;
+  };
+
   useEffect(() => {
     document.addEventListener('keydown', handleKeyboardShortcuts);
     return () => {
@@ -1178,10 +1203,34 @@ function PlayPageClient() {
 
             ensureVideoSource(video, url);
 
-            // 解析到 manifest 后注入画质切换菜单
+            // 解析到 manifest 后注入画质切换菜单 + 偵測編碼是否瀏覽器支援
             hls.on(Hls.Events.MANIFEST_PARSED, function () {
               try {
                 const levels = hls.levels || [];
+
+                // 預檢編碼：HEVC / H.265 不是所有瀏覽器都支援，瀏覽器不支援就直接跳下一源
+                const firstLevel = levels[0];
+                const codecs =
+                  (firstLevel?.attrs as any)?.CODECS ||
+                  (firstLevel as any)?.codecs ||
+                  '';
+                const isHevc = /hev1|hvc1/i.test(codecs);
+                if (isHevc && typeof MediaSource !== 'undefined') {
+                  const mime = `video/mp4; codecs="${codecs}"`;
+                  if (!MediaSource.isTypeSupported(mime)) {
+                    console.warn(
+                      `[codec] 此瀏覽器不支援 HEVC (${codecs})，自動跳下一源`
+                    );
+                    hls.destroy();
+                    if (!tryNextAvailableSource('HEVC_UNSUPPORTED')) {
+                      setFatalError(
+                        '影片是 H.265 編碼但瀏覽器不支援。請改用 Safari 或 Edge，或等下次更新'
+                      );
+                    }
+                    return;
+                  }
+                }
+
                 if (!artPlayerRef.current || levels.length <= 1) return;
                 const selector = [
                   { html: '自动', default: true, value: -1 },
@@ -1217,7 +1266,9 @@ function PlayPageClient() {
                     hls.startLoad();
                   } else {
                     hls.destroy();
-                    setFatalError('网络异常，无法加载视频');
+                    if (!tryNextAvailableSource('NETWORK_ERROR')) {
+                      setFatalError('所有來源都連線失敗，請稍後再試');
+                    }
                   }
                   break;
                 case Hls.ErrorTypes.MEDIA_ERROR:
@@ -1226,12 +1277,18 @@ function PlayPageClient() {
                     hls.recoverMediaError();
                   } else {
                     hls.destroy();
-                    setFatalError('视频解码失败，请重试或切换播放源');
+                    if (!tryNextAvailableSource('MEDIA_ERROR')) {
+                      setFatalError(
+                        '所有來源解碼都失敗，可能是影片編碼瀏覽器不支援（如 H.265）'
+                      );
+                    }
                   }
                   break;
                 default:
                   hls.destroy();
-                  setFatalError('播放出错，请重试或切换播放源');
+                  if (!tryNextAvailableSource('OTHER_ERROR')) {
+                    setFatalError('所有來源播放都失敗，請稍後再試');
+                  }
                   break;
               }
             });
