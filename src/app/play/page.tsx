@@ -1237,7 +1237,7 @@ function PlayPageClient() {
             const hls = new Hls({
               debug: false, // 关闭日志
               enableWorker: true, // WebWorker 解码，降低主线程压力
-              lowLatencyMode: true, // 开启低延迟 LL-HLS
+              lowLatencyMode: false, // 對跨境慢連線改用一般模式（LL-HLS 對慢源反而會更頓）
 
               /* 缓冲/内存相关 */
               maxBufferLength: 30, // 前向缓冲最大 30s，过大容易导致高延迟
@@ -1256,13 +1256,13 @@ function PlayPageClient() {
 
             ensureVideoSource(video, url);
 
-            // 載入逾時偵測：8 秒內 video 沒有 timeupdate / playing 事件 → 視為卡死、自動跳下一源
+            // 載入逾時偵測：5 秒內 video 沒有 timeupdate / playing 事件 → 視為卡死、自動跳下一源
             // 這個案例（黑屏轉圈不動）HLS 不會丟 fatal error，所以要靠 watchdog
             if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
             stallTimerRef.current = setTimeout(() => {
               const v = video as HTMLVideoElement;
               if (v.readyState < 2 || v.currentTime === 0) {
-                console.warn('[stallWatchdog] 8 秒沒進度，視為卡死');
+                console.warn('[stallWatchdog] 5 秒沒進度，視為卡死');
                 try {
                   hls.destroy();
                 } catch {
@@ -1272,7 +1272,7 @@ function PlayPageClient() {
                   setFatalError('所有來源都連線超時，請稍後再試');
                 }
               }
-            }, 8000);
+            }, 5000);
 
             const cancelStallWatchdog = () => {
               if (stallTimerRef.current) {
@@ -1915,7 +1915,27 @@ function PlayPageClient() {
                             ? '🔄 切换播放源...'
                             : '🔄 视频加载中...'}
                         </p>
+                        <p className='text-sm text-gray-300'>
+                          5 秒沒動就會自動換源，等不及的話按下面
+                        </p>
                       </div>
+
+                      {/* 手動立即換源 */}
+                      <button
+                        onClick={() => {
+                          if (stallTimerRef.current) {
+                            clearTimeout(stallTimerRef.current);
+                            stallTimerRef.current = null;
+                          }
+                          if (!tryNextAvailableSource('USER_MANUAL')) {
+                            setFatalError('沒有其他來源可以試了');
+                          }
+                        }}
+                        className='mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg transition-all duration-200 flex items-center gap-2 mx-auto'
+                      >
+                        <span>⚡</span>
+                        <span>立即換源</span>
+                      </button>
                     </div>
                   </div>
                 )}
