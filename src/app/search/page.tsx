@@ -111,6 +111,39 @@ const KEYWORDS_DEFAULT: string[] = [
 ];
 const KEYWORDS_KEY = 'moontv_keywords_v1';
 
+// 推薦演員（依字數分組顯示）—— 用繁體寫，後端已有 繁→簡 + 繁→日 自動轉換
+const ACTRESSES_DEFAULT: string[] = [
+  // 2 字
+  '葵司',
+  // 3 字
+  '蒼井空',
+  '麻倉憂',
+  '楓可憐',
+  '篠田優',
+  '大槻響',
+  // 4 字
+  '三上悠亞',
+  '橋本有菜',
+  '河北彩花',
+  '紗倉真菜',
+  '吉澤明步',
+  '上原亞衣',
+  '七澤美亞',
+  '高橋聖子',
+  '深田詠美',
+  '楓富愛',
+  '倉本菜未',
+  '麻美由真',
+  '美波志保',
+  // 5 字
+  '波多野結衣',
+  '神宮寺奈緒',
+  '桐谷茉莉',
+  '涼森玲夢',
+  '永井瑪利亞',
+];
+const ACTRESSES_KEY = 'moontv_actresses_v1';
+
 const loadStudioTags = (): StudioTag[] => {
   if (typeof window === 'undefined') return STUDIO_TAGS_DEFAULT;
   try {
@@ -155,6 +188,28 @@ const saveKeywords = (keywords: string[]) => {
   }
 };
 
+const loadActresses = (): string[] => {
+  if (typeof window === 'undefined') return ACTRESSES_DEFAULT;
+  try {
+    const raw = localStorage.getItem(ACTRESSES_KEY);
+    if (!raw) return ACTRESSES_DEFAULT;
+    const parsed = JSON.parse(raw) as string[];
+    if (!Array.isArray(parsed)) return ACTRESSES_DEFAULT;
+    return parsed;
+  } catch {
+    return ACTRESSES_DEFAULT;
+  }
+};
+
+const saveActresses = (names: string[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ACTRESSES_KEY, JSON.stringify(names));
+  } catch {
+    // ignore
+  }
+};
+
 function SearchPageClient() {
   // 搜索历史
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -163,6 +218,8 @@ function SearchPageClient() {
     useState<StudioTag[]>(STUDIO_TAGS_DEFAULT);
   // 常用關鍵字（中文 / 任意字串）
   const [keywords, setKeywords] = useState<string[]>(KEYWORDS_DEFAULT);
+  // 推薦演員（依字數分組顯示）
+  const [actresses, setActresses] = useState<string[]>(ACTRESSES_DEFAULT);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -264,6 +321,20 @@ function SearchPageClient() {
       saveKeywords(mergedKeywords);
     } else {
       setKeywords(storedKeywords);
+    }
+
+    // 同樣方式載入演員
+    const storedActresses = loadActresses();
+    const storedActSet = new Set(storedActresses);
+    const missingActresses = ACTRESSES_DEFAULT.filter(
+      (a) => !storedActSet.has(a)
+    );
+    if (missingActresses.length > 0) {
+      const mergedActresses = [...storedActresses, ...missingActresses];
+      setActresses(mergedActresses);
+      saveActresses(mergedActresses);
+    } else {
+      setActresses(storedActresses);
     }
 
     // 监听搜索历史更新事件
@@ -412,6 +483,55 @@ function SearchPageClient() {
     setKeywords(KEYWORDS_DEFAULT);
     saveKeywords(KEYWORDS_DEFAULT);
   };
+
+  // 新增演員
+  const handleAddActress = () => {
+    const input = window.prompt(
+      '輸入演員名（繁體 / 簡體 / 日文皆可，例：三上悠亞）'
+    );
+    if (!input) return;
+    const name = input.trim();
+    if (!name) return;
+    if (name.length > 12) {
+      window.alert('演員名最多 12 字');
+      return;
+    }
+    if (actresses.includes(name)) {
+      window.alert(`「${name}」已經在演員清單裡了`);
+      return;
+    }
+    const next = [...actresses, name];
+    setActresses(next);
+    saveActresses(next);
+  };
+
+  // 刪除演員
+  const handleDeleteActress = (name: string) => {
+    if (!window.confirm(`確定要移除「${name}」嗎？`)) return;
+    const next = actresses.filter((n) => n !== name);
+    setActresses(next);
+    saveActresses(next);
+  };
+
+  // 還原預設演員清單
+  const handleResetActresses = () => {
+    if (!window.confirm('確定要還原預設演員清單嗎？\n（你自訂的會被覆蓋）'))
+      return;
+    setActresses(ACTRESSES_DEFAULT);
+    saveActresses(ACTRESSES_DEFAULT);
+  };
+
+  // 演員按字數分組（用於 UI 渲染）
+  const actressesByLength = useMemo(() => {
+    const groups = new Map<number, string[]>();
+    actresses.forEach((name) => {
+      const len = name.length;
+      const arr = groups.get(len) || [];
+      arr.push(name);
+      groups.set(len, arr);
+    });
+    return Array.from(groups.entries()).sort((a, b) => a[0] - b[0]);
+  }, [actresses]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -642,6 +762,69 @@ function SearchPageClient() {
                   >
                     <Plus className='w-4 h-4' />
                     <span>新增關鍵字</span>
+                  </button>
+                </div>
+              </section>
+
+              {/* 推薦演員（按字數分組） */}
+              <section className='mb-8'>
+                <h2 className='mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200'>
+                  推薦演員
+                  <span className='ml-3 text-sm font-normal text-gray-500 dark:text-gray-400'>
+                    按字數分組 · 點一下直接搜
+                  </span>
+                  <button
+                    onClick={handleResetActresses}
+                    className='ml-3 text-sm font-normal text-gray-500 hover:text-green-600 transition-colors dark:text-gray-400 dark:hover:text-green-400'
+                  >
+                    還原預設
+                  </button>
+                </h2>
+                <div className='space-y-3'>
+                  {actressesByLength.map(([len, names]) => (
+                    <div key={len}>
+                      <div className='text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2'>
+                        {len} 字
+                      </div>
+                      <div className='flex flex-wrap gap-2'>
+                        {names.map((name) => (
+                          <div key={name} className='relative group'>
+                            <button
+                              onClick={() => {
+                                setSearchQuery(name);
+                                router.push(
+                                  `/search?q=${encodeURIComponent(name)}`
+                                );
+                              }}
+                              className='px-3 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-pink-500/15 dark:hover:bg-pink-500/25 dark:text-gray-200'
+                            >
+                              <span className='font-semibold text-pink-700 dark:text-pink-400'>
+                                {name}
+                              </span>
+                            </button>
+                            <button
+                              aria-label={`刪除 ${name}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleDeleteActress(name);
+                              }}
+                              className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
+                            >
+                              <X className='w-3 h-3' />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={handleAddActress}
+                    className='px-3 py-2 bg-gray-500/10 hover:bg-pink-500/20 border-2 border-dashed border-gray-300 hover:border-pink-500 rounded-full text-sm text-gray-500 hover:text-pink-700 dark:bg-gray-700/30 dark:hover:bg-pink-500/15 dark:border-gray-600 dark:hover:border-pink-400 dark:text-gray-400 dark:hover:text-pink-400 transition-colors duration-200 inline-flex items-center gap-1'
+                    title='新增演員'
+                  >
+                    <Plus className='w-4 h-4' />
+                    <span>新增演員</span>
                   </button>
                 </div>
               </section>
