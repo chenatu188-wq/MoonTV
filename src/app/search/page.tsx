@@ -90,6 +90,29 @@ const STUDIO_TAGS_DEFAULT: StudioTag[] = [
   { code: 'UMD', style: '自訂' },
 ];
 const STUDIO_TAGS_KEY = 'moontv_studio_tags_v1';
+const STUDIO_FAVS_KEY = 'moontv_studio_favs_v1';
+
+const loadStudioFavs = (): Set<string> => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(STUDIO_FAVS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as string[];
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed);
+  } catch {
+    return new Set();
+  }
+};
+
+const saveStudioFavs = (set: Set<string>) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STUDIO_FAVS_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    // ignore
+  }
+};
 
 // 常用關鍵字（中文 / 任意字串）—— 跟片商代號分開存，避免格式混淆
 const KEYWORDS_DEFAULT: string[] = [
@@ -216,6 +239,8 @@ function SearchPageClient() {
   // 片商代號標籤（可由阿公自行新增 / 刪除）
   const [studioTags, setStudioTags] =
     useState<StudioTag[]>(STUDIO_TAGS_DEFAULT);
+  // 片商代號收藏（純記號，不影響清單）
+  const [studioFavs, setStudioFavs] = useState<Set<string>>(new Set());
   // 常用關鍵字（中文 / 任意字串）
   const [keywords, setKeywords] = useState<string[]>(KEYWORDS_DEFAULT);
   // 推薦演員（依字數分組顯示）
@@ -297,6 +322,9 @@ function SearchPageClient() {
     getSearchHistory().then(setSearchHistory);
 
     // 初始加载片商代號（從 localStorage 讀；首次無資料時用預設）
+    // 載入片商代號收藏
+    setStudioFavs(loadStudioFavs());
+
     // 非破壞式合併：使用者已自訂的不動，把預設裡有但本機沒有的代號自動補進來
     const stored = loadStudioTags();
     const storedCodes = new Set(stored.map((t) => t.code));
@@ -436,6 +464,15 @@ function SearchPageClient() {
   };
 
   // 還原預設清單（手滑刪錯救命用）
+  // 切換片商代號收藏
+  const toggleStudioFav = (code: string) => {
+    const next = new Set(studioFavs);
+    if (next.has(code)) next.delete(code);
+    else next.add(code);
+    setStudioFavs(next);
+    saveStudioFavs(next);
+  };
+
   const handleResetStudioTags = () => {
     if (
       !window.confirm(
@@ -822,37 +859,65 @@ function SearchPageClient() {
                   </button>
                 </h2>
                 <div className='flex flex-wrap gap-2'>
-                  {studioTags.map((tag) => (
-                    <div key={tag.code} className='relative group'>
-                      <button
-                        onClick={() => {
-                          setSearchQuery(tag.code);
-                          router.push(
-                            `/search?q=${encodeURIComponent(tag.code)}`
-                          );
-                        }}
-                        className='px-3 py-2 bg-green-500/10 hover:bg-green-500/20 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-green-500/15 dark:hover:bg-green-500/25 dark:text-gray-200 flex items-center gap-2'
-                      >
-                        <span className='font-semibold text-green-700 dark:text-green-400'>
-                          {tag.code}
-                        </span>
-                        <span className='text-xs text-gray-500 dark:text-gray-400'>
-                          {tag.style}
-                        </span>
-                      </button>
-                      <button
-                        aria-label={`刪除 ${tag.code}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          handleDeleteStudioTag(tag.code);
-                        }}
-                        className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
-                      >
-                        <X className='w-3 h-3' />
-                      </button>
-                    </div>
-                  ))}
+                  {studioTags.map((tag) => {
+                    const isFav = studioFavs.has(tag.code);
+                    return (
+                      <div key={tag.code} className='relative group'>
+                        <button
+                          onClick={() => {
+                            setSearchQuery(tag.code);
+                            router.push(
+                              `/search?q=${encodeURIComponent(tag.code)}`
+                            );
+                          }}
+                          className={`px-3 py-2 rounded-full text-sm transition-colors duration-200 flex items-center gap-2 ${
+                            isFav
+                              ? 'bg-green-500/25 ring-1 ring-green-400 dark:bg-green-500/30'
+                              : 'bg-green-500/10 hover:bg-green-500/20 dark:bg-green-500/15 dark:hover:bg-green-500/25'
+                          } text-gray-700 dark:text-gray-200`}
+                        >
+                          <span className='font-semibold text-green-700 dark:text-green-400'>
+                            {tag.code}
+                          </span>
+                          <span className='text-xs text-gray-500 dark:text-gray-400'>
+                            {tag.style}
+                          </span>
+                          <span
+                            role='button'
+                            aria-label={
+                              isFav
+                                ? `取消收藏 ${tag.code}`
+                                : `收藏 ${tag.code}`
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              toggleStudioFav(tag.code);
+                            }}
+                            className={`text-base leading-none cursor-pointer transition-colors ${
+                              isFav
+                                ? 'text-pink-500 hover:text-gray-400 dark:text-pink-400'
+                                : 'text-gray-300 hover:text-pink-500 dark:text-gray-600 dark:hover:text-pink-400'
+                            }`}
+                            title={isFav ? '取消收藏' : '加入收藏'}
+                          >
+                            {isFav ? '❤' : '♡'}
+                          </span>
+                        </button>
+                        <button
+                          aria-label={`刪除 ${tag.code}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleDeleteStudioTag(tag.code);
+                          }}
+                          className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
+                        >
+                          <X className='w-3 h-3' />
+                        </button>
+                      </div>
+                    );
+                  })}
                   {/* 新增代號（單筆） */}
                   <button
                     onClick={handleAddStudioTag}
