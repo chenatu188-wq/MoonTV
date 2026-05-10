@@ -248,6 +248,18 @@ function SearchPageClient() {
     saveStudioTags(next);
   };
 
+  // 還原預設清單（手滑刪錯救命用）
+  const handleResetStudioTags = () => {
+    if (
+      !window.confirm(
+        `確定要還原預設清單嗎？\n（你目前自訂的代號會被覆蓋，預設 19 個會回來）`
+      )
+    )
+      return;
+    setStudioTags(STUDIO_TAGS_DEFAULT);
+    saveStudioTags(STUDIO_TAGS_DEFAULT);
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = searchQuery.trim().replace(/\s+/g, ' ');
@@ -378,6 +390,12 @@ function SearchPageClient() {
                   <span className='ml-3 text-sm font-normal text-gray-500 dark:text-gray-400'>
                     點一下直接搜 · 滑過按 × 可移除
                   </span>
+                  <button
+                    onClick={handleResetStudioTags}
+                    className='ml-3 text-sm font-normal text-gray-500 hover:text-green-600 transition-colors dark:text-gray-400 dark:hover:text-green-400'
+                  >
+                    還原預設
+                  </button>
                 </h2>
                 <div className='flex flex-wrap gap-2'>
                   {studioTags.map((tag) => (
