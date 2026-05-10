@@ -17,6 +17,30 @@ import { SearchResult } from '@/lib/types';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
+// 阿公專區常見片商代號（公開的工業識別碼，FANZA / DMM 都列出來）
+// 點一下直接以代號搜尋；命中率比完整番號高
+const STUDIO_TAGS: { code: string; studio: string; style: string }[] = [
+  { code: 'SSIS', studio: 'S1 No.1 Style', style: '大廠' },
+  { code: 'IPX', studio: 'IdeaPocket', style: '偶像系' },
+  { code: 'IPZZ', studio: 'IdeaPocket', style: '偶像系' },
+  { code: 'JUL', studio: 'Madonna', style: '人妻' },
+  { code: 'JUQ', studio: 'Madonna', style: '人妻' },
+  { code: 'PRED', studio: 'Premium', style: '中堅' },
+  { code: 'MIDV', studio: 'MOODYZ', style: '老牌' },
+  { code: 'MIAA', studio: 'MOODYZ', style: '老牌' },
+  { code: 'CAWD', studio: 'kawaii*', style: '清純' },
+  { code: 'WAAA', studio: 'Wanz', style: '大眾' },
+  { code: 'HMN', studio: 'Honnaka', style: '中堅' },
+  { code: 'FSDSS', studio: 'Faleno', style: '新興' },
+  { code: 'DASS', studio: 'Das!', style: '中堅' },
+  { code: 'EBOD', studio: 'E-BODY', style: '巨乳' },
+  { code: 'ROE', studio: 'Madonna', style: '人妻' },
+  { code: 'ATID', studio: 'Attackers', style: '劇情' },
+  { code: 'SHKD', studio: 'Attackers', style: '劇情' },
+  { code: 'GVH', studio: 'Glory Quest', style: '中堅' },
+  { code: 'SDAB', studio: 'SOD Create', style: '老牌' },
+];
+
 function SearchPageClient() {
   // 搜索历史
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -284,53 +308,86 @@ function SearchPageClient() {
                 )}
               </div>
             </section>
-          ) : searchHistory.length > 0 ? (
-            // 搜索历史
-            <section className='mb-12'>
-              <h2 className='mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200'>
-                搜索历史
-                {searchHistory.length > 0 && (
-                  <button
-                    onClick={() => {
-                      clearSearchHistory(); // 事件监听会自动更新界面
-                    }}
-                    className='ml-3 text-sm text-gray-500 hover:text-red-500 transition-colors dark:text-gray-400 dark:hover:text-red-500'
-                  >
-                    清空
-                  </button>
-                )}
-              </h2>
-              <div className='flex flex-wrap gap-2'>
-                {searchHistory.map((item) => (
-                  <div key={item} className='relative group'>
+          ) : (
+            <>
+              {/* 推薦片商代號（adult-edition 阿公專區用，一鍵搜常見片商） */}
+              <section className='mb-8'>
+                <h2 className='mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200'>
+                  推薦片商代號
+                  <span className='ml-3 text-sm font-normal text-gray-500 dark:text-gray-400'>
+                    點一下直接搜
+                  </span>
+                </h2>
+                <div className='flex flex-wrap gap-2'>
+                  {STUDIO_TAGS.map((tag) => (
                     <button
+                      key={tag.code}
                       onClick={() => {
-                        setSearchQuery(item);
+                        setSearchQuery(tag.code);
                         router.push(
-                          `/search?q=${encodeURIComponent(item.trim())}`
+                          `/search?q=${encodeURIComponent(tag.code)}`
                         );
                       }}
-                      className='px-4 py-2 bg-gray-500/10 hover:bg-gray-300 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300'
+                      className='group px-3 py-2 bg-green-500/10 hover:bg-green-500/20 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-green-500/15 dark:hover:bg-green-500/25 dark:text-gray-200 flex items-center gap-2'
+                      title={`${tag.studio} · ${tag.style}`}
                     >
-                      {item}
+                      <span className='font-semibold text-green-700 dark:text-green-400'>
+                        {tag.code}
+                      </span>
+                      <span className='text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'>
+                        {tag.style}
+                      </span>
                     </button>
-                    {/* 删除按钮 */}
+                  ))}
+                </div>
+              </section>
+
+              {searchHistory.length > 0 && (
+                // 搜索历史
+                <section className='mb-12'>
+                  <h2 className='mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200'>
+                    搜索历史
                     <button
-                      aria-label='删除搜索历史'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        deleteSearchHistory(item); // 事件监听会自动更新界面
+                      onClick={() => {
+                        clearSearchHistory();
                       }}
-                      className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
+                      className='ml-3 text-sm text-gray-500 hover:text-red-500 transition-colors dark:text-gray-400 dark:hover:text-red-500'
                     >
-                      <X className='w-3 h-3' />
+                      清空
                     </button>
+                  </h2>
+                  <div className='flex flex-wrap gap-2'>
+                    {searchHistory.map((item) => (
+                      <div key={item} className='relative group'>
+                        <button
+                          onClick={() => {
+                            setSearchQuery(item);
+                            router.push(
+                              `/search?q=${encodeURIComponent(item.trim())}`
+                            );
+                          }}
+                          className='px-4 py-2 bg-gray-500/10 hover:bg-gray-300 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300'
+                        >
+                          {item}
+                        </button>
+                        <button
+                          aria-label='删除搜索历史'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            deleteSearchHistory(item);
+                          }}
+                          className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
+                        >
+                          <X className='w-3 h-3' />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
+                </section>
+              )}
+            </>
+          )}
         </div>
       </div>
     </PageLayout>
