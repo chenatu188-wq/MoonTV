@@ -21,25 +21,73 @@ import VideoCard from '@/components/VideoCard';
 // 預設清單，可在 UI 上新增 / 刪除（存 localStorage）
 type StudioTag = { code: string; style: string };
 const STUDIO_TAGS_DEFAULT: StudioTag[] = [
+  // 主流大廠
   { code: 'SSIS', style: '大廠' },
   { code: 'IPX', style: '偶像系' },
   { code: 'IPZZ', style: '偶像系' },
-  { code: 'JUL', style: '人妻' },
-  { code: 'JUQ', style: '人妻' },
+  { code: 'IDBD', style: '精選' },
+  { code: 'STARS', style: '偶像' },
   { code: 'PRED', style: '中堅' },
+  // MOODYZ 家族
   { code: 'MIDV', style: '老牌' },
   { code: 'MIAA', style: '老牌' },
-  { code: 'CAWD', style: '清純' },
-  { code: 'WAAA', style: '大眾' },
-  { code: 'HMN', style: '中堅' },
-  { code: 'FSDSS', style: '新興' },
-  { code: 'DASS', style: '中堅' },
-  { code: 'EBOD', style: '巨乳' },
+  { code: 'MIAB', style: '老牌' },
+  { code: 'MIDA', style: '老牌' },
+  { code: 'MIDE', style: '老牌' },
+  // SOD 家族
+  { code: 'SDDE', style: '老牌' },
+  { code: 'SDAB', style: '老牌' },
+  { code: 'SW', style: '老牌' },
+  // Madonna / 人妻系
+  { code: 'JUL', style: '人妻' },
+  { code: 'JUQ', style: '人妻' },
+  { code: 'JUFE', style: '人妻' },
   { code: 'ROE', style: '人妻' },
+  { code: 'MDYD', style: '人妻' },
+  { code: 'MEYD', style: '人妻' },
+  { code: 'VEC', style: '人妻' },
+  { code: 'VENX', style: '熟女' },
+  // Faleno / 新興
+  { code: 'FSDSS', style: '新興' },
+  // Wanz 家族
+  { code: 'WAAA', style: '大眾' },
+  { code: 'WANZ', style: '大眾' },
+  // kawaii
+  { code: 'CAWD', style: '清純' },
+  // E-BODY 巨乳
+  { code: 'EBOD', style: '巨乳' },
+  // Attackers 劇情
   { code: 'ATID', style: '劇情' },
   { code: 'SHKD', style: '劇情' },
+  // DANDY / HUNTER 戲劇系
+  { code: 'DANDY', style: '戲劇' },
+  { code: 'HUNTC', style: '戲劇' },
+  // h.m.p / 老牌
+  { code: 'HODV', style: '老牌' },
+  // Bibian 女女
+  { code: 'HMDB', style: '女女' },
+  // 素人系
+  { code: 'HJMO', style: '素人' },
+  // 其他中堅
+  { code: 'HMN', style: '中堅' },
+  { code: 'DASS', style: '中堅' },
   { code: 'GVH', style: '中堅' },
-  { code: 'SDAB', style: '老牌' },
+  { code: 'FERA', style: '中堅' },
+  { code: 'TPPN', style: '中堅' },
+  // 較少見 / 自訂
+  { code: 'SVH', style: '自訂' },
+  { code: 'HMIX', style: '自訂' },
+  { code: 'JJDA', style: '自訂' },
+  { code: 'KIRE', style: '自訂' },
+  { code: 'LULU', style: '自訂' },
+  { code: 'MBYD', style: '自訂' },
+  { code: 'MCSR', style: '自訂' },
+  { code: 'MIZU', style: '自訂' },
+  { code: 'DAZP', style: '自訂' },
+  { code: 'SAKD', style: '自訂' },
+  { code: 'SSAH', style: '自訂' },
+  { code: 'SVRT', style: '自訂' },
+  { code: 'UMD', style: '自訂' },
 ];
 const STUDIO_TAGS_KEY = 'moontv_studio_tags_v1';
 
@@ -148,7 +196,19 @@ function SearchPageClient() {
     getSearchHistory().then(setSearchHistory);
 
     // 初始加载片商代號（從 localStorage 讀；首次無資料時用預設）
-    setStudioTags(loadStudioTags());
+    // 非破壞式合併：使用者已自訂的不動，把預設裡有但本機沒有的代號自動補進來
+    const stored = loadStudioTags();
+    const storedCodes = new Set(stored.map((t) => t.code));
+    const missingDefaults = STUDIO_TAGS_DEFAULT.filter(
+      (t) => !storedCodes.has(t.code)
+    );
+    if (missingDefaults.length > 0) {
+      const merged = [...stored, ...missingDefaults];
+      setStudioTags(merged);
+      saveStudioTags(merged);
+    } else {
+      setStudioTags(stored);
+    }
 
     // 监听搜索历史更新事件
     const unsubscribe = subscribeToDataUpdates(
