@@ -4,7 +4,7 @@
 
 import Artplayer from 'artplayer';
 import Hls from 'hls.js';
-import { Heart } from 'lucide-react';
+import { Heart, Shuffle } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -195,6 +195,11 @@ function PlayPageClient() {
           if (seen.has(key)) continue;
           seen.add(key);
           deduped.push(r);
+        }
+        // Fisher-Yates 洗牌：每次重載/換片都不一樣的順序
+        for (let i = deduped.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [deduped[i], deduped[j]] = [deduped[j], deduped[i]];
         }
         setRelatedResults(deduped);
       })
@@ -2028,7 +2033,7 @@ function PlayPageClient() {
         {/* 其他搜尋結果 — 同一搜尋詞的其他影片，免回搜尋頁 */}
         {relatedResults.length > 1 && (
           <div className='mt-6 mb-2'>
-            <div className='flex items-center justify-between mb-3'>
+            <div className='flex items-center justify-between mb-3 gap-3'>
               <h3 className='text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200'>
                 其他搜尋結果
                 <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
@@ -2041,6 +2046,24 @@ function PlayPageClient() {
                   )}
                 </span>
               </h3>
+              <button
+                onClick={() => {
+                  setRelatedResults((prev) => {
+                    const arr = [...prev];
+                    for (let i = arr.length - 1; i > 0; i--) {
+                      const j = Math.floor(Math.random() * (i + 1));
+                      [arr[i], arr[j]] = [arr[j], arr[i]];
+                    }
+                    return arr;
+                  });
+                  setRelatedPage(1);
+                }}
+                className='shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors'
+                title='隨機重排這份清單'
+              >
+                <Shuffle className='w-3.5 h-3.5' />
+                換一批
+              </button>
             </div>
             <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'>
               {relatedPaged.items.map((r) => {
