@@ -484,6 +484,102 @@ function SearchPageClient() {
     saveKeywords(KEYWORDS_DEFAULT);
   };
 
+  // 批量新增關鍵字（支援逗號 / 頓號 / 換行 / 空白分隔）
+  const handleBulkAddKeywords = () => {
+    const input = window.prompt(
+      [
+        '批量新增關鍵字',
+        '分隔可用：逗號 , 頓號 、 換行或空格',
+        '',
+        '範例：',
+        '巨乳,人妻,清純,OL',
+      ].join('\n')
+    );
+    if (!input) return;
+    const candidates = input
+      .split(/[,，、\n\r\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (candidates.length === 0) return;
+
+    const existing = new Set(keywords);
+    const added: string[] = [];
+    const skipped: string[] = [];
+    const tooLong: string[] = [];
+    for (const kw of candidates) {
+      if (kw.length > 20) {
+        tooLong.push(kw);
+        continue;
+      }
+      if (existing.has(kw) || added.includes(kw)) {
+        skipped.push(kw);
+        continue;
+      }
+      added.push(kw);
+    }
+    if (added.length > 0) {
+      const next = [...keywords, ...added];
+      setKeywords(next);
+      saveKeywords(next);
+    }
+    const lines = [`✅ 新增 ${added.length} 個`];
+    if (skipped.length > 0)
+      lines.push(`⚠ 重複略過 ${skipped.length} 個：${skipped.join('、')}`);
+    if (tooLong.length > 0)
+      lines.push(`❌ 太長略過 ${tooLong.length} 個：${tooLong.join('、')}`);
+    window.alert(lines.join('\n'));
+  };
+
+  // 批量新增片商代號（每筆只有代號、style 自動設「自訂」）
+  const handleBulkAddStudioTags = () => {
+    const input = window.prompt(
+      [
+        '批量新增片商代號（風格自動標「自訂」、之後可單筆編輯）',
+        '分隔可用：逗號 , 頓號 、 換行或空格',
+        '',
+        '範例：',
+        'OFJE,SNIS,DOCP',
+      ].join('\n')
+    );
+    if (!input) return;
+    const candidates = input
+      .split(/[,，、\n\r\s]+/)
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+    if (candidates.length === 0) return;
+
+    const existing = new Set(studioTags.map((t) => t.code));
+    const added: StudioTag[] = [];
+    const skipped: string[] = [];
+    const invalid: string[] = [];
+    for (const code of candidates) {
+      if (!/^[A-Z]{2,8}$/.test(code)) {
+        invalid.push(code);
+        continue;
+      }
+      if (existing.has(code) || added.some((t) => t.code === code)) {
+        skipped.push(code);
+        continue;
+      }
+      added.push({ code, style: '自訂' });
+    }
+    if (added.length > 0) {
+      const next = [...studioTags, ...added];
+      setStudioTags(next);
+      saveStudioTags(next);
+    }
+    const lines = [`✅ 新增 ${added.length} 個`];
+    if (skipped.length > 0)
+      lines.push(`⚠ 重複略過 ${skipped.length} 個：${skipped.join('、')}`);
+    if (invalid.length > 0)
+      lines.push(
+        `❌ 格式錯誤略過 ${invalid.length} 個：${invalid.join(
+          '、'
+        )}（限 2-8 個英文字母）`
+      );
+    window.alert(lines.join('\n'));
+  };
+
   // 新增演員
   const handleAddActress = () => {
     const input = window.prompt(
@@ -757,14 +853,23 @@ function SearchPageClient() {
                       </button>
                     </div>
                   ))}
-                  {/* 新增代號 */}
+                  {/* 新增代號（單筆） */}
                   <button
                     onClick={handleAddStudioTag}
                     className='px-3 py-2 bg-gray-500/10 hover:bg-green-500/20 border-2 border-dashed border-gray-300 hover:border-green-500 rounded-full text-sm text-gray-500 hover:text-green-700 dark:bg-gray-700/30 dark:hover:bg-green-500/15 dark:border-gray-600 dark:hover:border-green-400 dark:text-gray-400 dark:hover:text-green-400 transition-colors duration-200 flex items-center gap-1'
-                    title='新增片商代號'
+                    title='新增片商代號（單筆）'
                   >
                     <Plus className='w-4 h-4' />
-                    <span>新增代號</span>
+                    <span>新增</span>
+                  </button>
+                  {/* 批量新增 */}
+                  <button
+                    onClick={handleBulkAddStudioTags}
+                    className='px-3 py-2 bg-green-500/10 hover:bg-green-500/30 border-2 border-green-300 hover:border-green-500 rounded-full text-sm text-green-700 dark:bg-green-500/15 dark:hover:bg-green-500/25 dark:border-green-400 dark:text-green-300 transition-colors duration-200 flex items-center gap-1'
+                    title='批量新增（一次貼一串）'
+                  >
+                    <Plus className='w-4 h-4' />
+                    <span>批量新增</span>
                   </button>
                 </div>
               </section>
@@ -813,10 +918,18 @@ function SearchPageClient() {
                   <button
                     onClick={handleAddKeyword}
                     className='px-3 py-2 bg-gray-500/10 hover:bg-blue-500/20 border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-full text-sm text-gray-500 hover:text-blue-700 dark:bg-gray-700/30 dark:hover:bg-blue-500/15 dark:border-gray-600 dark:hover:border-blue-400 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200 flex items-center gap-1'
-                    title='新增關鍵字'
+                    title='新增關鍵字（單筆）'
                   >
                     <Plus className='w-4 h-4' />
-                    <span>新增關鍵字</span>
+                    <span>新增</span>
+                  </button>
+                  <button
+                    onClick={handleBulkAddKeywords}
+                    className='px-3 py-2 bg-blue-500/10 hover:bg-blue-500/30 border-2 border-blue-300 hover:border-blue-500 rounded-full text-sm text-blue-700 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:border-blue-400 dark:text-blue-300 transition-colors duration-200 flex items-center gap-1'
+                    title='批量新增（一次貼一串）'
+                  >
+                    <Plus className='w-4 h-4' />
+                    <span>批量新增</span>
                   </button>
                 </div>
               </section>
