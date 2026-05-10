@@ -6,7 +6,7 @@ import Artplayer from 'artplayer';
 import Hls from 'hls.js';
 import { Heart } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   deleteFavorite,
@@ -181,10 +181,16 @@ function PlayPageClient() {
       .then((data) => {
         if (cancelled) return;
         const list: SearchResult[] = data?.results || [];
-        // 聚合同一影片（標題+年份）只留一筆，再排除當前正在播的
+        // 過濾：採集站 fuzzy match 標籤/描述，會回傳跟搜尋詞無關的片
+        // 只保留標題真的含搜尋詞（case-insensitive）的結果
+        const qLower = q.toLowerCase();
+        const titleMatched = list.filter((r) =>
+          (r.title || '').toLowerCase().includes(qLower)
+        );
+        // 聚合同一影片（標題+年份）只留一筆
         const seen = new Set<string>();
         const deduped: SearchResult[] = [];
-        for (const r of list) {
+        for (const r of titleMatched) {
           const key = `${r.title.replaceAll(' ', '')}-${r.year || 'unknown'}`;
           if (seen.has(key)) continue;
           seen.add(key);
@@ -199,6 +205,26 @@ function PlayPageClient() {
       cancelled = true;
     };
   }, [searchParams]);
+
+  // 「其他搜尋結果」分頁
+  const [relatedPage, setRelatedPage] = useState(1);
+  const RELATED_PAGE_SIZE = 30; // 5 排 × 6 行
+  useEffect(() => {
+    setRelatedPage(1);
+  }, [relatedResults]);
+  const relatedPaged = useMemo(() => {
+    const tp = Math.max(
+      1,
+      Math.ceil(relatedResults.length / RELATED_PAGE_SIZE)
+    );
+    const safePage = Math.min(Math.max(1, relatedPage), tp);
+    const start = (safePage - 1) * RELATED_PAGE_SIZE;
+    return {
+      items: relatedResults.slice(start, start + RELATED_PAGE_SIZE),
+      page: safePage,
+      totalPages: tp,
+    };
+  }, [relatedResults, relatedPage]);
 
   // 换源加载状态
   const [isVideoLoading, setIsVideoLoading] = useState(true);
@@ -2007,11 +2033,17 @@ function PlayPageClient() {
                 其他搜尋結果
                 <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
                   「{searchParams.get('stitle')}」共 {relatedResults.length} 筆
+                  {relatedPaged.totalPages > 1 && (
+                    <span>
+                      {' '}
+                      · 第 {relatedPaged.page}/{relatedPaged.totalPages} 頁
+                    </span>
+                  )}
                 </span>
               </h3>
             </div>
-            <div className='flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x'>
-              {relatedResults.map((r) => {
+            <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'>
+              {relatedPaged.items.map((r) => {
                 const isCurrent =
                   r.source === currentSource && r.id === currentId;
                 return (
@@ -2027,7 +2059,7 @@ function PlayPageClient() {
                       }${q ? `&stitle=${encodeURIComponent(q)}` : ''}`;
                       router.push(url);
                     }}
-                    className={`shrink-0 w-28 sm:w-32 snap-start rounded-lg overflow-hidden text-left bg-white dark:bg-gray-800 border transition-all ${
+                    className={`rounded-lg overflow-hidden text-left bg-white dark:bg-gray-800 border transition-all ${
                       isCurrent
                         ? 'border-green-500 ring-2 ring-green-400 cursor-default'
                         : 'border-gray-200 dark:border-gray-700 hover:border-green-400 hover:shadow-md'
@@ -2066,6 +2098,34 @@ function PlayPageClient() {
                 );
               })}
             </div>
+            {/* 分頁 */}
+            {relatedPaged.totalPages > 1 && (
+              <div className='mt-4 flex items-center justify-center gap-2'>
+                <button
+                  onClick={() =>
+                    setRelatedPage(Math.max(1, relatedPaged.page - 1))
+                  }
+                  disabled={relatedPaged.page === 1}
+                  className='px-3 py-1.5 rounded-md text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors'
+                >
+                  上一頁
+                </button>
+                <span className='text-sm text-gray-500 dark:text-gray-400 px-2'>
+                  {relatedPaged.page} / {relatedPaged.totalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setRelatedPage(
+                      Math.min(relatedPaged.totalPages, relatedPaged.page + 1)
+                    )
+                  }
+                  disabled={relatedPaged.page === relatedPaged.totalPages}
+                  className='px-3 py-1.5 rounded-md text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors'
+                >
+                  下一頁
+                </button>
+              </div>
+            )}
           </div>
         )}
 
