@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any */
 'use client';
 
-import { Search, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 
@@ -18,32 +18,59 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 // 阿公專區常見片商代號（公開的工業識別碼，FANZA / DMM 都列出來）
-// 點一下直接以代號搜尋；命中率比完整番號高
-const STUDIO_TAGS: { code: string; studio: string; style: string }[] = [
-  { code: 'SSIS', studio: 'S1 No.1 Style', style: '大廠' },
-  { code: 'IPX', studio: 'IdeaPocket', style: '偶像系' },
-  { code: 'IPZZ', studio: 'IdeaPocket', style: '偶像系' },
-  { code: 'JUL', studio: 'Madonna', style: '人妻' },
-  { code: 'JUQ', studio: 'Madonna', style: '人妻' },
-  { code: 'PRED', studio: 'Premium', style: '中堅' },
-  { code: 'MIDV', studio: 'MOODYZ', style: '老牌' },
-  { code: 'MIAA', studio: 'MOODYZ', style: '老牌' },
-  { code: 'CAWD', studio: 'kawaii*', style: '清純' },
-  { code: 'WAAA', studio: 'Wanz', style: '大眾' },
-  { code: 'HMN', studio: 'Honnaka', style: '中堅' },
-  { code: 'FSDSS', studio: 'Faleno', style: '新興' },
-  { code: 'DASS', studio: 'Das!', style: '中堅' },
-  { code: 'EBOD', studio: 'E-BODY', style: '巨乳' },
-  { code: 'ROE', studio: 'Madonna', style: '人妻' },
-  { code: 'ATID', studio: 'Attackers', style: '劇情' },
-  { code: 'SHKD', studio: 'Attackers', style: '劇情' },
-  { code: 'GVH', studio: 'Glory Quest', style: '中堅' },
-  { code: 'SDAB', studio: 'SOD Create', style: '老牌' },
+// 預設清單，可在 UI 上新增 / 刪除（存 localStorage）
+type StudioTag = { code: string; style: string };
+const STUDIO_TAGS_DEFAULT: StudioTag[] = [
+  { code: 'SSIS', style: '大廠' },
+  { code: 'IPX', style: '偶像系' },
+  { code: 'IPZZ', style: '偶像系' },
+  { code: 'JUL', style: '人妻' },
+  { code: 'JUQ', style: '人妻' },
+  { code: 'PRED', style: '中堅' },
+  { code: 'MIDV', style: '老牌' },
+  { code: 'MIAA', style: '老牌' },
+  { code: 'CAWD', style: '清純' },
+  { code: 'WAAA', style: '大眾' },
+  { code: 'HMN', style: '中堅' },
+  { code: 'FSDSS', style: '新興' },
+  { code: 'DASS', style: '中堅' },
+  { code: 'EBOD', style: '巨乳' },
+  { code: 'ROE', style: '人妻' },
+  { code: 'ATID', style: '劇情' },
+  { code: 'SHKD', style: '劇情' },
+  { code: 'GVH', style: '中堅' },
+  { code: 'SDAB', style: '老牌' },
 ];
+const STUDIO_TAGS_KEY = 'moontv_studio_tags_v1';
+
+const loadStudioTags = (): StudioTag[] => {
+  if (typeof window === 'undefined') return STUDIO_TAGS_DEFAULT;
+  try {
+    const raw = localStorage.getItem(STUDIO_TAGS_KEY);
+    if (!raw) return STUDIO_TAGS_DEFAULT;
+    const parsed = JSON.parse(raw) as StudioTag[];
+    if (!Array.isArray(parsed)) return STUDIO_TAGS_DEFAULT;
+    return parsed;
+  } catch {
+    return STUDIO_TAGS_DEFAULT;
+  }
+};
+
+const saveStudioTags = (tags: StudioTag[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STUDIO_TAGS_KEY, JSON.stringify(tags));
+  } catch {
+    // ignore quota / privacy mode
+  }
+};
 
 function SearchPageClient() {
   // 搜索历史
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  // 片商代號標籤（可由阿公自行新增 / 刪除）
+  const [studioTags, setStudioTags] =
+    useState<StudioTag[]>(STUDIO_TAGS_DEFAULT);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -120,6 +147,9 @@ function SearchPageClient() {
     // 初始加载搜索历史
     getSearchHistory().then(setSearchHistory);
 
+    // 初始加载片商代號（從 localStorage 讀；首次無資料時用預設）
+    setStudioTags(loadStudioTags());
+
     // 监听搜索历史更新事件
     const unsubscribe = subscribeToDataUpdates(
       'searchHistoryUpdated',
@@ -185,6 +215,37 @@ function SearchPageClient() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 阿公新增一個片商代號
+  const handleAddStudioTag = () => {
+    const codeInput = window.prompt('輸入片商代號（如 OFJE）');
+    if (!codeInput) return;
+    const code = codeInput.trim().toUpperCase();
+    if (!/^[A-Z]{2,8}$/.test(code)) {
+      window.alert('代號只能是 2-8 個英文字母');
+      return;
+    }
+    if (studioTags.some((t) => t.code === code)) {
+      window.alert(`「${code}」已經在標籤裡了`);
+      return;
+    }
+    const styleInput = window.prompt(
+      `輸入「${code}」的風格說明（可空、最多 6 字，例：偶像 / 人妻 / 巨乳）`,
+      ''
+    );
+    const style = (styleInput || '').trim().slice(0, 6) || '自訂';
+    const next = [...studioTags, { code, style }];
+    setStudioTags(next);
+    saveStudioTags(next);
+  };
+
+  // 刪除一個片商代號
+  const handleDeleteStudioTag = (code: string) => {
+    if (!window.confirm(`確定要移除「${code}」標籤嗎？`)) return;
+    const next = studioTags.filter((t) => t.code !== code);
+    setStudioTags(next);
+    saveStudioTags(next);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -315,30 +376,50 @@ function SearchPageClient() {
                 <h2 className='mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200'>
                   推薦片商代號
                   <span className='ml-3 text-sm font-normal text-gray-500 dark:text-gray-400'>
-                    點一下直接搜
+                    點一下直接搜 · 滑過按 × 可移除
                   </span>
                 </h2>
                 <div className='flex flex-wrap gap-2'>
-                  {STUDIO_TAGS.map((tag) => (
-                    <button
-                      key={tag.code}
-                      onClick={() => {
-                        setSearchQuery(tag.code);
-                        router.push(
-                          `/search?q=${encodeURIComponent(tag.code)}`
-                        );
-                      }}
-                      className='group px-3 py-2 bg-green-500/10 hover:bg-green-500/20 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-green-500/15 dark:hover:bg-green-500/25 dark:text-gray-200 flex items-center gap-2'
-                      title={`${tag.studio} · ${tag.style}`}
-                    >
-                      <span className='font-semibold text-green-700 dark:text-green-400'>
-                        {tag.code}
-                      </span>
-                      <span className='text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'>
-                        {tag.style}
-                      </span>
-                    </button>
+                  {studioTags.map((tag) => (
+                    <div key={tag.code} className='relative group'>
+                      <button
+                        onClick={() => {
+                          setSearchQuery(tag.code);
+                          router.push(
+                            `/search?q=${encodeURIComponent(tag.code)}`
+                          );
+                        }}
+                        className='px-3 py-2 bg-green-500/10 hover:bg-green-500/20 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-green-500/15 dark:hover:bg-green-500/25 dark:text-gray-200 flex items-center gap-2'
+                      >
+                        <span className='font-semibold text-green-700 dark:text-green-400'>
+                          {tag.code}
+                        </span>
+                        <span className='text-xs text-gray-500 dark:text-gray-400'>
+                          {tag.style}
+                        </span>
+                      </button>
+                      <button
+                        aria-label={`刪除 ${tag.code}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleDeleteStudioTag(tag.code);
+                        }}
+                        className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
+                      >
+                        <X className='w-3 h-3' />
+                      </button>
+                    </div>
                   ))}
+                  {/* 新增代號 */}
+                  <button
+                    onClick={handleAddStudioTag}
+                    className='px-3 py-2 bg-gray-500/10 hover:bg-green-500/20 border-2 border-dashed border-gray-300 hover:border-green-500 rounded-full text-sm text-gray-500 hover:text-green-700 dark:bg-gray-700/30 dark:hover:bg-green-500/15 dark:border-gray-600 dark:hover:border-green-400 dark:text-gray-400 dark:hover:text-green-400 transition-colors duration-200 flex items-center gap-1'
+                    title='新增片商代號'
+                  >
+                    <Plus className='w-4 h-4' />
+                    <span>新增代號</span>
+                  </button>
                 </div>
               </section>
 
