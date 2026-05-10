@@ -34,7 +34,7 @@ const saveFavorites = (set: Set<string>) => {
 // 一筆 = [name, videoCount]
 type PoolEntry = [string, number];
 
-const PAGE_SIZE = 100; // 每頁 100 位
+const PAGE_SIZE = 200; // 每頁 200 位（5129 / 200 ≈ 26 頁）
 
 function ActressesPageInner() {
   const router = useRouter();
