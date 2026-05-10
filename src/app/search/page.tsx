@@ -513,6 +513,61 @@ function SearchPageClient() {
     saveActresses(next);
   };
 
+  // 批量新增演員（支援逗號 / 頓號 / 換行 / 空白分隔）
+  const handleBulkAddActresses = () => {
+    const input = window.prompt(
+      [
+        '批量新增演員 — 可一次貼一串',
+        '分隔可用：逗號 , 頓號 、 換行或空格',
+        '',
+        '範例：',
+        '三上悠亞,橋本有菜,河北彩花',
+        '或',
+        '三上悠亞、橋本有菜、河北彩花',
+      ].join('\n')
+    );
+    if (!input) return;
+
+    // 拆分：逗號 / 頓號 / 換行 / 全形逗號 / 多空白
+    const candidates = input
+      .split(/[,，、\n\r\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (candidates.length === 0) return;
+
+    const existing = new Set(actresses);
+    const added: string[] = [];
+    const skipped: string[] = [];
+    const tooLong: string[] = [];
+
+    for (const name of candidates) {
+      if (name.length > 12) {
+        tooLong.push(name);
+        continue;
+      }
+      if (existing.has(name) || added.includes(name)) {
+        skipped.push(name);
+        continue;
+      }
+      added.push(name);
+    }
+
+    if (added.length > 0) {
+      const next = [...actresses, ...added];
+      setActresses(next);
+      saveActresses(next);
+    }
+
+    // 結果回報
+    const lines = [`✅ 新增 ${added.length} 個`];
+    if (skipped.length > 0)
+      lines.push(`⚠ 重複略過 ${skipped.length} 個：${skipped.join('、')}`);
+    if (tooLong.length > 0)
+      lines.push(`❌ 太長略過 ${tooLong.length} 個：${tooLong.join('、')}`);
+    window.alert(lines.join('\n'));
+  };
+
   // 還原預設演員清單
   const handleResetActresses = () => {
     if (!window.confirm('確定要還原預設演員清單嗎？\n（你自訂的會被覆蓋）'))
@@ -818,14 +873,24 @@ function SearchPageClient() {
                       </div>
                     </div>
                   ))}
-                  <button
-                    onClick={handleAddActress}
-                    className='px-3 py-2 bg-gray-500/10 hover:bg-pink-500/20 border-2 border-dashed border-gray-300 hover:border-pink-500 rounded-full text-sm text-gray-500 hover:text-pink-700 dark:bg-gray-700/30 dark:hover:bg-pink-500/15 dark:border-gray-600 dark:hover:border-pink-400 dark:text-gray-400 dark:hover:text-pink-400 transition-colors duration-200 inline-flex items-center gap-1'
-                    title='新增演員'
-                  >
-                    <Plus className='w-4 h-4' />
-                    <span>新增演員</span>
-                  </button>
+                  <div className='flex flex-wrap gap-2'>
+                    <button
+                      onClick={handleAddActress}
+                      className='px-3 py-2 bg-gray-500/10 hover:bg-pink-500/20 border-2 border-dashed border-gray-300 hover:border-pink-500 rounded-full text-sm text-gray-500 hover:text-pink-700 dark:bg-gray-700/30 dark:hover:bg-pink-500/15 dark:border-gray-600 dark:hover:border-pink-400 dark:text-gray-400 dark:hover:text-pink-400 transition-colors duration-200 inline-flex items-center gap-1'
+                      title='新增演員（單一）'
+                    >
+                      <Plus className='w-4 h-4' />
+                      <span>新增</span>
+                    </button>
+                    <button
+                      onClick={handleBulkAddActresses}
+                      className='px-3 py-2 bg-pink-500/10 hover:bg-pink-500/30 border-2 border-pink-300 hover:border-pink-500 rounded-full text-sm text-pink-700 dark:bg-pink-500/15 dark:hover:bg-pink-500/25 dark:border-pink-400 dark:text-pink-300 transition-colors duration-200 inline-flex items-center gap-1'
+                      title='批量新增（一次貼一串）'
+                    >
+                      <Plus className='w-4 h-4' />
+                      <span>批量新增</span>
+                    </button>
+                  </div>
                 </div>
               </section>
 
