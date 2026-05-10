@@ -66,15 +66,28 @@ function ActressesPageInner() {
   }, [filter]);
 
   // 過濾 + 分頁
-  const { displayed, totalMatched, totalPages } = useMemo(() => {
+  const { displayed, totalMatched, totalPages, currentPage } = useMemo(() => {
     const f = filter.trim();
-    const matched = f ? pool.filter(([name]) => name.includes(f)) : pool;
+    let matched: PoolEntry[] = [];
+    try {
+      matched = f
+        ? pool.filter((entry) => {
+            const name = entry?.[0];
+            return typeof name === 'string' && name.includes(f);
+          })
+        : pool;
+    } catch {
+      matched = [];
+    }
     const tp = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
-    const start = (page - 1) * PAGE_SIZE;
+    // page 可能因 filter 變化暫時大於 totalPages，clamp 一下
+    const safePage = Math.min(Math.max(1, page), tp);
+    const start = (safePage - 1) * PAGE_SIZE;
     return {
       displayed: matched.slice(start, start + PAGE_SIZE),
       totalMatched: matched.length,
       totalPages: tp,
+      currentPage: safePage,
     };
   }, [pool, filter, page]);
 
@@ -84,14 +97,14 @@ function ActressesPageInner() {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
     const result: (number | 'gap')[] = [1];
-    if (page > 3) result.push('gap');
-    const start = Math.max(2, page - 1);
-    const end = Math.min(totalPages - 1, page + 1);
+    if (currentPage > 3) result.push('gap');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
     for (let i = start; i <= end; i++) result.push(i);
-    if (page < totalPages - 2) result.push('gap');
+    if (currentPage < totalPages - 2) result.push('gap');
     result.push(totalPages);
     return result;
-  }, [page, totalPages]);
+  }, [currentPage, totalPages]);
 
   // 收藏 / 取消收藏
   const toggleFavorite = (name: string) => {
@@ -155,13 +168,13 @@ function ActressesPageInner() {
             '載入中...'
           ) : filter ? (
             <span>
-              符合「{filter}」<strong>{totalMatched}</strong> 位 · 第 {page}/
-              {totalPages} 頁
+              符合「{filter}」<strong>{totalMatched}</strong> 位 · 第{' '}
+              {currentPage}/{totalPages} 頁
             </span>
           ) : (
             <span>
-              共 {pool.length.toLocaleString()} 位 · 第 {page}/{totalPages} 頁 ·
-              按熱門度排序
+              共 {pool.length.toLocaleString()} 位 · 第 {currentPage}/
+              {totalPages} 頁 · 按熱門度排序
             </span>
           )}
         </div>
@@ -221,10 +234,10 @@ function ActressesPageInner() {
           <div className='mt-8 flex items-center justify-center gap-1 flex-wrap'>
             <button
               onClick={() => {
-                setPage(Math.max(1, page - 1));
+                setPage(Math.max(1, currentPage - 1));
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              disabled={page === 1}
+              disabled={currentPage === 1}
               className='px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors'
             >
               上一頁
@@ -242,7 +255,7 @@ function ActressesPageInner() {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className={`min-w-[40px] px-3 py-2 rounded-lg text-sm transition-colors ${
-                    p === page
+                    p === currentPage
                       ? 'bg-pink-500 text-white font-bold'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'
                   }`}
@@ -253,10 +266,10 @@ function ActressesPageInner() {
             )}
             <button
               onClick={() => {
-                setPage(Math.min(totalPages, page + 1));
+                setPage(Math.min(totalPages, currentPage + 1));
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              disabled={page === totalPages}
+              disabled={currentPage === totalPages}
               className='px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors'
             >
               下一頁
