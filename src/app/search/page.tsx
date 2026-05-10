@@ -91,6 +91,26 @@ const STUDIO_TAGS_DEFAULT: StudioTag[] = [
 ];
 const STUDIO_TAGS_KEY = 'moontv_studio_tags_v1';
 
+// 常用關鍵字（中文 / 任意字串）—— 跟片商代號分開存，避免格式混淆
+const KEYWORDS_DEFAULT: string[] = [
+  '人妻',
+  '熟女',
+  '巨乳',
+  '美乳',
+  '清純',
+  '偶像',
+  'OL',
+  '制服',
+  '學生',
+  '護士',
+  '教師',
+  '素人',
+  '黑絲',
+  '中出',
+  '痴女',
+];
+const KEYWORDS_KEY = 'moontv_keywords_v1';
+
 const loadStudioTags = (): StudioTag[] => {
   if (typeof window === 'undefined') return STUDIO_TAGS_DEFAULT;
   try {
@@ -113,12 +133,36 @@ const saveStudioTags = (tags: StudioTag[]) => {
   }
 };
 
+const loadKeywords = (): string[] => {
+  if (typeof window === 'undefined') return KEYWORDS_DEFAULT;
+  try {
+    const raw = localStorage.getItem(KEYWORDS_KEY);
+    if (!raw) return KEYWORDS_DEFAULT;
+    const parsed = JSON.parse(raw) as string[];
+    if (!Array.isArray(parsed)) return KEYWORDS_DEFAULT;
+    return parsed;
+  } catch {
+    return KEYWORDS_DEFAULT;
+  }
+};
+
+const saveKeywords = (keywords: string[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(KEYWORDS_KEY, JSON.stringify(keywords));
+  } catch {
+    // ignore
+  }
+};
+
 function SearchPageClient() {
   // 搜索历史
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   // 片商代號標籤（可由阿公自行新增 / 刪除）
   const [studioTags, setStudioTags] =
     useState<StudioTag[]>(STUDIO_TAGS_DEFAULT);
+  // 常用關鍵字（中文 / 任意字串）
+  const [keywords, setKeywords] = useState<string[]>(KEYWORDS_DEFAULT);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -208,6 +252,18 @@ function SearchPageClient() {
       saveStudioTags(merged);
     } else {
       setStudioTags(stored);
+    }
+
+    // 同樣方式載入關鍵字
+    const storedKeywords = loadKeywords();
+    const storedKwSet = new Set(storedKeywords);
+    const missingKeywords = KEYWORDS_DEFAULT.filter((k) => !storedKwSet.has(k));
+    if (missingKeywords.length > 0) {
+      const mergedKeywords = [...storedKeywords, ...missingKeywords];
+      setKeywords(mergedKeywords);
+      saveKeywords(mergedKeywords);
+    } else {
+      setKeywords(storedKeywords);
     }
 
     // 监听搜索历史更新事件
@@ -312,12 +368,49 @@ function SearchPageClient() {
   const handleResetStudioTags = () => {
     if (
       !window.confirm(
-        `確定要還原預設清單嗎？\n（你目前自訂的代號會被覆蓋，預設 19 個會回來）`
+        `確定要還原預設清單嗎？\n（你目前自訂的代號會被覆蓋，預設清單會回來）`
       )
     )
       return;
     setStudioTags(STUDIO_TAGS_DEFAULT);
     saveStudioTags(STUDIO_TAGS_DEFAULT);
+  };
+
+  // 新增關鍵字
+  const handleAddKeyword = () => {
+    const input = window.prompt(
+      '輸入關鍵字（中文 / 英文皆可，例：三上悠亞 / 巨乳 / OL）'
+    );
+    if (!input) return;
+    const kw = input.trim();
+    if (!kw) return;
+    if (kw.length > 20) {
+      window.alert('關鍵字最多 20 個字');
+      return;
+    }
+    if (keywords.includes(kw)) {
+      window.alert(`「${kw}」已經在關鍵字裡了`);
+      return;
+    }
+    const next = [...keywords, kw];
+    setKeywords(next);
+    saveKeywords(next);
+  };
+
+  // 刪除關鍵字
+  const handleDeleteKeyword = (kw: string) => {
+    if (!window.confirm(`確定要移除「${kw}」嗎？`)) return;
+    const next = keywords.filter((k) => k !== kw);
+    setKeywords(next);
+    saveKeywords(next);
+  };
+
+  // 還原預設關鍵字
+  const handleResetKeywords = () => {
+    if (!window.confirm('確定要還原預設關鍵字嗎？\n（你自訂的關鍵字會被覆蓋）'))
+      return;
+    setKeywords(KEYWORDS_DEFAULT);
+    saveKeywords(KEYWORDS_DEFAULT);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -497,6 +590,58 @@ function SearchPageClient() {
                   >
                     <Plus className='w-4 h-4' />
                     <span>新增代號</span>
+                  </button>
+                </div>
+              </section>
+
+              {/* 常用關鍵字（中文 / 任意字串，跟代號分開） */}
+              <section className='mb-8'>
+                <h2 className='mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200'>
+                  常用關鍵字
+                  <span className='ml-3 text-sm font-normal text-gray-500 dark:text-gray-400'>
+                    點一下直接搜 · 滑過按 × 可移除
+                  </span>
+                  <button
+                    onClick={handleResetKeywords}
+                    className='ml-3 text-sm font-normal text-gray-500 hover:text-green-600 transition-colors dark:text-gray-400 dark:hover:text-green-400'
+                  >
+                    還原預設
+                  </button>
+                </h2>
+                <div className='flex flex-wrap gap-2'>
+                  {keywords.map((kw) => (
+                    <div key={kw} className='relative group'>
+                      <button
+                        onClick={() => {
+                          setSearchQuery(kw);
+                          router.push(`/search?q=${encodeURIComponent(kw)}`);
+                        }}
+                        className='px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:text-gray-200'
+                      >
+                        <span className='font-semibold text-blue-700 dark:text-blue-400'>
+                          {kw}
+                        </span>
+                      </button>
+                      <button
+                        aria-label={`刪除 ${kw}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleDeleteKeyword(kw);
+                        }}
+                        className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
+                      >
+                        <X className='w-3 h-3' />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={handleAddKeyword}
+                    className='px-3 py-2 bg-gray-500/10 hover:bg-blue-500/20 border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-full text-sm text-gray-500 hover:text-blue-700 dark:bg-gray-700/30 dark:hover:bg-blue-500/15 dark:border-gray-600 dark:hover:border-blue-400 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200 flex items-center gap-1'
+                    title='新增關鍵字'
+                  >
+                    <Plus className='w-4 h-4' />
+                    <span>新增關鍵字</span>
                   </button>
                 </div>
               </section>
