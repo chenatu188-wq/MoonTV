@@ -34,14 +34,14 @@ const saveFavorites = (set: Set<string>) => {
 // 一筆 = [name, videoCount]
 type PoolEntry = [string, number];
 
-const DEFAULT_LIMIT = 200; // filter 空時顯示前 200 筆（按 videoCount 排序）
+const PAGE_SIZE = 100; // 每頁 100 位
 
 function ActressesPageInner() {
   const router = useRouter();
   const [pool, setPool] = useState<PoolEntry[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState('');
-  const [showAll, setShowAll] = useState(false);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   // 載入 pool + 個人收藏
@@ -60,18 +60,38 @@ function ActressesPageInner() {
       });
   }, []);
 
-  // 過濾 + 限制顯示數量
-  const { displayed, totalMatched } = useMemo(() => {
+  // filter 改變時跳回第 1 頁
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  // 過濾 + 分頁
+  const { displayed, totalMatched, totalPages } = useMemo(() => {
     const f = filter.trim();
     const matched = f ? pool.filter(([name]) => name.includes(f)) : pool;
-    if (showAll || f) {
-      return { displayed: matched, totalMatched: matched.length };
-    }
+    const tp = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+    const start = (page - 1) * PAGE_SIZE;
     return {
-      displayed: matched.slice(0, DEFAULT_LIMIT),
+      displayed: matched.slice(start, start + PAGE_SIZE),
       totalMatched: matched.length,
+      totalPages: tp,
     };
-  }, [pool, filter, showAll]);
+  }, [pool, filter, page]);
+
+  // 產生頁碼（最多顯示 7 個：1 ... currentPage-1 currentPage currentPage+1 ... last）
+  const pageNumbers = useMemo<(number | 'gap')[]>(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const result: (number | 'gap')[] = [1];
+    if (page > 3) result.push('gap');
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) result.push(i);
+    if (page < totalPages - 2) result.push('gap');
+    result.push(totalPages);
+    return result;
+  }, [page, totalPages]);
 
   // 收藏 / 取消收藏
   const toggleFavorite = (name: string) => {
@@ -130,29 +150,19 @@ function ActressesPageInner() {
         </div>
 
         {/* 統計列 */}
-        <div className='mb-4 flex items-center justify-between text-sm'>
-          <div className='text-gray-500 dark:text-gray-400'>
-            {loading ? (
-              '載入中...'
-            ) : filter ? (
-              <span>
-                符合「{filter}」<strong>{totalMatched}</strong> 位
-              </span>
-            ) : showAll ? (
-              <span>顯示全部 {pool.length.toLocaleString()} 位</span>
-            ) : (
-              <span>
-                顯示前 {DEFAULT_LIMIT} 位（共 {pool.length.toLocaleString()}）
-              </span>
-            )}
-          </div>
-          {!filter && !showAll && pool.length > DEFAULT_LIMIT && (
-            <button
-              onClick={() => setShowAll(true)}
-              className='text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 font-medium'
-            >
-              顯示全部 →
-            </button>
+        <div className='mb-4 text-sm text-gray-500 dark:text-gray-400'>
+          {loading ? (
+            '載入中...'
+          ) : filter ? (
+            <span>
+              符合「{filter}」<strong>{totalMatched}</strong> 位 · 第 {page}/
+              {totalPages} 頁
+            </span>
+          ) : (
+            <span>
+              共 {pool.length.toLocaleString()} 位 · 第 {page}/{totalPages} 頁 ·
+              按熱門度排序
+            </span>
           )}
         </div>
 
@@ -206,14 +216,50 @@ function ActressesPageInner() {
           </div>
         )}
 
-        {/* 顯示全部後可以收回 */}
-        {!filter && showAll && (
-          <div className='mt-6 text-center'>
+        {/* 分頁控制 */}
+        {!loading && totalPages > 1 && (
+          <div className='mt-8 flex items-center justify-center gap-1 flex-wrap'>
             <button
-              onClick={() => setShowAll(false)}
-              className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm'
+              onClick={() => {
+                setPage(Math.max(1, page - 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={page === 1}
+              className='px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors'
             >
-              收回（只顯示前 {DEFAULT_LIMIT}）
+              上一頁
+            </button>
+            {pageNumbers.map((p, idx) =>
+              p === 'gap' ? (
+                <span key={`gap-${idx}`} className='px-2 text-gray-400'>
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setPage(p);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`min-w-[40px] px-3 py-2 rounded-lg text-sm transition-colors ${
+                    p === page
+                      ? 'bg-pink-500 text-white font-bold'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => {
+                setPage(Math.min(totalPages, page + 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={page === totalPages}
+              className='px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition-colors'
+            >
+              下一頁
             </button>
           </div>
         )}
