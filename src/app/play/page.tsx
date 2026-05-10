@@ -2057,7 +2057,9 @@ function PlayPageClient() {
                       }&title=${encodeURIComponent(r.title)}${
                         r.year ? `&year=${r.year}` : ''
                       }${q ? `&stitle=${encodeURIComponent(q)}` : ''}`;
-                      router.push(url);
+                      // 用 full page reload 確保播放器重建（router.push 不 unmount，
+                      // 舊的 currentSource/Id useState 不會更新、影片不會重載）
+                      window.location.href = url;
                     }}
                     className={`rounded-lg overflow-hidden text-left bg-white dark:bg-gray-800 border transition-all ${
                       isCurrent
