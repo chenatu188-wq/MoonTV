@@ -168,6 +168,38 @@ function PlayPageClient() {
   const [isEpisodeSelectorCollapsed, setIsEpisodeSelectorCollapsed] =
     useState(false);
 
+  // 「其他搜尋結果」列：顯示同一搜尋詞的其他影片，可直接切換不用回搜尋頁
+  const [relatedResults, setRelatedResults] = useState<SearchResult[]>([]);
+
+  // 用 searchTitle 拉同搜尋詞的其他結果（一次性、結果不變）
+  useEffect(() => {
+    const q = (searchParams.get('stitle') || '').trim();
+    if (!q) return;
+    let cancelled = false;
+    fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const list: SearchResult[] = data?.results || [];
+        // 聚合同一影片（標題+年份）只留一筆，再排除當前正在播的
+        const seen = new Set<string>();
+        const deduped: SearchResult[] = [];
+        for (const r of list) {
+          const key = `${r.title.replaceAll(' ', '')}-${r.year || 'unknown'}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(r);
+        }
+        setRelatedResults(deduped);
+      })
+      .catch(() => {
+        // ignore — 拉不到就不顯示這條
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
+
   // 换源加载状态
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [videoLoadingStage, setVideoLoadingStage] = useState<
@@ -1966,6 +1998,76 @@ function PlayPageClient() {
             </div>
           </div>
         </div>
+
+        {/* 其他搜尋結果 — 同一搜尋詞的其他影片，免回搜尋頁 */}
+        {relatedResults.length > 1 && (
+          <div className='mt-6 mb-2'>
+            <div className='flex items-center justify-between mb-3'>
+              <h3 className='text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200'>
+                其他搜尋結果
+                <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
+                  「{searchParams.get('stitle')}」共 {relatedResults.length} 筆
+                </span>
+              </h3>
+            </div>
+            <div className='flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x'>
+              {relatedResults.map((r) => {
+                const isCurrent =
+                  r.source === currentSource && r.id === currentId;
+                return (
+                  <button
+                    key={`${r.source}-${r.id}`}
+                    onClick={() => {
+                      if (isCurrent) return;
+                      const q = searchParams.get('stitle') || '';
+                      const url = `/play?source=${r.source}&id=${
+                        r.id
+                      }&title=${encodeURIComponent(r.title)}${
+                        r.year ? `&year=${r.year}` : ''
+                      }${q ? `&stitle=${encodeURIComponent(q)}` : ''}`;
+                      router.push(url);
+                    }}
+                    className={`shrink-0 w-28 sm:w-32 snap-start rounded-lg overflow-hidden text-left bg-white dark:bg-gray-800 border transition-all ${
+                      isCurrent
+                        ? 'border-green-500 ring-2 ring-green-400 cursor-default'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-green-400 hover:shadow-md'
+                    }`}
+                  >
+                    <div className='relative aspect-[2/3] bg-gray-100 dark:bg-gray-700'>
+                      {r.poster ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={r.poster}
+                          alt={r.title}
+                          loading='lazy'
+                          className='w-full h-full object-cover'
+                        />
+                      ) : null}
+                      {isCurrent && (
+                        <div className='absolute top-1 left-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded'>
+                          播放中
+                        </div>
+                      )}
+                      {r.episodes.length > 1 && (
+                        <div className='absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded'>
+                          {r.episodes.length} 集
+                        </div>
+                      )}
+                    </div>
+                    <div className='p-2'>
+                      <div className='text-xs font-medium text-gray-900 dark:text-gray-100 line-clamp-2 leading-tight'>
+                        {r.title}
+                      </div>
+                      <div className='mt-1 text-[10px] text-gray-500 dark:text-gray-400 truncate'>
+                        {r.source_name} {r.year ? `· ${r.year}` : ''}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 详情展示 */}
         <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
