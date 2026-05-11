@@ -859,65 +859,67 @@ function SearchPageClient() {
                   </button>
                 </h2>
                 <div className='flex flex-wrap gap-2'>
-                  {studioTags.map((tag) => {
-                    const isFav = studioFavs.has(tag.code);
-                    return (
-                      <div key={tag.code} className='relative group'>
-                        <button
-                          onClick={() => {
-                            setSearchQuery(tag.code);
-                            router.push(
-                              `/search?q=${encodeURIComponent(tag.code)}`
-                            );
-                          }}
-                          className={`px-3 py-2 rounded-full text-sm transition-colors duration-200 flex items-center gap-2 ${
-                            isFav
-                              ? 'bg-green-500/25 ring-1 ring-green-400 dark:bg-green-500/30'
-                              : 'bg-green-500/10 hover:bg-green-500/20 dark:bg-green-500/15 dark:hover:bg-green-500/25'
-                          } text-gray-700 dark:text-gray-200`}
-                        >
-                          <span className='font-semibold text-green-700 dark:text-green-400'>
-                            {tag.code}
-                          </span>
-                          <span className='text-xs text-gray-500 dark:text-gray-400'>
-                            {tag.style}
-                          </span>
-                          <span
-                            role='button'
-                            aria-label={
+                  {[...studioTags]
+                    .sort((a, b) => a.code.localeCompare(b.code))
+                    .map((tag) => {
+                      const isFav = studioFavs.has(tag.code);
+                      return (
+                        <div key={tag.code} className='relative group'>
+                          <button
+                            onClick={() => {
+                              setSearchQuery(tag.code);
+                              router.push(
+                                `/search?q=${encodeURIComponent(tag.code)}`
+                              );
+                            }}
+                            className={`px-3 py-2 rounded-full text-sm transition-colors duration-200 flex items-center gap-2 ${
                               isFav
-                                ? `取消收藏 ${tag.code}`
-                                : `收藏 ${tag.code}`
-                            }
+                                ? 'bg-green-500/25 ring-1 ring-green-400 dark:bg-green-500/30'
+                                : 'bg-green-500/10 hover:bg-green-500/20 dark:bg-green-500/15 dark:hover:bg-green-500/25'
+                            } text-gray-700 dark:text-gray-200`}
+                          >
+                            <span className='font-semibold text-green-700 dark:text-green-400'>
+                              {tag.code}
+                            </span>
+                            <span className='text-xs text-gray-500 dark:text-gray-400'>
+                              {tag.style}
+                            </span>
+                            <span
+                              role='button'
+                              aria-label={
+                                isFav
+                                  ? `取消收藏 ${tag.code}`
+                                  : `收藏 ${tag.code}`
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                toggleStudioFav(tag.code);
+                              }}
+                              className={`text-base leading-none cursor-pointer transition-colors ${
+                                isFav
+                                  ? 'text-pink-500 hover:text-gray-400 dark:text-pink-400'
+                                  : 'text-gray-300 hover:text-pink-500 dark:text-gray-600 dark:hover:text-pink-400'
+                              }`}
+                              title={isFav ? '取消收藏' : '加入收藏'}
+                            >
+                              {isFav ? '❤' : '♡'}
+                            </span>
+                          </button>
+                          <button
+                            aria-label={`刪除 ${tag.code}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              toggleStudioFav(tag.code);
+                              handleDeleteStudioTag(tag.code);
                             }}
-                            className={`text-base leading-none cursor-pointer transition-colors ${
-                              isFav
-                                ? 'text-pink-500 hover:text-gray-400 dark:text-pink-400'
-                                : 'text-gray-300 hover:text-pink-500 dark:text-gray-600 dark:hover:text-pink-400'
-                            }`}
-                            title={isFav ? '取消收藏' : '加入收藏'}
+                            className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
                           >
-                            {isFav ? '❤' : '♡'}
-                          </span>
-                        </button>
-                        <button
-                          aria-label={`刪除 ${tag.code}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            handleDeleteStudioTag(tag.code);
-                          }}
-                          className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
-                        >
-                          <X className='w-3 h-3' />
-                        </button>
-                      </div>
-                    );
-                  })}
+                            <X className='w-3 h-3' />
+                          </button>
+                        </div>
+                      );
+                    })}
                   {/* 新增代號（單筆） */}
                   <button
                     onClick={handleAddStudioTag}
