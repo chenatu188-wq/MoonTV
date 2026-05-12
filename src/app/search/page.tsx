@@ -131,6 +131,11 @@ const KEYWORDS_DEFAULT: string[] = [
   '黑絲',
   '中出',
   '痴女',
+  // 韓國（阿公要求 2026-05-12）— 現有採集站「韩国」關鍵字有大量結果，含三級 / 主播
+  '韓國',
+  '韓國三級',
+  '韓國主播',
+  '倫理三級',
 ];
 const KEYWORDS_KEY = 'moontv_keywords_v1';
 
