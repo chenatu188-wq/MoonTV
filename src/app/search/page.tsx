@@ -136,6 +136,11 @@ const KEYWORDS_DEFAULT: string[] = [
   '韓國三級',
   '韓國主播',
   '倫理三級',
+  // 歐美 / 美國（阿公要求 2026-05-12）— hsckzy 1480 筆、fhapi9 598 筆「黑人」
+  '歐美',
+  '歐美三級',
+  '美國',
+  '黑人',
 ];
 const KEYWORDS_KEY = 'moontv_keywords_v1';
 
