@@ -1531,11 +1531,64 @@ function PlayPageClient() {
         controls: [
           {
             position: 'left',
+            index: 11,
+            html: '<span class="art-icon" style="padding: 0 6px; font-size: 13px; font-weight: 600;">⏪ 10s</span>',
+            tooltip: '快退 10 秒',
+            click: function () {
+              if (artPlayerRef.current) {
+                artPlayerRef.current.currentTime = Math.max(
+                  0,
+                  artPlayerRef.current.currentTime - 10
+                );
+                artPlayerRef.current.notice.show = '快退 10 秒';
+              }
+            },
+          },
+          {
+            position: 'left',
+            index: 12,
+            html: '<span class="art-icon" style="padding: 0 6px; font-size: 13px; font-weight: 600;">10s ⏩</span>',
+            tooltip: '快進 10 秒',
+            click: function () {
+              if (artPlayerRef.current) {
+                const dur = artPlayerRef.current.duration || 0;
+                artPlayerRef.current.currentTime = Math.min(
+                  dur - 1,
+                  artPlayerRef.current.currentTime + 10
+                );
+                artPlayerRef.current.notice.show = '快進 10 秒';
+              }
+            },
+          },
+          {
+            position: 'left',
             index: 13,
             html: '<i class="art-icon flex"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" fill="currentColor"/></svg></i>',
             tooltip: '播放下一集',
             click: function () {
               handleNextEpisode();
+            },
+          },
+          {
+            name: 'speedToggle',
+            position: 'right',
+            index: 10,
+            html: '<span class="art-icon" style="padding: 0 8px; font-size: 13px; font-weight: 600;">1x</span>',
+            tooltip: '播放速度（點擊切換 1x → 1.25x → 1.5x → 2x）',
+            click: function (component: any) {
+              const rates = [1, 1.25, 1.5, 2];
+              const current = artPlayerRef.current?.playbackRate || 1;
+              const idx = rates.indexOf(current);
+              const next = rates[(idx + 1) % rates.length];
+              if (artPlayerRef.current) {
+                artPlayerRef.current.playbackRate = next;
+                artPlayerRef.current.notice.show = `播放速度 ${next}x`;
+              }
+              const el = component?.$ref || component;
+              if (el && typeof el.querySelector === 'function') {
+                const span = el.querySelector('span.art-icon');
+                if (span) span.innerHTML = `${next}x`;
+              }
             },
           },
         ],
