@@ -172,18 +172,19 @@ function PlayPageClient() {
   const [relatedResults, setRelatedResults] = useState<SearchResult[]>([]);
 
   // 用 searchTitle 拉同搜尋詞的其他結果（一次性、結果不變）
+  // 依賴改成字串值，避免 useSearchParams() 物件 reference 不穩定造成重複 fetch
+  const stitleKey = (searchParams.get('stitle') || '').trim();
   useEffect(() => {
-    const q = (searchParams.get('stitle') || '').trim();
-    if (!q) return;
+    if (!stitleKey) return;
     let cancelled = false;
-    fetch(`/api/search?q=${encodeURIComponent(q)}`)
+    fetch(`/api/search?q=${encodeURIComponent(stitleKey)}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
         const list: SearchResult[] = data?.results || [];
         // 過濾：採集站 fuzzy match 標籤/描述，會回傳跟搜尋詞無關的片
         // 只保留標題真的含搜尋詞（case-insensitive）的結果
-        const qLower = q.toLowerCase();
+        const qLower = stitleKey.toLowerCase();
         const titleMatched = list.filter((r) =>
           (r.title || '').toLowerCase().includes(qLower)
         );
@@ -209,14 +210,16 @@ function PlayPageClient() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams]);
+  }, [stitleKey]);
 
   // 「其他搜尋結果」分頁
   const [relatedPage, setRelatedPage] = useState(1);
   const RELATED_PAGE_SIZE = 30; // 5 排 × 6 行
+  // 只在搜尋詞字串變化時 reset page，不要看 relatedResults reference
+  // （之前看 reference 導致每次 fetch 結果即使內容一樣也會把翻到的頁面打回 1）
   useEffect(() => {
     setRelatedPage(1);
-  }, [relatedResults]);
+  }, [stitleKey]);
   const relatedPaged = useMemo(() => {
     const tp = Math.max(
       1,
