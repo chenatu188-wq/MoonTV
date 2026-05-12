@@ -141,6 +141,10 @@ const KEYWORDS_DEFAULT: string[] = [
   '歐美三級',
   '美國',
   '黑人',
+  // 畫質篩選（阿公嫌片太老不清楚，2026-05-12）— lbapiby 4K 5260 筆、fhapi9 高清 2958 筆
+  '4K',
+  '高清',
+  '1080P',
 ];
 const KEYWORDS_KEY = 'moontv_keywords_v1';
 
