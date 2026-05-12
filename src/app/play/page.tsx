@@ -1573,22 +1573,19 @@ function PlayPageClient() {
             name: 'speedToggle',
             position: 'right',
             index: 10,
-            html: '<span class="art-icon" style="padding: 0 8px; font-size: 13px; font-weight: 600;">1x</span>',
+            html: '<span class="art-icon speed-toggle-text" style="padding: 0 8px; font-size: 13px; font-weight: 600;">1x</span>',
             tooltip: '播放速度（點擊切換 1x → 1.25x → 1.5x → 2x）',
-            click: function (component: any) {
+            click: function () {
               const rates = [1, 1.25, 1.5, 2];
               const current = artPlayerRef.current?.playbackRate || 1;
-              const idx = rates.indexOf(current);
+              // 用 Math.abs 比對浮點數，避免 1.5 != 1.5 之類的坑
+              const idx = rates.findIndex((r) => Math.abs(r - current) < 0.01);
               const next = rates[(idx + 1) % rates.length];
               if (artPlayerRef.current) {
                 artPlayerRef.current.playbackRate = next;
                 artPlayerRef.current.notice.show = `播放速度 ${next}x`;
               }
-              const el = component?.$ref || component;
-              if (el && typeof el.querySelector === 'function') {
-                const span = el.querySelector('span.art-icon');
-                if (span) span.innerHTML = `${next}x`;
-              }
+              // 顯示更新交給下方 video:ratechange listener，這裡不直接操作 DOM
             },
           },
         ],
@@ -1597,6 +1594,15 @@ function PlayPageClient() {
       // 监听播放器事件
       artPlayerRef.current.on('ready', () => {
         setError(null);
+      });
+
+      // 監聽倍速變化，同步右下角倍速按鈕顯示（不管是按鈕按的還是設定選單改的）
+      artPlayerRef.current.on('video:ratechange', () => {
+        const rate = artPlayerRef.current?.playbackRate || 1;
+        const text = rate === 1 ? '1x' : `${rate}x`;
+        const root = artPlayerRef.current?.template?.$player || document;
+        const el = root.querySelector('.speed-toggle-text');
+        if (el) el.textContent = text;
       });
 
       artPlayerRef.current.on('video:volumechange', () => {
