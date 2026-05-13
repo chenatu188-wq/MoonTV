@@ -631,6 +631,285 @@ function SearchPageClient() {
     window.alert(lines.join('\n'));
   };
 
+  // 從一段任意文字過濾出片商代號（複製整篇文章 / 排行榜貼進來，自動只留代號）
+  const handleExtractStudioCodesFromText = () => {
+    const input = window.prompt(
+      [
+        '從文字過濾片商代號（貼任何混雜內容都行，會自動只留代號）',
+        '會抓出所有 2-8 個連續大寫英文字母當候選，過濾常見雜訊（HTML/API/DVD…）',
+        '',
+        '範例輸入：',
+        '今天推薦 SSIS-456、IPX-789，還有 OFJE-345 也好看 (HD 1080P)',
+        '→ 會抓出 SSIS、IPX、OFJE',
+      ].join('\n')
+    );
+    if (!input) return;
+    // 分類關鍵字 → 比對代號附近文字（順序就是優先順序）
+    const CATEGORY_PATTERNS: Array<[string, RegExp]> = [
+      ['人妻', /人妻|已婚|主婦|婦女|有夫之婦|老婆|妻子/],
+      ['中出', /中出|內射|懷孕|生殖器/],
+      ['巨乳', /巨乳|大奶|爆乳|奶子|[A-Z]罩杯|乳交|豐滿/],
+      ['熟女', /熟女|成熟|御[姉姊]|阿姨|大姐|姐姐/],
+      ['出軌', /NTR|出軌|不倫|偷情|背叛|外遇/],
+      ['美少女', /美少女|女子高生|高中女生|JK|高中生/],
+      ['亂倫', /亂倫|姐妹|妹妹|義[姐姊母]|繼母|表姐|阿姨/],
+      ['多P', /多P|3P|4P|群交|亂交|輪[姦插]/],
+      ['企畫', /企畫|企劃/],
+      ['教師', /教師|老師|女教師|家庭教師/],
+      ['口交', /口交|接吻|法式|口水|咽喉|吸吮|舔/],
+      ['潮吹', /潮吹|噴水|失禁|漏尿/],
+      ['痴漢', /痴漢|電車/],
+      ['制服', /制服|OL|護士|空姐|警察|女僕/],
+      ['調教', /調教|奴隸|束縛|SM|綑綁/],
+      ['強姦', /強[姦暴]|強制|強迫/],
+    ];
+    const detectCategory = (idx: number, codeLen: number): string => {
+      const ctx = input.slice(Math.max(0, idx - 30), idx + codeLen + 200);
+      const hits: string[] = [];
+      for (const [cat, re] of CATEGORY_PATTERNS) {
+        if (re.test(ctx)) {
+          hits.push(cat);
+          if (hits.length >= 2) break;
+        }
+      }
+      return hits.length === 0 ? '自訂' : hits.join('');
+    };
+    // 抓代號 + 取附近文字判類型；重複代號合併它們各自的上下文
+    const upperInput = input.toUpperCase();
+    const regex = /\b[A-Z]{2,8}\b/g;
+    const codeContexts = new Map<string, Set<string>>(); // code → set of categories
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(upperInput)) !== null) {
+      const code = m[0];
+      const cat = detectCategory(m.index, code.length);
+      let set = codeContexts.get(code);
+      if (!set) {
+        set = new Set();
+        codeContexts.set(code, set);
+      }
+      if (cat !== '自訂') set.add(cat);
+    }
+    // 常見雜訊（網頁 / 影音 / 檔案 / 地區），不會被當片商代號
+    const noiseBlocklist = new Set([
+      'HTML',
+      'CSS',
+      'JS',
+      'API',
+      'URL',
+      'URI',
+      'HTTP',
+      'HTTPS',
+      'FTP',
+      'SSH',
+      'SSL',
+      'TLS',
+      'HD',
+      'FHD',
+      'UHD',
+      'SD',
+      'BD',
+      'DVD',
+      'CD',
+      'VCD',
+      'HEVC',
+      'AVC',
+      'AV1',
+      'AV',
+      'JAV',
+      'MP',
+      'MP3',
+      'MP4',
+      'MKV',
+      'MOV',
+      'AVI',
+      'WMV',
+      'FLV',
+      'WEBM',
+      'TS',
+      'JPG',
+      'JPEG',
+      'PNG',
+      'GIF',
+      'WEBP',
+      'BMP',
+      'PDF',
+      'TXT',
+      'DOC',
+      'XLS',
+      'ZIP',
+      'RAR',
+      'TAR',
+      'GZ',
+      '7Z',
+      'EXE',
+      'APK',
+      'DMG',
+      'ISO',
+      'GB',
+      'MB',
+      'KB',
+      'TB',
+      'FPS',
+      'BPS',
+      'BIT',
+      'BYTE',
+      'USA',
+      'UK',
+      'JP',
+      'CN',
+      'TW',
+      'HK',
+      'KR',
+      'EU',
+      'CA',
+      'VIP',
+      'FREE',
+      'NEW',
+      'HOT',
+      'TOP',
+      'LIVE',
+      'FULL',
+      'PRO',
+      'EXT',
+      'EXP',
+      'ID',
+      'IP',
+      'OS',
+      'UI',
+      'UX',
+      'DB',
+      'AI',
+      'ML',
+      'NN',
+      'GPU',
+      'CPU',
+      'RAM',
+      'PC',
+      'MAC',
+      'IOS',
+      'WIN',
+      'LINUX',
+      'IPHONE',
+      'IPAD',
+      'XYZ',
+      'ABC',
+      'ETC',
+      'OK',
+      'NO',
+      'YES',
+      'ON',
+      'OFF',
+      'GO',
+      'AM',
+      'PM',
+      'GMT',
+      'UTC',
+      'EST',
+      'JST',
+      'CST',
+      'PG',
+      'PV',
+      'OP',
+      'ED',
+      'EP',
+      'OST',
+      'BGM',
+      'SE',
+      'MV',
+      // 成人網常見雜訊
+      'NTR',
+      'DMM',
+      'DMCA',
+      'FUCK',
+      'SEX',
+      'BDSM',
+      'BBC',
+      'POV',
+      'RAW',
+      'CEN',
+      'UNCEN',
+      'MILF',
+      'GILF',
+      'OL',
+      'JK',
+      'JAV',
+      'GANG',
+      'HQ',
+      'LQ',
+      'TAG',
+      'TAGS',
+      'TIP',
+      'TIPS',
+      'LOL',
+      'OMG',
+      'WTF',
+      'IMG',
+      'GIF',
+    ]);
+    const existing = new Set(studioTags.map((t) => t.code));
+    const candidates: string[] = [];
+    const noise: string[] = [];
+    const duplicated: string[] = [];
+    for (const code of Array.from(codeContexts.keys())) {
+      if (noiseBlocklist.has(code)) {
+        noise.push(code);
+        continue;
+      }
+      if (existing.has(code)) {
+        duplicated.push(code);
+        continue;
+      }
+      candidates.push(code);
+    }
+    if (candidates.length === 0 && duplicated.length === 0) {
+      const lines = [`📭 沒抓到片商代號`];
+      if (noise.length > 0)
+        lines.push(`🚫 過濾雜訊 ${noise.length} 個：${noise.join('、')}`);
+      window.alert(lines.join('\n'));
+      return;
+    }
+    // 新代號 → 用自動分類當 style（多分類組合，例：「人妻中出」）
+    const added: StudioTag[] = candidates.map((code) => {
+      const cats = Array.from(codeContexts.get(code) || []);
+      return { code, style: cats.length > 0 ? cats.join('') : '自訂' };
+    });
+    // 已存在代號 → 原 style 前加 🔥（保留原類型），且把這次新偵測到的分類合進去
+    const dupSet = new Set(duplicated);
+    const updated: string[] = [];
+    const nextList = studioTags.map((t) => {
+      if (!dupSet.has(t.code)) return t;
+      const newCats = Array.from(codeContexts.get(t.code) || []);
+      const baseStyle = t.style.startsWith('🔥') ? t.style : `🔥${t.style}`;
+      // 若這次偵測到新分類且原 style 沒有，追加
+      let mergedStyle = baseStyle;
+      for (const c of newCats) {
+        if (!mergedStyle.includes(c)) mergedStyle += c;
+      }
+      if (mergedStyle !== t.style) {
+        updated.push(t.code);
+        return { ...t, style: mergedStyle };
+      }
+      return t;
+    });
+    const next = [...nextList, ...added];
+    setStudioTags(next);
+    saveStudioTags(next);
+    const lines: string[] = [];
+    if (added.length > 0) {
+      const detail = added
+        .map((t) => (t.style === '自訂' ? t.code : `${t.code}(${t.style})`))
+        .join('、');
+      lines.push(`✅ 已新增 ${added.length} 個：${detail}`);
+    }
+    if (updated.length > 0)
+      lines.push(
+        `🔥 已存在 ${updated.length} 個加熱榜標記：${updated.join('、')}`
+      );
+    if (noise.length > 0)
+      lines.push(`🚫 過濾雜訊 ${noise.length} 個：${noise.join('、')}`);
+    window.alert(lines.join('\n') || '無變動');
+  };
+
   // 新增演員
   const handleAddActress = () => {
     const input = window.prompt(
@@ -951,6 +1230,15 @@ function SearchPageClient() {
                   >
                     <Plus className='w-4 h-4' />
                     <span>批量新增</span>
+                  </button>
+                  {/* 從文字過濾代號（貼整篇文章自動抓） */}
+                  <button
+                    onClick={handleExtractStudioCodesFromText}
+                    className='px-3 py-2 bg-blue-500/10 hover:bg-blue-500/30 border-2 border-blue-300 hover:border-blue-500 rounded-full text-sm text-blue-700 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 dark:border-blue-400 dark:text-blue-300 transition-colors duration-200 flex items-center gap-1'
+                    title='從文字過濾代號（貼整篇文章 / 排行榜，自動抓代號加入）'
+                  >
+                    <Plus className='w-4 h-4' />
+                    <span>文字過濾</span>
                   </button>
                 </div>
               </section>
