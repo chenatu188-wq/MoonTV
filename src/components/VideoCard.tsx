@@ -273,9 +273,9 @@ export default function VideoCard({
       onClick={handleClick}
     >
       {/* 海报容器 */}
-      <div className='relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800'>
+      <div className='relative aspect-[4/3] overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800'>
         {/* 骨架屏 */}
-        {!isLoading && <ImagePlaceholder aspectRatio='aspect-square' />}
+        {!isLoading && <ImagePlaceholder aspectRatio='aspect-[4/3]' />}
         {/* 图片 */}
         <Image
           src={processImageUrl(actualPoster)}
