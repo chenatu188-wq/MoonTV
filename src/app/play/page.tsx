@@ -2152,14 +2152,14 @@ function PlayPageClient() {
                         : 'border-gray-200 dark:border-gray-700 hover:border-green-400 hover:shadow-md'
                     }`}
                   >
-                    <div className='relative aspect-[2/3] bg-gray-100 dark:bg-gray-700'>
+                    <div className='relative aspect-[4/3] bg-gray-100 dark:bg-gray-700'>
                       {r.poster ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={r.poster}
                           alt={r.title}
                           loading='lazy'
-                          className='w-full h-full object-cover'
+                          className='w-full h-full object-contain'
                         />
                       ) : null}
                       {isCurrent && (
