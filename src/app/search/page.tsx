@@ -282,6 +282,13 @@ function SearchPageClient() {
     return getDefaultAggregate() ? 'agg' : 'all';
   });
 
+  // 搜索結果分頁（每頁 100 筆）
+  const SEARCH_PAGE_SIZE = 100;
+  const [searchPage, setSearchPage] = useState(1);
+  useEffect(() => {
+    setSearchPage(1);
+  }, [searchQuery, viewMode]);
+
   // 聚合后的结果（按标题和年份分组）
   const aggregatedResults = useMemo(() => {
     const map = new Map<string, SearchResult[]>();
@@ -1086,54 +1093,128 @@ function SearchPageClient() {
               </div>
               <div
                 key={`search-results-${viewMode}`}
-                className='justify-start grid grid-cols-3 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(11rem,_1fr))] sm:gap-x-8'
+                className='justify-start grid grid-cols-2 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(14rem,_1fr))] sm:gap-x-8'
               >
                 {viewMode === 'agg'
-                  ? aggregatedResults.map(([mapKey, group]) => {
-                      return (
-                        <div key={`agg-${mapKey}`} className='w-full'>
+                  ? aggregatedResults
+                      .slice(
+                        (searchPage - 1) * SEARCH_PAGE_SIZE,
+                        searchPage * SEARCH_PAGE_SIZE
+                      )
+                      .map(([mapKey, group]) => {
+                        return (
+                          <div key={`agg-${mapKey}`} className='w-full'>
+                            <VideoCard
+                              from='search'
+                              items={group}
+                              query={
+                                searchQuery.trim() !== group[0].title
+                                  ? searchQuery.trim()
+                                  : ''
+                              }
+                            />
+                          </div>
+                        );
+                      })
+                  : searchResults
+                      .slice(
+                        (searchPage - 1) * SEARCH_PAGE_SIZE,
+                        searchPage * SEARCH_PAGE_SIZE
+                      )
+                      .map((item) => (
+                        <div
+                          key={`all-${item.source}-${item.id}`}
+                          className='w-full'
+                        >
                           <VideoCard
-                            from='search'
-                            items={group}
+                            id={item.id}
+                            title={item.title}
+                            poster={item.poster}
+                            episodes={item.episodes.length}
+                            source={item.source}
+                            source_name={item.source_name}
+                            douban_id={item.douban_id?.toString()}
                             query={
-                              searchQuery.trim() !== group[0].title
+                              searchQuery.trim() !== item.title
                                 ? searchQuery.trim()
                                 : ''
                             }
+                            year={item.year}
+                            from='search'
+                            type={item.episodes.length > 1 ? 'tv' : 'movie'}
                           />
                         </div>
-                      );
-                    })
-                  : searchResults.map((item) => (
-                      <div
-                        key={`all-${item.source}-${item.id}`}
-                        className='w-full'
-                      >
-                        <VideoCard
-                          id={item.id}
-                          title={item.title}
-                          poster={item.poster}
-                          episodes={item.episodes.length}
-                          source={item.source}
-                          source_name={item.source_name}
-                          douban_id={item.douban_id?.toString()}
-                          query={
-                            searchQuery.trim() !== item.title
-                              ? searchQuery.trim()
-                              : ''
-                          }
-                          year={item.year}
-                          from='search'
-                          type={item.episodes.length > 1 ? 'tv' : 'movie'}
-                        />
-                      </div>
-                    ))}
+                      ))}
                 {searchResults.length === 0 && (
                   <div className='col-span-full text-center text-gray-500 py-8 dark:text-gray-400'>
                     未找到相关结果
                   </div>
                 )}
               </div>
+              {/* 搜索結果分頁（每頁 100 筆） */}
+              {(() => {
+                const total =
+                  viewMode === 'agg'
+                    ? aggregatedResults.length
+                    : searchResults.length;
+                if (total <= SEARCH_PAGE_SIZE) return null;
+                const totalPages = Math.ceil(total / SEARCH_PAGE_SIZE);
+                const safePage = Math.min(Math.max(1, searchPage), totalPages);
+                return (
+                  <div className='mt-8 flex flex-wrap items-center justify-center gap-2'>
+                    <span className='text-sm text-gray-500 dark:text-gray-400 mr-2'>
+                      共 {total} 筆，第 {safePage} / {totalPages} 頁
+                    </span>
+                    <button
+                      disabled={safePage <= 1}
+                      onClick={() => {
+                        setSearchPage(safePage - 1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className='px-3 py-1 rounded text-sm bg-gray-200 hover:bg-green-500/30 disabled:opacity-40 dark:bg-gray-700 dark:hover:bg-green-500/30'
+                    >
+                      ← 上一頁
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(
+                        (p) =>
+                          p === 1 ||
+                          p === totalPages ||
+                          Math.abs(p - safePage) <= 2
+                      )
+                      .map((p, idx, arr) => (
+                        <span key={p} className='flex items-center gap-2'>
+                          {idx > 0 && arr[idx - 1] !== p - 1 && (
+                            <span className='text-gray-400'>…</span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSearchPage(p);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className={`px-3 py-1 rounded text-sm ${
+                              p === safePage
+                                ? 'bg-green-500 text-white'
+                                : 'bg-gray-200 hover:bg-green-500/30 dark:bg-gray-700 dark:hover:bg-green-500/30'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </span>
+                      ))}
+                    <button
+                      disabled={safePage >= totalPages}
+                      onClick={() => {
+                        setSearchPage(safePage + 1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className='px-3 py-1 rounded text-sm bg-gray-200 hover:bg-green-500/30 disabled:opacity-40 dark:bg-gray-700 dark:hover:bg-green-500/30'
+                    >
+                      下一頁 →
+                    </button>
+                  </div>
+                );
+              })()}
             </section>
           ) : (
             <>
