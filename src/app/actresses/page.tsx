@@ -43,6 +43,7 @@ function ActressesPageInner() {
   const [filter, setFilter] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [showFavOnly, setShowFavOnly] = useState(false);
 
   // 載入 pool + 個人收藏
   useEffect(() => {
@@ -60,22 +61,25 @@ function ActressesPageInner() {
       });
   }, []);
 
-  // filter 改變時跳回第 1 頁
+  // filter 或 showFavOnly 改變時跳回第 1 頁
   useEffect(() => {
     setPage(1);
-  }, [filter]);
+  }, [filter, showFavOnly]);
 
   // 過濾 + 分頁
   const { displayed, totalMatched, totalPages, currentPage } = useMemo(() => {
     const f = filter.trim();
     let matched: PoolEntry[] = [];
     try {
+      const base = showFavOnly
+        ? pool.filter((entry) => favorites.has(entry?.[0]))
+        : pool;
       matched = f
-        ? pool.filter((entry) => {
+        ? base.filter((entry) => {
             const name = entry?.[0];
             return typeof name === 'string' && name.includes(f);
           })
-        : pool;
+        : base;
     } catch {
       matched = [];
     }
@@ -89,7 +93,7 @@ function ActressesPageInner() {
       totalPages: tp,
       currentPage: safePage,
     };
-  }, [pool, filter, page]);
+  }, [pool, filter, page, showFavOnly, favorites]);
 
   // 產生頁碼（最多顯示 7 個：1 ... currentPage-1 currentPage currentPage+1 ... last）
   const pageNumbers = useMemo<(number | 'gap')[]>(() => {
@@ -139,9 +143,9 @@ function ActressesPageInner() {
           </p>
         </div>
 
-        {/* 過濾框 */}
-        <div className='mb-6 max-w-xl'>
-          <div className='relative'>
+        {/* 過濾框 + 只看收藏 */}
+        <div className='mb-6 flex gap-3 items-center max-w-xl'>
+          <div className='relative flex-1'>
             <SearchIcon className='absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500' />
             <input
               type='text'
@@ -160,6 +164,18 @@ function ActressesPageInner() {
               </button>
             )}
           </div>
+          {favorites.size > 0 && (
+            <button
+              onClick={() => setShowFavOnly((v) => !v)}
+              className={`shrink-0 flex items-center gap-1.5 px-4 h-12 rounded-lg text-sm font-medium transition-colors ${
+                showFavOnly
+                  ? 'bg-pink-500 text-white shadow'
+                  : 'bg-gray-100 text-gray-600 hover:bg-pink-100 hover:text-pink-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-pink-900/30 dark:hover:text-pink-300'
+              }`}
+            >
+              ❤ 我的收藏{showFavOnly ? `（${favorites.size}）` : ''}
+            </button>
+          )}
         </div>
 
         {/* 統計列 */}
@@ -186,7 +202,11 @@ function ActressesPageInner() {
           </div>
         ) : displayed.length === 0 ? (
           <div className='text-center text-gray-500 dark:text-gray-400 py-12'>
-            {filter ? `沒有符合「${filter}」的演員` : '資料庫是空的'}
+            {showFavOnly
+              ? '還沒有收藏任何演員，點 ♡ 加入收藏'
+              : filter
+              ? `沒有符合「${filter}」的演員`
+              : '資料庫是空的'}
           </div>
         ) : (
           <div className='flex flex-wrap gap-2'>
