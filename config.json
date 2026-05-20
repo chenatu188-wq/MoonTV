@@ -84,6 +84,84 @@
     "xiaomaomi": {
       "api": "https://zy.xmm.hk/api.php/provide/vod",
       "name": "小猫咪资源"
+    },
+    "lovedan": {
+      "api": "https://lovedan.net/api.php/provide/vod",
+      "name": "艾旦影视",
+      "detail": "https://lovedan.net",
+      "group": "精選推薦"
+    },
+    "jyzy": {
+      "api": "https://jyzyapi.com/provide/vod",
+      "name": "金鹰资源",
+      "detail": "https://jyzyapi.com",
+      "group": "大陸劇"
+    },
+    "sdzy": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电资源",
+      "detail": "https://sdzyapi.com",
+      "group": "大陸劇"
+    },
+    "tyyszy2": {
+      "api": "https://tyyszyapi.com/api.php/provide/vod",
+      "name": "天涯影视",
+      "detail": "https://tyyszyapi.com",
+      "group": "大陸劇"
+    },
+    "bwzyz": {
+      "api": "https://api.bwzyz.com/api.php/provide/vod",
+      "name": "百万影视",
+      "detail": "https://api.bwzyz.com",
+      "group": "綜合影視"
+    },
+    "hhzy": {
+      "api": "https://hhzyapi.com/api.php/provide/vod",
+      "name": "火火资源",
+      "detail": "https://hhzyapi.com",
+      "group": "綜合影視"
+    },
+    "gszy": {
+      "api": "https://api.guangsuapi.com/api.php/provide/vod",
+      "name": "光速资源",
+      "detail": "https://api.guangsuapi.com",
+      "group": "綜合影視"
+    },
+    "bdzy": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度资源",
+      "detail": "https://api.apibdzy.com",
+      "group": "綜合影視"
+    },
+    "xlzy": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪资源",
+      "detail": "https://api.xinlangapi.com",
+      "group": "綜合影視"
+    },
+    "hnzy": {
+      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
+      "name": "红牛资源",
+      "detail": "https://www.hongniuzy2.com",
+      "group": "綜合影視"
+    },
+    "ukuzy": {
+      "api": "https://api.ukuapi.com/api.php/provide/vod",
+      "name": "U酷资源",
+      "detail": "https://api.ukuapi.com",
+      "group": "綜合影視"
+    },
+    "fnzy": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟资源",
+      "detail": "https://hongniuzy3.com",
+      "group": "綜合影視"
+    },
+    "dbzy2": {
+      "api": "https://caiji.dbzy5.com/api.php/provide/vod",
+      "name": "豆瓣电影2",
+      "detail": "https://caiji.dbzy5.com",
+      "group": "精選推薦"
     }
   }
 }
