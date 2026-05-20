@@ -10,6 +10,7 @@ export interface ApiSite {
   api: string;
   name: string;
   detail?: string;
+  group?: string;
 }
 
 interface ConfigFileStruct {
@@ -99,6 +100,7 @@ async function initConfig() {
               name: site.name,
               api: site.api,
               detail: site.detail,
+              group: site.group,
               from: 'config',
               disabled: false,
             });

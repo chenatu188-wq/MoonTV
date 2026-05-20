@@ -74,6 +74,7 @@ export interface SearchResult {
   episodes: string[];
   source: string;
   source_name: string;
+  source_group?: string;
   class?: string;
   year: string;
   desc?: string;

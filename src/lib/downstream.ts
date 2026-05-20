@@ -80,6 +80,7 @@ export async function searchFromApi(
         episodes,
         source: apiSite.key,
         source_name: apiName,
+        source_group: apiSite.group,
         class: item.vod_class,
         year: item.vod_year
           ? item.vod_year.match(/\d{4}/)?.[0] || ''
