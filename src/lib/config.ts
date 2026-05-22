@@ -209,6 +209,7 @@ async function initConfig() {
         name: site.name,
         api: site.api,
         detail: site.detail,
+        group: site.group,
         from: 'config',
         disabled: false,
       })),
@@ -332,6 +333,7 @@ export async function resetConfig() {
       name: site.name,
       api: site.api,
       detail: site.detail,
+      group: site.group,
       from: 'config',
       disabled: false,
     })),
@@ -356,10 +358,12 @@ export async function getCacheTime(): Promise<number> {
 
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
-  return config.SourceConfig.filter((s) => !s.disabled).map((s) => ({
-    key: s.key,
-    name: s.name,
-    api: s.api,
-    detail: s.detail,
-  }));
+  return config.SourceConfig.filter((s) => !s.disabled && s.group !== '🔞').map(
+    (s) => ({
+      key: s.key,
+      name: s.name,
+      api: s.api,
+      detail: s.detail,
+    })
+  );
 }
