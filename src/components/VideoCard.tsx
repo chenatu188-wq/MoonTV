@@ -35,6 +35,7 @@ interface VideoCardProps {
   rate?: string;
   items?: SearchResult[];
   type?: string;
+  adultSearch?: boolean;
 }
 
 export default function VideoCard({
@@ -54,6 +55,7 @@ export default function VideoCard({
   rate,
   items,
   type = '',
+  adultSearch = false,
 }: VideoCardProps) {
   const router = useRouter();
   const [favorited, setFavorited] = useState(false);
@@ -210,7 +212,9 @@ export default function VideoCard({
           isAggregate ? '&prefer=true' : ''
         }${
           actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}`
+        }${actualSearchType ? `&stype=${actualSearchType}` : ''}${
+          adultSearch ? '&adult=1' : ''
+        }`
       );
     }
   }, [
@@ -223,6 +227,7 @@ export default function VideoCard({
     isAggregate,
     actualQuery,
     actualSearchType,
+    adultSearch,
   ]);
 
   const config = useMemo(() => {

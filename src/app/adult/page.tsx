@@ -132,6 +132,7 @@ function AdultClient() {
 
   // ── Search state ──
   const [searchInput, setSearchInput] = useState('');
+  const [lastSearchedQuery, setLastSearchedQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
@@ -227,6 +228,7 @@ function AdultClient() {
       const q = (directQuery ?? searchInput).trim();
       if (!q) return;
       if (directQuery !== undefined) setSearchInput(directQuery);
+      setLastSearchedQuery(q);
       setTab('search');
       setSearchLoading(true);
       setSearchDone(false);
@@ -514,7 +516,12 @@ function AdultClient() {
               <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
                 {searchResults.map((item) => (
                   <div key={`${item.source}-${item.id}`} className='w-full'>
-                    <VideoCard from='search' items={[item]} />
+                    <VideoCard
+                      from='search'
+                      items={[item]}
+                      query={lastSearchedQuery}
+                      adultSearch
+                    />
                   </div>
                 ))}
               </div>

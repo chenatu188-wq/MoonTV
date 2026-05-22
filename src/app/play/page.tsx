@@ -174,10 +174,12 @@ function PlayPageClient() {
   // 用 searchTitle 拉同搜尋詞的其他結果（一次性、結果不變）
   // 依賴改成字串值，避免 useSearchParams() 物件 reference 不穩定造成重複 fetch
   const stitleKey = (searchParams.get('stitle') || '').trim();
+  const isAdultSearch = searchParams.get('adult') === '1';
   useEffect(() => {
     if (!stitleKey) return;
     let cancelled = false;
-    fetch(`/api/search?q=${encodeURIComponent(stitleKey)}`)
+    const searchApi = isAdultSearch ? '/api/adult/search' : '/api/search';
+    fetch(`${searchApi}?q=${encodeURIComponent(stitleKey)}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
@@ -2141,7 +2143,9 @@ function PlayPageClient() {
                         r.id
                       }&title=${encodeURIComponent(r.title)}${
                         r.year ? `&year=${r.year}` : ''
-                      }${q ? `&stitle=${encodeURIComponent(q)}` : ''}`;
+                      }${q ? `&stitle=${encodeURIComponent(q)}` : ''}${
+                        isAdultSearch ? '&adult=1' : ''
+                      }`;
                       // 用 full page reload 確保播放器重建（router.push 不 unmount，
                       // 舊的 currentSource/Id useState 不會更新、影片不會重載）
                       window.location.href = url;
