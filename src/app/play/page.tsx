@@ -1993,10 +1993,18 @@ function PlayPageClient() {
                       </p>
                       <div className='flex gap-2 justify-center'>
                         <button
-                          onClick={() => setRetryNonce((n) => n + 1)}
+                          onClick={() => {
+                            setFatalError(null);
+                            // 清掉失敗紀錄，讓換源從下一個可用源重新開始
+                            failedSourcesRef.current = new Set();
+                            if (!tryNextAvailableSource('USER_RETRY')) {
+                              // 沒有其他源，才 fallback 到重試同一源
+                              setRetryNonce((n) => n + 1);
+                            }
+                          }}
                           className='px-5 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors'
                         >
-                          🔄 重试播放
+                          🔄 換源播放
                         </button>
                         <button
                           onClick={() => setFatalError(null)}
