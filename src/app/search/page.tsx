@@ -43,8 +43,8 @@ function SearchPageClient() {
     return getDefaultAggregate() ? 'agg' : 'all';
   });
 
-  // 搜索結果分頁（每頁 100 筆）
-  const SEARCH_PAGE_SIZE = 100;
+  // 搜索結果分頁（每頁 600 筆）
+  const SEARCH_PAGE_SIZE = 600;
   const [searchPage, setSearchPage] = useState(1);
   useEffect(() => {
     setSearchPage(1);
