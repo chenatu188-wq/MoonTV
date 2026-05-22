@@ -4,6 +4,7 @@ import {
   Clapperboard,
   Clover,
   Film,
+  Flame,
   Heart,
   Home,
   Menu,
@@ -157,6 +158,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Sparkles,
       label: '动漫',
       href: '/search?q=' + encodeURIComponent('动漫'),
+    },
+    {
+      icon: Flame,
+      label: '18禁',
+      href: '/adult',
     },
     {
       icon: Heart,
