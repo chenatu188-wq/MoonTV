@@ -40,6 +40,7 @@ function BrowseClient() {
   const [activeSource, setActiveSource] = useState<string>('');
   const [activeYear, setActiveYear] = useState<string>('');
   const [results, setResults] = useState<BrowseResult[]>([]);
+  const [filterQuery, setFilterQuery] = useState('');
   const [total, setTotal] = useState(0);
   const [pagecount, setPagecount] = useState(1);
   const [page, setPage] = useState(1);
@@ -116,6 +117,12 @@ function BrowseClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  const filteredResults = filterQuery.trim()
+    ? results.filter((r) =>
+        r.title.toLowerCase().includes(filterQuery.trim().toLowerCase())
+      )
+    : results;
+
   const toSearchResult = (item: BrowseResult): SearchResult => ({
     id: item.id,
     title: item.title,
@@ -148,6 +155,7 @@ function BrowseClient() {
               onClick={() => {
                 setCategory(cat.key);
                 setActiveYear('');
+                setFilterQuery('');
                 setResults([]);
                 window.scrollTo({ top: 0 });
               }}
@@ -170,6 +178,7 @@ function BrowseClient() {
                 key={s.key}
                 onClick={() => {
                   setActiveSource(s.key);
+                  setFilterQuery('');
                   window.scrollTo({ top: 0 });
                 }}
                 className={`${btnBase} ${
@@ -208,10 +217,36 @@ function BrowseClient() {
           ))}
         </div>
 
+        {/* Page filter search */}
+        {results.length > 0 && (
+          <div className='relative'>
+            <input
+              type='text'
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder='篩選本頁結果…'
+              className='w-full sm:w-72 px-3 py-1.5 pr-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400'
+            />
+            {filterQuery && (
+              <button
+                onClick={() => setFilterQuery('')}
+                className='absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-base leading-none'
+              >
+                ×
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Results info */}
         {!loading && total > 0 && (
           <p className='text-sm text-gray-500 dark:text-gray-400'>
             共 {total} 部，第 {page} / {pagecount} 頁
+            {filterQuery && filteredResults.length !== results.length && (
+              <span className='ml-2 text-green-600 dark:text-green-400'>
+                篩選出 {filteredResults.length} 筆
+              </span>
+            )}
           </p>
         )}
 
@@ -220,13 +255,13 @@ function BrowseClient() {
           <div className='flex justify-center py-16 text-gray-500 dark:text-gray-400'>
             載入中…
           </div>
-        ) : results.length === 0 ? (
+        ) : filteredResults.length === 0 ? (
           <div className='flex justify-center py-16 text-gray-500 dark:text-gray-400'>
-            暫無內容
+            {filterQuery ? '無符合結果' : '暫無內容'}
           </div>
         ) : (
           <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
-            {results.map((item) => (
+            {filteredResults.map((item) => (
               <div key={`${item.source}-${item.id}`} className='w-full'>
                 <VideoCard from='search' items={[toSearchResult(item)]} />
               </div>
