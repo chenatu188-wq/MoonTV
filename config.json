@@ -387,6 +387,24 @@
       "api": "https://apittzy.com/api.php/provide/vod",
       "name": "🔞探探資源",
       "group": "🔞歐美"
+    },
+    "semaozy.net": {
+      "api": "https://caiji.semaozy.net/inc/apijson_vod.php",
+      "name": "🔞色猫精選",
+      "detail": "https://caiji.semaozy.net",
+      "group": "🔞"
+    },
+    "madouse.la": {
+      "api": "http://madouse.la/api.php/provide/vod",
+      "name": "🔞MADOU精品",
+      "detail": "http://madouse.la",
+      "group": "🔞"
+    },
+    "aosikazy.com": {
+      "api": "https://aosikazy.com/api.php/provide/vod",
+      "name": "🔞奧斯卡資源",
+      "detail": "https://aosikazy.com",
+      "group": "🔞"
     }
   }
 }
