@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { API_CONFIG, getAvailableApiSites, getCacheTime } from '@/lib/config';
+import { API_CONFIG, getCacheTime, getConfig } from '@/lib/config';
 
 export const runtime = 'edge';
 
@@ -65,8 +65,8 @@ export async function GET(request: Request) {
   const page = parseInt(searchParams.get('page') || '1', 10);
   const category = searchParams.get('category') || 'duanju'; // duanju | tv | adult
 
-  const sites = await getAvailableApiSites();
-  const site = sites.find((s) => s.key === sourceKey);
+  const config = await getConfig();
+  const site = (config.SourceConfig || []).find((s) => s.key === sourceKey);
   if (!site)
     return NextResponse.json({ error: 'source not found' }, { status: 404 });
 
