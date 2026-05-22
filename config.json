@@ -98,6 +98,24 @@
       "name": "旺旺短剧",
       "group": "短劇"
     },
+    "wwzy_api": {
+      "api": "https://api.wwzy.tv/api.php/provide/vod",
+      "name": "旺旺短剧(备用)",
+      "detail": "https://api.wwzy.tv",
+      "group": "短劇"
+    },
+    "bfzy_dj": {
+      "api": "https://bfzyapi.com/api.php/provide/vod",
+      "name": "暴风短剧",
+      "detail": "https://bfzyapi.com",
+      "group": "短劇"
+    },
+    "jisu_dj": {
+      "api": "https://jszyapi.com/api.php/provide/vod",
+      "name": "极速短剧",
+      "detail": "https://jszyapi.com",
+      "group": "短劇"
+    },
     "ikun": {
       "api": "https://ikunzyapi.com/api.php/provide/vod",
       "name": "iKun资源",

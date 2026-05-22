@@ -313,25 +313,22 @@ function SearchPageClient() {
       if (aExactMatch && !bExactMatch) return -1;
       if (!aExactMatch && bExactMatch) return 1;
 
-      // 年份排序
-      if (a[1][0].year === b[1][0].year) {
-        return a[0].localeCompare(b[0]);
-      } else {
-        // 处理 unknown 的情况
-        const aYear = a[1][0].year;
-        const bYear = b[1][0].year;
-
-        if (aYear === 'unknown' && bYear === 'unknown') {
-          return 0;
-        } else if (aYear === 'unknown') {
-          return 1; // a 排在后面
-        } else if (bYear === 'unknown') {
-          return -1; // b 排在后面
-        } else {
-          // 都是数字年份，按数字大小排序（大的在前面）
-          return aYear > bYear ? -1 : 1;
-        }
+      // 評分排序：有分優先，高分靠前
+      const aScore = a[1][0].score ?? 0;
+      const bScore = b[1][0].score ?? 0;
+      if (aScore !== bScore) {
+        return bScore - aScore;
       }
+
+      // 同分再按年份
+      const aYear = a[1][0].year;
+      const bYear = b[1][0].year;
+      if (aYear === bYear) {
+        return a[0].localeCompare(b[0]);
+      }
+      if (aYear === 'unknown') return 1;
+      if (bYear === 'unknown') return -1;
+      return aYear > bYear ? -1 : 1;
     });
   }, [searchResults]);
 
@@ -427,22 +424,18 @@ function SearchPageClient() {
           if (aExactMatch && !bExactMatch) return -1;
           if (!aExactMatch && bExactMatch) return 1;
 
-          // 如果都匹配或都不匹配，则按原来的逻辑排序
-          if (a.year === b.year) {
-            return a.title.localeCompare(b.title);
-          } else {
-            // 处理 unknown 的情况
-            if (a.year === 'unknown' && b.year === 'unknown') {
-              return 0;
-            } else if (a.year === 'unknown') {
-              return 1; // a 排在后面
-            } else if (b.year === 'unknown') {
-              return -1; // b 排在后面
-            } else {
-              // 都是数字年份，按数字大小排序（大的在前面）
-              return parseInt(a.year) > parseInt(b.year) ? -1 : 1;
-            }
-          }
+          // 評分高的靠前，無分排後
+          const aScore = a.score ?? 0;
+          const bScore = b.score ?? 0;
+          if (aScore !== bScore) return bScore - aScore;
+
+          // 同分按年份
+          if (a.year === 'unknown' && b.year === 'unknown') return 0;
+          if (a.year === 'unknown') return 1;
+          if (b.year === 'unknown') return -1;
+          if (a.year !== b.year)
+            return parseInt(a.year) > parseInt(b.year) ? -1 : 1;
+          return a.title.localeCompare(b.title);
         })
       );
       setShowResults(true);
