@@ -14,11 +14,12 @@ export async function GET(request: Request) {
   if (!query) return NextResponse.json({ results: [] });
 
   const config = await getConfig();
-  const adultSites = (config.SourceConfig || [])
-    .filter((s) => !s.disabled && s.group === '🔞')
+  // Search ALL sources (general + 🔞)
+  const allSites = (config.SourceConfig || [])
+    .filter((s) => !s.disabled)
     .map((s) => ({ key: s.key, name: s.name, api: s.api, detail: s.detail }));
 
-  if (adultSites.length === 0) return NextResponse.json({ results: [] });
+  if (allSites.length === 0) return NextResponse.json({ results: [] });
 
   // 繁體 → 簡體（大陸採集站以簡體儲存）
   const simplifiedQuery = toSimplified(query);
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
   extraQueries.forEach((q) => querySet.add(q));
 
   const allQueries = Array.from(querySet);
-  const searchPromises = adultSites.flatMap((site) =>
+  const searchPromises = allSites.flatMap((site) =>
     allQueries.map((q) => searchFromApi(site, q))
   );
 
