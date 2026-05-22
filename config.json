@@ -78,7 +78,7 @@
       "name": "魔都资源",
       "group": "精選推薦"
     },
-    "zuid": {
+    "zuidapi": {
       "api": "https://api.zuidapi.com/api.php/provide/vod",
       "name": "最大资源",
       "group": "綜合影視"
@@ -91,6 +91,27 @@
     "wujin": {
       "api": "https://api.wujinapi.me/api.php/provide/vod",
       "name": "无尽资源",
+      "group": "綜合影視"
+    },
+    "heimuer": {
+      "api": "https://json.heimuer.xyz/api.php/provide/vod",
+      "name": "黑木耳",
+      "detail": "https://heimuer.tv",
+      "group": "綜合影視"
+    },
+    "iqiyi": {
+      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
+      "name": "iqiyi资源",
+      "group": "綜合影視"
+    },
+    "mozhua": {
+      "api": "https://mozhuazy.com/api.php/provide/vod",
+      "name": "魔爪资源",
+      "group": "綜合影視"
+    },
+    "xiaomaomi": {
+      "api": "https://zy.xmm.hk/api.php/provide/vod",
+      "name": "小猫咪资源",
       "group": "綜合影視"
     },
     "wwzy": {
