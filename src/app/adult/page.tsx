@@ -5,6 +5,7 @@ import { SearchResult } from '@/lib/types';
 
 import ActressesPanel from '@/components/ActressesPanel';
 import PageLayout from '@/components/PageLayout';
+import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
@@ -197,22 +198,29 @@ function AdultClient() {
       )
     : browseResults;
 
-  const handleSearch = useCallback(async () => {
-    const q = searchInput.trim();
-    if (!q) return;
-    setSearchLoading(true);
-    setSearchDone(false);
-    try {
-      const resp = await fetch(`/api/adult/search?q=${encodeURIComponent(q)}`);
-      const data = await resp.json();
-      setSearchResults(data.results || []);
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-      setSearchDone(true);
-    }
-  }, [searchInput]);
+  const handleSearch = useCallback(
+    async (directQuery?: string) => {
+      const q = (directQuery ?? searchInput).trim();
+      if (!q) return;
+      if (directQuery !== undefined) setSearchInput(directQuery);
+      setTab('search');
+      setSearchLoading(true);
+      setSearchDone(false);
+      try {
+        const resp = await fetch(
+          `/api/adult/search?q=${encodeURIComponent(q)}`
+        );
+        const data = await resp.json();
+        setSearchResults(data.results || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+        setSearchDone(true);
+      }
+    },
+    [searchInput]
+  );
 
   const toSearchResult = (item: BrowseResult): SearchResult => ({
     id: item.id,
@@ -417,7 +425,7 @@ function AdultClient() {
                 className='flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400'
               />
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 disabled={searchLoading || !searchInput.trim()}
                 className='px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium disabled:opacity-50 transition-colors'
               >
@@ -430,6 +438,11 @@ function AdultClient() {
               <p className='text-sm text-gray-500 dark:text-gray-400'>
                 找到 {searchResults.length} 筆結果
               </p>
+            )}
+
+            {/* Quick search panel（無搜索結果時顯示） */}
+            {!searchLoading && !searchDone && (
+              <StudioQuickSearchPanel onSearch={(q) => handleSearch(q)} />
             )}
 
             {/* Search results grid */}
