@@ -4,30 +4,48 @@ import { API_CONFIG, getAvailableApiSites, getCacheTime } from '@/lib/config';
 
 export const runtime = 'edge';
 
+const TV_KEYWORDS = ['电视剧', '連續劇', '连续剧'];
+const DJ_KEYWORDS = ['短剧', '短劇'];
+
+function matchCat(
+  cats: Array<{ type_id: number; type_name: string }>,
+  keywords: string[]
+) {
+  // prefer exact keyword match, then broader 连续剧/电视剧 fallback for tv
+  for (const kw of keywords) {
+    const c = cats.find((c) => c.type_name.includes(kw));
+    if (c) return c;
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const sourceKey = searchParams.get('source');
   const year = searchParams.get('year') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
+  const category = searchParams.get('category') || 'duanju'; // duanju | tv
 
   const sites = await getAvailableApiSites();
   const site = sourceKey
     ? sites.find((s) => s.key === sourceKey)
+    : category === 'tv'
+    ? sites.find((s) => s.group !== '短劇' && s.group !== '🔞')
     : sites.find((s) => s.group === '短劇');
   if (!site)
     return NextResponse.json({ error: 'source not found' }, { status: 404 });
 
+  const keywords = category === 'tv' ? TV_KEYWORDS : DJ_KEYWORDS;
+
   try {
-    // Step 1: get category list to find 短剧 type_id
+    // Step 1: get category list to find matching type_id
     const listResp = await fetch(`${site.api}?ac=list`, {
       headers: API_CONFIG.search.headers,
     });
     const listData = await listResp.json();
     const cats: Array<{ type_id: number; type_name: string }> =
       listData.class || [];
-    const djCat = cats.find(
-      (c) => c.type_name.includes('短剧') || c.type_name.includes('短劇')
-    );
+    const djCat = matchCat(cats, keywords);
     if (!djCat)
       return NextResponse.json({ results: [], total: 0, pagecount: 0 });
 
@@ -39,34 +57,47 @@ export async function GET(request: Request) {
     });
     const data = await browseResp.json();
 
+    type RawItem = {
+      vod_id?: unknown;
+      vod_name?: string;
+      vod_pic?: string;
+      vod_year?: string;
+      vod_remarks?: string;
+      vod_douban_score?: number;
+      vod_score?: number;
+    };
+    const mapped = (data.list || []).map((item: RawItem) => {
+      const ds = item.vod_douban_score ?? 0;
+      const ss = item.vod_score ?? 0;
+      return {
+        id: item.vod_id?.toString(),
+        title: item.vod_name?.trim(),
+        poster: item.vod_pic,
+        year: item.vod_year?.match(/\d{4}/)?.[0] || '',
+        remarks: item.vod_remarks || '',
+        score: ds > 0 ? ds : ss > 0 ? ss : undefined,
+        source: site.key,
+        source_name: site.name,
+        episodes: [],
+      };
+    });
+    // sort by score desc within the page
+    mapped.sort(
+      (
+        a: { score?: number; year?: string },
+        b: { score?: number; year?: string }
+      ) => {
+        const as = a.score ?? 0;
+        const bs = b.score ?? 0;
+        if (bs !== as) return bs - as;
+        return (b.year ?? '') > (a.year ?? '') ? 1 : -1;
+      }
+    );
+
     const cacheTime = await getCacheTime();
     return NextResponse.json(
       {
-        results: (data.list || []).map(
-          (item: {
-            vod_id?: unknown;
-            vod_name?: string;
-            vod_pic?: string;
-            vod_year?: string;
-            vod_remarks?: string;
-            vod_douban_score?: number;
-            vod_score?: number;
-          }) => ({
-            id: item.vod_id?.toString(),
-            title: item.vod_name?.trim(),
-            poster: item.vod_pic,
-            year: item.vod_year?.match(/\d{4}/)?.[0] || '',
-            remarks: item.vod_remarks || '',
-            score: (() => {
-              const ds = item.vod_douban_score ?? 0;
-              const ss = item.vod_score ?? 0;
-              return ds > 0 ? ds : ss > 0 ? ss : undefined;
-            })(),
-            source: site.key,
-            source_name: site.name,
-            episodes: [],
-          })
-        ),
+        results: mapped,
         total: data.total || 0,
         pagecount: data.pagecount || 1,
         source_name: site.name,

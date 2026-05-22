@@ -8,6 +8,11 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
+type Category = 'duanju' | 'tv';
+const CATEGORIES: { key: Category; label: string }[] = [
+  { key: 'duanju', label: '短劇' },
+  { key: 'tv', label: '電視劇' },
+];
 
 interface BrowseResult {
   id: string;
@@ -30,7 +35,8 @@ interface ApiSiteInfo {
 function BrowseClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [sources, setSources] = useState<ApiSiteInfo[]>([]);
+  const [category, setCategory] = useState<Category>('duanju');
+  const [allSources, setAllSources] = useState<ApiSiteInfo[]>([]);
   const [activeSource, setActiveSource] = useState<string>('');
   const [activeYear, setActiveYear] = useState<string>('');
   const [results, setResults] = useState<BrowseResult[]>([]);
@@ -43,21 +49,36 @@ function BrowseClient() {
   void router;
   void searchParams;
 
-  // Load short drama sources from API
+  // Derived: sources filtered by current category
+  const sources = allSources.filter((s) =>
+    category === 'duanju'
+      ? s.group === '短劇'
+      : s.group !== '短劇' && s.group !== '🔞'
+  );
+
+  // Load all sources once
   useEffect(() => {
     fetch('/api/search/resources')
       .then((r) => r.json())
       .then((sites: ApiSiteInfo[]) => {
-        const djSites = sites.filter((s) => s.group === '短劇');
-        setSources(djSites);
-        if (djSites.length > 0 && !activeSource)
-          setActiveSource(djSites[0].key);
+        setAllSources(sites);
       })
       .catch(() => {
         /* ignore */
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When category or source list changes, reset to first source
+  useEffect(() => {
+    if (sources.length > 0) {
+      setActiveSource(sources[0].key);
+      setPage(1);
+    } else {
+      setActiveSource('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, allSources.length]);
 
   const fetchBrowse = useCallback(
     async (source: string, year: string, pg: number) => {
@@ -66,7 +87,7 @@ function BrowseClient() {
       try {
         const yearParam = year ? `&year=${year}` : '';
         const resp = await fetch(
-          `/api/browse?source=${source}${yearParam}&page=${pg}`
+          `/api/browse?source=${source}${yearParam}&page=${pg}&category=${category}`
         );
         if (!resp.ok) throw new Error('fetch failed');
         const data = await resp.json();
@@ -79,7 +100,7 @@ function BrowseClient() {
         setLoading(false);
       }
     },
-    []
+    [category]
   );
 
   useEffect(() => {
@@ -116,8 +137,30 @@ function BrowseClient() {
     <PageLayout>
       <div className='p-4 space-y-4'>
         <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
-          短劇瀏覽
+          {category === 'duanju' ? '短劇瀏覽' : '電視劇瀏覽'}
         </h1>
+
+        {/* Category tabs */}
+        <div className='flex gap-2'>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => {
+                setCategory(cat.key);
+                setActiveYear('');
+                setResults([]);
+                window.scrollTo({ top: 0 });
+              }}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                category === cat.key
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/30'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
 
         {/* Source tabs */}
         {sources.length > 0 && (
