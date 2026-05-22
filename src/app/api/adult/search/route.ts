@@ -14,9 +14,8 @@ export async function GET(request: Request) {
   if (!query) return NextResponse.json({ results: [] });
 
   const config = await getConfig();
-  // Search ALL sources (general + 🔞)
   const allSites = (config.SourceConfig || [])
-    .filter((s) => !s.disabled)
+    .filter((s) => !s.disabled && s.group === '🔞')
     .map((s) => ({ key: s.key, name: s.name, api: s.api, detail: s.detail }));
 
   if (allSites.length === 0) return NextResponse.json({ results: [] });
