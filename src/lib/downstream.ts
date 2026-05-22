@@ -12,6 +12,8 @@ interface ApiSearchItem {
   vod_year?: string;
   vod_content?: string;
   vod_douban_id?: number;
+  vod_douban_score?: number;
+  vod_score?: number;
   type_name?: string;
 }
 
@@ -73,6 +75,8 @@ export async function searchFromApi(
         return parenIndex > 0 ? link.substring(0, parenIndex) : link;
       });
 
+      const doubanScore = item.vod_douban_score ?? 0;
+      const siteScore = item.vod_score ?? 0;
       return {
         id: item.vod_id.toString(),
         title: item.vod_name.trim().replace(/\s+/g, ' '),
@@ -80,6 +84,7 @@ export async function searchFromApi(
         episodes,
         source: apiSite.key,
         source_name: apiName,
+        source_group: apiSite.group,
         class: item.vod_class,
         year: item.vod_year
           ? item.vod_year.match(/\d{4}/)?.[0] || ''
@@ -87,6 +92,8 @@ export async function searchFromApi(
         desc: cleanHtmlTags(item.vod_content || ''),
         type_name: item.type_name,
         douban_id: item.vod_douban_id,
+        score:
+          doubanScore > 0 ? doubanScore : siteScore > 0 ? siteScore : undefined,
       };
     });
 
@@ -146,6 +153,8 @@ export async function searchFromApi(
                 return parenIndex > 0 ? link.substring(0, parenIndex) : link;
               });
 
+              const ds = item.vod_douban_score ?? 0;
+              const ss = item.vod_score ?? 0;
               return {
                 id: item.vod_id.toString(),
                 title: item.vod_name.trim().replace(/\s+/g, ' '),
@@ -160,6 +169,7 @@ export async function searchFromApi(
                 desc: cleanHtmlTags(item.vod_content || ''),
                 type_name: item.type_name,
                 douban_id: item.vod_douban_id,
+                score: ds > 0 ? ds : ss > 0 ? ss : undefined,
               };
             });
           } catch (error) {
