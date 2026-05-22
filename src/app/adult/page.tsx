@@ -137,10 +137,25 @@ function AdultClient() {
   const [searchDone, setSearchDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const adultSources = allSources.filter((s) => s.group === '🔞');
+  const [activeRegion, setActiveRegion] = useState<string>('all');
+
+  const REGIONS = [
+    { key: 'all', label: '全部' },
+    { key: '🔞', label: '🇯🇵 日本' },
+    { key: '🔞歐美', label: '🇺🇸 歐美' },
+    { key: '🔞韓國', label: '🇰🇷 韓國' },
+    { key: '🔞台灣', label: '🇹🇼 台灣' },
+  ];
+
+  const adultSources = allSources.filter((s) => s.group?.startsWith('🔞'));
+
+  const regionedSources =
+    activeRegion === 'all'
+      ? adultSources
+      : adultSources.filter((s) => s.group === activeRegion);
 
   useEffect(() => {
-    fetch('/api/search/resources')
+    fetch('/api/adult/resources')
       .then((r) => r.json())
       .then((sites: ApiSiteInfo[]) => setAllSources(sites))
       .catch(() => {
@@ -154,6 +169,15 @@ function AdultClient() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSources.length]);
+
+  // 切換分區時，自動選第一個該區的片源
+  useEffect(() => {
+    if (regionedSources.length > 0) {
+      setActiveSource(regionedSources[0].key);
+      setPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRegion]);
 
   const fetchBrowse = useCallback(
     async (source: string, year: string, pg: number) => {
@@ -276,10 +300,34 @@ function AdultClient() {
         {/* ── Browse tab ── */}
         {tab === 'browse' && (
           <>
+            {/* Region tabs */}
+            <div className='flex flex-wrap gap-2'>
+              {REGIONS.filter(
+                (r) =>
+                  r.key === 'all' || adultSources.some((s) => s.group === r.key)
+              ).map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => {
+                    setActiveRegion(r.key);
+                    setFilterQuery('');
+                    window.scrollTo({ top: 0 });
+                  }}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    activeRegion === r.key
+                      ? 'bg-rose-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-rose-100 dark:hover:bg-rose-900/30'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
             {/* Source tabs */}
-            {adultSources.length > 0 && (
+            {regionedSources.length > 0 && (
               <div className='flex flex-wrap gap-2'>
-                {adultSources.map((s) => (
+                {regionedSources.map((s) => (
                   <button
                     key={s.key}
                     onClick={() => {
