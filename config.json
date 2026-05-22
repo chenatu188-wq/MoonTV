@@ -253,7 +253,7 @@
       "api": "https://hsckzy.xyz/api.php/provide/vod",
       "name": "🔞黄色仓库",
       "detail": "https://hsckzy.xyz",
-      "group": "🔞"
+      "group": "🔞歐美"
     },
     "apidanaizi.com": {
       "api": "https://apidanaizi.com/api.php/provide/vod",
@@ -271,7 +271,7 @@
       "api": "https://lbapi9.com/api.php/provide/vod",
       "name": "🔞乐播资源",
       "detail": "https://lbapi9.com",
-      "group": "🔞"
+      "group": "🔞歐美"
     },
     "Naixxzy.com": {
       "api": "https://Naixxzy.com/api.php/provide/vod",
@@ -313,7 +313,7 @@
       "api": "https://api.bwzyz.com/api.php/provide/vod",
       "name": "🔞百万资源",
       "detail": "https://api.bwzym3u8.com",
-      "group": "🔞"
+      "group": "🔞歐美"
     },
     "thzy8.me": {
       "api": "https://thzy1.me/api.php/provide/vod",
@@ -331,7 +331,7 @@
       "api": "https://api.souavzyw.net/api.php/provide/vod",
       "name": "🔞souavZY",
       "detail": "https://api.souavzyw.net",
-      "group": "🔞"
+      "group": "🔞歐美"
     },
     "xfzyapi.com": {
       "api": "https://xfzyapi.com/api.php/provide/vod",
@@ -357,6 +357,36 @@
       "api": "https://czyapi.com/api.php/provide/vod",
       "name": "🔞超资源",
       "group": "🔞"
+    },
+    "4000zy.com": {
+      "api": "https://www.4000zy.com/inc/api.php",
+      "name": "🔞4000資源",
+      "group": "🔞歐美"
+    },
+    "523zyw.com": {
+      "api": "https://caiji.523zyw.com/inc/api.php",
+      "name": "🔞523資源",
+      "group": "🔞歐美"
+    },
+    "51smt4.xyz": {
+      "api": "http://51smt4.xyz/api.php/provide/vod",
+      "name": "🔞水蜜桃",
+      "group": "🔞歐美"
+    },
+    "maozyapi.com": {
+      "api": "https://api.maozyapi.com/inc/api.php",
+      "name": "🔞色猫資源",
+      "group": "🔞歐美"
+    },
+    "xiuseapi.com": {
+      "api": "https://api.xiuseapi.com/api.php/provide/vod",
+      "name": "🔞秀色資源",
+      "group": "🔞歐美"
+    },
+    "apittzy.com": {
+      "api": "https://apittzy.com/api.php/provide/vod",
+      "name": "🔞探探資源",
+      "group": "🔞歐美"
     }
   }
 }
