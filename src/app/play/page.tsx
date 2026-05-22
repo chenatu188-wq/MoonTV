@@ -2007,6 +2007,12 @@ function PlayPageClient() {
                           🔄 換源播放
                         </button>
                         <button
+                          onClick={() => router.back()}
+                          className='px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors'
+                        >
+                          ← 返回
+                        </button>
+                        <button
                           onClick={() => setFatalError(null)}
                           className='px-5 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium transition-colors'
                         >
