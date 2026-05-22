@@ -54,7 +54,7 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
         <div className='text-4xl'>🔞</div>
         <div className='text-center'>
           <p className='text-lg font-bold text-gray-800 dark:text-gray-100'>
-            18禁專區
+            彩虹頻道
           </p>
           <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
             請輸入密碼以繼續
@@ -236,7 +236,7 @@ function AdultClient() {
       {!unlocked && <PasswordGate onUnlock={() => setUnlocked(true)} />}
       <div className='p-4 space-y-4'>
         <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
-          🔞 18禁專區
+          🌈 彩虹頻道
         </h1>
 
         {/* Tab switcher */}

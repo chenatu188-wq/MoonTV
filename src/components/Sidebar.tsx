@@ -161,7 +161,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     },
     {
       icon: Flame,
-      label: '18禁',
+      label: '彩虹',
       href: '/adult',
     },
     {
