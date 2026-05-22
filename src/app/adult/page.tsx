@@ -235,7 +235,15 @@ function AdultClient() {
           `/api/adult/search?q=${encodeURIComponent(q)}`
         );
         const data = await resp.json();
-        setSearchResults(data.results || []);
+        const results: SearchResult[] = data.results || [];
+        // 演員名稱出現在標題的靠前
+        const qLower = q.toLowerCase();
+        results.sort((a, b) => {
+          const aHit = a.title.toLowerCase().includes(qLower) ? 1 : 0;
+          const bHit = b.title.toLowerCase().includes(qLower) ? 1 : 0;
+          return bHit - aHit;
+        });
+        setSearchResults(results);
       } catch {
         setSearchResults([]);
       } finally {
@@ -515,7 +523,9 @@ function AdultClient() {
         )}
 
         {/* ── Actresses tab ── */}
-        {tab === 'actresses' && <ActressesPanel />}
+        {tab === 'actresses' && (
+          <ActressesPanel onSearch={(name) => handleSearch(name)} />
+        )}
       </div>
     </PageLayout>
   );

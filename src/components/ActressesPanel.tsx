@@ -31,7 +31,11 @@ const saveFavorites = (set: Set<string>) => {
 type PoolEntry = [string, number];
 const PAGE_SIZE = 200;
 
-export default function ActressesPanel() {
+interface ActressesPanelProps {
+  onSearch?: (name: string) => void;
+}
+
+export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
   const router = useRouter();
   const [pool, setPool] = useState<PoolEntry[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -105,7 +109,11 @@ export default function ActressesPanel() {
   };
 
   const handleSearch = (name: string) => {
-    router.push(`/search?q=${encodeURIComponent(name)}`);
+    if (onSearch) {
+      onSearch(name);
+    } else {
+      router.push(`/search?q=${encodeURIComponent(name)}`);
+    }
   };
 
   return (
