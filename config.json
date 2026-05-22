@@ -333,11 +333,6 @@
       "detail": "https://api.souavzyw.net",
       "group": "🔞歐美"
     },
-    "czyapi.com": {
-      "api": "https://czyapi.com/api.php/provide/vod",
-      "name": "🔞超资源",
-      "group": "🔞"
-    },
     "4000zy.com": {
       "api": "https://www.4000zy.com/inc/api.php",
       "name": "🔞4000資源",
@@ -367,6 +362,60 @@
       "api": "https://apittzy.com/api.php/provide/vod",
       "name": "🔞探探資源",
       "group": "🔞歐美"
+    },
+    "apilsbzy6.com": {
+      "api": "https://apilsbzy6.com/api.php/provide/vod",
+      "name": "🔞-老色逼6-",
+      "detail": "https://apilsbzy6.com",
+      "group": "🔞"
+    },
+    "apilsbzy4.com": {
+      "api": "https://apilsbzy4.com/api.php/provide/vod",
+      "name": "🔞-老色逼4-",
+      "detail": "https://apilsbzy4.com",
+      "group": "🔞"
+    },
+    "apilsbzy5.com": {
+      "api": "https://apilsbzy5.com/api.php/provide/vod",
+      "name": "🔞-老色逼5-",
+      "detail": "https://apilsbzy5.com",
+      "group": "🔞"
+    },
+    "yutuzy5.com": {
+      "api": "https://yutuzy5.com/api.php/provide/vod",
+      "name": "🔞玉兔资源5",
+      "detail": "https://yutuzy5.com",
+      "group": "🔞"
+    },
+    "yutuzy6.com": {
+      "api": "https://yutuzy6.com/api.php/provide/vod",
+      "name": "🔞玉兔资源6",
+      "detail": "https://yutuzy6.com",
+      "group": "🔞"
+    },
+    "apilsbzy2.com": {
+      "api": "https://apilsbzy2.com/api.php/provide/vod",
+      "name": "🔞-老色逼2-",
+      "detail": "https://apilsbzy2.com",
+      "group": "🔞"
+    },
+    "apilsbzy3.com": {
+      "api": "https://apilsbzy3.com/api.php/provide/vod",
+      "name": "🔞-老色逼3-",
+      "detail": "https://apilsbzy3.com",
+      "group": "🔞"
+    },
+    "yutuzy3.com": {
+      "api": "https://yutuzy3.com/api.php/provide/vod",
+      "name": "🔞玉兔资源3",
+      "detail": "https://yutuzy3.com",
+      "group": "🔞"
+    },
+    "yutuzy4.com": {
+      "api": "https://yutuzy4.com/api.php/provide/vod",
+      "name": "🔞玉兔资源4",
+      "detail": "https://yutuzy4.com",
+      "group": "🔞"
     },
     "semaozy.net": {
       "api": "https://caiji.semaozy.net/inc/apijson_vod.php",
