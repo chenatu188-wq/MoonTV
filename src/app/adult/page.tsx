@@ -10,6 +10,87 @@ import VideoCard from '@/components/VideoCard';
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 type Tab = 'browse' | 'search' | 'actresses';
 
+const SESSION_KEY = 'adult_unlocked';
+
+function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
+  const [input, setInput] = useState('');
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!input || loading) return;
+    setLoading(true);
+    setError(false);
+    try {
+      const resp = await fetch('/api/adult/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: input }),
+      });
+      const { ok } = await resp.json();
+      if (ok) {
+        sessionStorage.setItem(SESSION_KEY, '1');
+        onUnlock();
+      } else {
+        setError(true);
+        setInput('');
+        inputRef.current?.focus();
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm'>
+      <div className='bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-80 flex flex-col items-center gap-5'>
+        <div className='text-4xl'>🔞</div>
+        <div className='text-center'>
+          <p className='text-lg font-bold text-gray-800 dark:text-gray-100'>
+            18禁專區
+          </p>
+          <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
+            請輸入密碼以繼續
+          </p>
+        </div>
+        <input
+          ref={inputRef}
+          type='password'
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            setError(false);
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          placeholder='密碼'
+          className={`w-full px-4 py-2.5 rounded-lg border text-center text-sm tracking-widest focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-gray-100 ${
+            error
+              ? 'border-rose-500 focus:ring-rose-400 placeholder-rose-300'
+              : 'border-gray-300 dark:border-gray-600 focus:ring-rose-400'
+          }`}
+        />
+        {error && (
+          <p className='text-xs text-rose-500 -mt-2'>密碼錯誤，請重試</p>
+        )}
+        <button
+          onClick={handleSubmit}
+          disabled={loading || !input}
+          className='w-full py-2.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium disabled:opacity-50 transition-colors'
+        >
+          {loading ? '驗證中…' : '進入'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface BrowseResult {
   id: string;
   title: string;
@@ -29,7 +110,13 @@ interface ApiSiteInfo {
 }
 
 function AdultClient() {
+  const [unlocked, setUnlocked] = useState(false);
   const [tab, setTab] = useState<Tab>('browse');
+
+  // Check sessionStorage on mount
+  useEffect(() => {
+    if (sessionStorage.getItem(SESSION_KEY) === '1') setUnlocked(true);
+  }, []);
 
   // ── Browse state ──
   const [allSources, setAllSources] = useState<ApiSiteInfo[]>([]);
@@ -146,6 +233,7 @@ function AdultClient() {
 
   return (
     <PageLayout>
+      {!unlocked && <PasswordGate onUnlock={() => setUnlocked(true)} />}
       <div className='p-4 space-y-4'>
         <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
           🔞 18禁專區
