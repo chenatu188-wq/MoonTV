@@ -3,11 +3,12 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { SearchResult } from '@/lib/types';
 
+import ActressesPanel from '@/components/ActressesPanel';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
-type Tab = 'browse' | 'search';
+type Tab = 'browse' | 'search' | 'actresses';
 
 interface BrowseResult {
   id: string;
@@ -152,20 +153,26 @@ function AdultClient() {
 
         {/* Tab switcher */}
         <div className='flex gap-2'>
-          {(['browse', 'search'] as Tab[]).map((t) => (
+          {(
+            [
+              { key: 'browse', label: '瀏覽' },
+              { key: 'search', label: '搜索' },
+              { key: 'actresses', label: '演員' },
+            ] as { key: Tab; label: string }[]
+          ).map((t) => (
             <button
-              key={t}
+              key={t.key}
               onClick={() => {
-                setTab(t);
+                setTab(t.key);
                 window.scrollTo({ top: 0 });
               }}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                tab === t
+                tab === t.key
                   ? 'bg-rose-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-rose-100 dark:hover:bg-rose-900/30'
               }`}
             >
-              {t === 'browse' ? '瀏覽' : '搜索'}
+              {t.label}
             </button>
           ))}
         </div>
@@ -357,6 +364,9 @@ function AdultClient() {
             )}
           </>
         )}
+
+        {/* ── Actresses tab ── */}
+        {tab === 'actresses' && <ActressesPanel />}
       </div>
     </PageLayout>
   );
