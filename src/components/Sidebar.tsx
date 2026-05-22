@@ -5,7 +5,6 @@ import {
   Clover,
   Film,
   Flame,
-  Heart,
   Home,
   Menu,
   Search,
@@ -163,11 +162,6 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Flame,
       label: '彩虹',
       href: '/adult',
-    },
-    {
-      icon: Heart,
-      label: '演員',
-      href: '/actresses',
     },
   ];
 
