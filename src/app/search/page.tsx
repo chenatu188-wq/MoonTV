@@ -332,6 +332,24 @@ function SearchPageClient() {
     });
   }, [searchResults]);
 
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+
+  const filteredAggResults = useMemo(() => {
+    if (!selectedYear) return aggregatedResults;
+    return aggregatedResults.filter(
+      ([, group]) => group[0].year === selectedYear
+    );
+  }, [aggregatedResults, selectedYear]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set(
+      aggregatedResults
+        .map(([, g]) => g[0].year)
+        .filter((y) => y && y !== 'unknown')
+    );
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [aggregatedResults]);
+
   useEffect(() => {
     // 无搜索参数时聚焦搜索框
     !searchParams.get('q') && document.getElementById('searchInput')?.focus();
@@ -1023,6 +1041,7 @@ function SearchPageClient() {
     setSearchQuery(trimmed);
     setIsLoading(true);
     setShowResults(true);
+    setSelectedYear(null);
 
     router.push(`/search?q=${encodeURIComponent(trimmed)}`);
     // 直接发请求
@@ -1084,12 +1103,45 @@ function SearchPageClient() {
                   </div>
                 </label>
               </div>
+              {showResults && availableYears.length > 1 && (
+                <div className='flex flex-wrap gap-2 mb-3'>
+                  <button
+                    onClick={() => {
+                      setSelectedYear(null);
+                      setSearchPage(1);
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                      !selectedYear
+                        ? 'bg-green-500 text-white border-green-500'
+                        : 'border-gray-300 dark:border-gray-600 hover:border-green-400 dark:text-gray-300'
+                    }`}
+                  >
+                    全部
+                  </button>
+                  {availableYears.map((y) => (
+                    <button
+                      key={y}
+                      onClick={() => {
+                        setSelectedYear(y);
+                        setSearchPage(1);
+                      }}
+                      className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                        selectedYear === y
+                          ? 'bg-green-500 text-white border-green-500'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-green-400 dark:text-gray-300'
+                      }`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div
                 key={`search-results-${viewMode}`}
                 className='justify-start grid grid-cols-2 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(14rem,_1fr))] sm:gap-x-8'
               >
                 {viewMode === 'agg'
-                  ? aggregatedResults
+                  ? filteredAggResults
                       .slice(
                         (searchPage - 1) * SEARCH_PAGE_SIZE,
                         searchPage * SEARCH_PAGE_SIZE
@@ -1148,7 +1200,7 @@ function SearchPageClient() {
               {(() => {
                 const total =
                   viewMode === 'agg'
-                    ? aggregatedResults.length
+                    ? filteredAggResults.length
                     : searchResults.length;
                 if (total <= SEARCH_PAGE_SIZE) return null;
                 const totalPages = Math.ceil(total / SEARCH_PAGE_SIZE);

@@ -151,7 +151,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     {
       icon: Clapperboard,
       label: '短剧',
-      href: '/search?q=' + encodeURIComponent('短剧'),
+      href: '/browse',
     },
     {
       icon: Sparkles,
