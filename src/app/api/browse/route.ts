@@ -73,12 +73,14 @@ export async function GET(request: Request) {
   const yearParam = year ? `&y=${year}` : '';
   const cacheTime = await getCacheTime();
 
+  // 每邏輯頁聚合 20 個上游頁，上游每頁 30 → 一次回 600 個
+  const PAGES_PER_LOGICAL = 20;
+
   try {
-    let browseUrl: string;
+    let buildUrl: (pg: number) => string;
 
     if (category === 'adult') {
-      // Browse all content without type filtering
-      browseUrl = `${site.api}?ac=videolist${yearParam}&pg=${page}`;
+      buildUrl = (pg) => `${site.api}?ac=videolist${yearParam}&pg=${pg}`;
     } else {
       const keywords = category === 'tv' ? TV_KEYWORDS : DJ_KEYWORDS;
       const listResp = await fetch(`${site.api}?ac=list`, {
@@ -90,19 +92,47 @@ export async function GET(request: Request) {
       const djCat = matchCat(cats, keywords);
       if (!djCat)
         return NextResponse.json({ results: [], total: 0, pagecount: 0 });
-      browseUrl = `${site.api}?ac=videolist&t=${djCat.type_id}${yearParam}&pg=${page}`;
+      buildUrl = (pg) =>
+        `${site.api}?ac=videolist&t=${djCat.type_id}${yearParam}&pg=${pg}`;
     }
 
-    const browseResp = await fetch(browseUrl, {
-      headers: API_CONFIG.search.headers,
-    });
-    const data = await browseResp.json();
+    const startPg = (page - 1) * PAGES_PER_LOGICAL + 1;
+    const upstreamPages = Array.from(
+      { length: PAGES_PER_LOGICAL },
+      (_, i) => startPg + i
+    );
+
+    const responses = await Promise.all(
+      upstreamPages.map(async (pg) => {
+        try {
+          const r = await fetch(buildUrl(pg), {
+            headers: API_CONFIG.search.headers,
+          });
+          if (!r.ok) return null;
+          return await r.json();
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const firstValid = responses.find((r) => r && Array.isArray(r.list));
+    const upstreamTotal: number = firstValid?.total || 0;
+    const upstreamPageCount: number = firstValid?.pagecount || 1;
+    const logicalPageCount = Math.max(
+      1,
+      Math.ceil(upstreamPageCount / PAGES_PER_LOGICAL)
+    );
+
+    const mergedList = responses.flatMap((r) =>
+      r && Array.isArray(r.list) ? (r.list as RawItem[]) : []
+    );
 
     return NextResponse.json(
       {
-        results: mapItems(data.list || [], site.key, site.name),
-        total: data.total || 0,
-        pagecount: data.pagecount || 1,
+        results: mapItems(mergedList, site.key, site.name),
+        total: upstreamTotal,
+        pagecount: logicalPageCount,
         source_name: site.name,
         source_key: site.key,
       },
