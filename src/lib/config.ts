@@ -360,12 +360,13 @@ export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const fileSites = (runtimeConfig as any)?.api_site || {};
   return config.SourceConfig.filter((s) => {
     if (s.disabled) return false;
-    const group: string = fileSites[s.key]?.group || '';
-    return !group.startsWith('🔞');
+    const group: string = (s as any).group || fileSites[s.key]?.group || '';
+    return !group.startsWith('🔞') && !s.name.startsWith('🔞');
   }).map((s) => ({
     key: s.key,
     name: s.name,
     api: s.api,
     detail: s.detail,
+    group: (s as any).group || fileSites[s.key]?.group,
   }));
 }
