@@ -525,24 +525,32 @@ function PlayPageClient() {
     }
   };
 
-  // 去广告相关函数
+  // 去广告：辨識「廣告 segments + DISCONTINUITY + 主片」結構，整段廣告連 DISCONTINUITY 一起刪。
+  // 只刪 DISCONTINUITY 那一行的舊邏輯會留下未加密廣告 segments，遇到主片切換 AES-128 時 hls.js
+  // 會用 AES key 去解未加密的廣告 → 亂碼 → MEDIA_ERROR → 看似「片源無法播放」。
   function filterAdsFromM3U8(m3u8Content: string): string {
     if (!m3u8Content) return '';
-
-    // 按行分割M3U8内容
     const lines = m3u8Content.split('\n');
-    const filteredLines = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    // 找第一個 DISCONTINUITY；沒有就不動
+    const discIdx = lines.findIndex((l) =>
+      l.startsWith('#EXT-X-DISCONTINUITY')
+    );
+    if (discIdx === -1) return m3u8Content;
 
-      // 只过滤#EXT-X-DISCONTINUITY标识
-      if (!line.includes('#EXT-X-DISCONTINUITY')) {
-        filteredLines.push(line);
-      }
+    // 找 playlist body 起點（第一個 #EXTINF 或非標籤 URL 行）
+    const bodyIdx = lines.findIndex(
+      (l) => l.startsWith('#EXTINF:') || (l.trim() && !l.startsWith('#'))
+    );
+    if (bodyIdx === -1 || bodyIdx >= discIdx) {
+      // 結構不合預期，退回舊行為（只刪 DISCONTINUITY）
+      return lines
+        .filter((l) => !l.startsWith('#EXT-X-DISCONTINUITY'))
+        .join('\n');
     }
 
-    return filteredLines.join('\n');
+    // 保留 header [0, bodyIdx)；丟掉廣告區段 [bodyIdx, discIdx]（含 DISCONTINUITY）；保留 [discIdx+1, end)
+    return [...lines.slice(0, bodyIdx), ...lines.slice(discIdx + 1)].join('\n');
   }
 
   class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
