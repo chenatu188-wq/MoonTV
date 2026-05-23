@@ -89,12 +89,13 @@ async function initConfig() {
       const apiSiteEntries = Object.entries(fileConfig.api_site);
 
       if (adminConfig) {
-        // 补全 SourceConfig
-        const existed = new Set(
-          (adminConfig.SourceConfig || []).map((s) => s.key)
+        // 補全 / 同步 SourceConfig：config.json 是 from='config' 源的最新權威
+        const bySite = new Map(
+          (adminConfig.SourceConfig || []).map((s) => [s.key, s])
         );
         apiSiteEntries.forEach(([key, site]) => {
-          if (!existed.has(key)) {
+          const existing = bySite.get(key);
+          if (!existing) {
             adminConfig!.SourceConfig.push({
               key,
               name: site.name,
@@ -104,6 +105,12 @@ async function initConfig() {
               from: 'config',
               disabled: false,
             });
+          } else if (existing.from === 'config') {
+            // 同步 config.json 的最新欄位（保留 disabled 使用者狀態）
+            existing.name = site.name;
+            existing.api = site.api;
+            existing.detail = site.detail; // undefined → 從 DB 清空，讓 detail 路徑走標準 JSON
+            existing.group = site.group;
           }
         });
 
