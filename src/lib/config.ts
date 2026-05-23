@@ -355,7 +355,14 @@ export async function getCacheTime(): Promise<number> {
 
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
-  return config.SourceConfig.filter((s) => !s.disabled).map((s) => ({
+  // 家庭區：排除所有 🔞 開頭的群組（🔞 / 🔞歐美 等成人源）
+  // group 沒存在 admin DB 裡，從 runtime.ts 反查
+  const fileSites = (runtimeConfig as any)?.api_site || {};
+  return config.SourceConfig.filter((s) => {
+    if (s.disabled) return false;
+    const group: string = fileSites[s.key]?.group || '';
+    return !group.startsWith('🔞');
+  }).map((s) => ({
     key: s.key,
     name: s.name,
     api: s.api,
