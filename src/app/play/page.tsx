@@ -525,32 +525,67 @@ function PlayPageClient() {
     }
   };
 
-  // 去广告：辨識「廣告 segments + DISCONTINUITY + 主片」結構，整段廣告連 DISCONTINUITY 一起刪。
-  // 只刪 DISCONTINUITY 那一行的舊邏輯會留下未加密廣告 segments，遇到主片切換 AES-128 時 hls.js
-  // 會用 AES key 去解未加密的廣告 → 亂碼 → MEDIA_ERROR → 看似「片源無法播放」。
+  // 去广告：辨識「短廣告 + DISCONTINUITY + 長主片」的 pre-roll 結構，整段廣告連 DISCONTINUITY 一起刪。
+  // 安全機制：只有當 DISC 前的 segment 數 ≤ 30（典型廣告長度）且後段顯著更長時才剪。
+  // 其他結構（無 DISC / 主片在前 / 雙方都長）只移除 DISC 行，避免誤刪主片。
+  // 同時去掉「#EXT-X-KEY:METHOD=NONE 緊接 AES-128 key」這種冗餘 KEY，避免 hls.js 偶發解析錯亂。
   function filterAdsFromM3U8(m3u8Content: string): string {
     if (!m3u8Content) return '';
     const lines = m3u8Content.split('\n');
 
-    // 找第一個 DISCONTINUITY；沒有就不動
     const discIdx = lines.findIndex((l) =>
       l.startsWith('#EXT-X-DISCONTINUITY')
     );
-    if (discIdx === -1) return m3u8Content;
+    if (discIdx === -1) return cleanupRedundantKey(m3u8Content);
 
-    // 找 playlist body 起點（第一個 #EXTINF 或非標籤 URL 行）
     const bodyIdx = lines.findIndex(
       (l) => l.startsWith('#EXTINF:') || (l.trim() && !l.startsWith('#'))
     );
-    if (bodyIdx === -1 || bodyIdx >= discIdx) {
-      // 結構不合預期，退回舊行為（只刪 DISCONTINUITY）
-      return lines
-        .filter((l) => !l.startsWith('#EXT-X-DISCONTINUITY'))
-        .join('\n');
-    }
+    const fallback = () =>
+      cleanupRedundantKey(
+        lines.filter((l) => !l.startsWith('#EXT-X-DISCONTINUITY')).join('\n')
+      );
 
-    // 保留 header [0, bodyIdx)；丟掉廣告區段 [bodyIdx, discIdx]（含 DISCONTINUITY）；保留 [discIdx+1, end)
-    return [...lines.slice(0, bodyIdx), ...lines.slice(discIdx + 1)].join('\n');
+    if (bodyIdx === -1 || bodyIdx >= discIdx) return fallback();
+
+    // 計算 DISC 前後的 segment 數（以 .ts URL 行計）
+    const isSeg = (l: string) =>
+      l.trim().length > 0 && !l.startsWith('#') && l.includes('.ts');
+    let segsBefore = 0;
+    for (let i = bodyIdx; i < discIdx; i++) if (isSeg(lines[i])) segsBefore++;
+    let segsAfter = 0;
+    for (let i = discIdx + 1; i < lines.length; i++)
+      if (isSeg(lines[i])) segsAfter++;
+
+    // 廣告判定：前段 ≤ 30（典型廣告 ≈ 20 秒）且後段顯著更長（≥ 前段 × 3）
+    const isPreRollAd =
+      segsBefore > 0 && segsBefore <= 30 && segsAfter >= segsBefore * 3;
+    if (!isPreRollAd) return fallback();
+
+    const merged = [
+      ...lines.slice(0, bodyIdx),
+      ...lines.slice(discIdx + 1),
+    ].join('\n');
+    return cleanupRedundantKey(merged);
+  }
+
+  // 移除冗餘的 #EXT-X-KEY:METHOD=NONE（後面緊跟另一個 KEY 標籤時）
+  function cleanupRedundantKey(m3u8: string): string {
+    const lines = m3u8.split('\n');
+    const out: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const cur = lines[i];
+      if (cur.startsWith('#EXT-X-KEY:METHOD=NONE')) {
+        // 找下一個 non-empty 非註解之前的下一個 KEY 行
+        let j = i + 1;
+        while (j < lines.length && lines[j].trim() === '') j++;
+        if (j < lines.length && lines[j].startsWith('#EXT-X-KEY:')) {
+          continue; // 跳過冗餘 NONE
+        }
+      }
+      out.push(cur);
+    }
+    return out.join('\n');
   }
 
   class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
