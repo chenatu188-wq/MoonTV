@@ -365,12 +365,12 @@ export async function getCacheTime(): Promise<number> {
 
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
-  return config.SourceConfig.filter((s) => !s.disabled && s.group !== '🔞').map(
-    (s) => ({
-      key: s.key,
-      name: s.name,
-      api: s.api,
-      detail: s.detail,
-    })
-  );
+  return config.SourceConfig.filter(
+    (s) => !s.disabled && !(s.group || '').startsWith('🔞')
+  ).map((s) => ({
+    key: s.key,
+    name: s.name,
+    api: s.api,
+    detail: s.detail,
+  }));
 }
