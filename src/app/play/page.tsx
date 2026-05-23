@@ -655,8 +655,9 @@ function PlayPageClient() {
     const fetchSourcesData = async (query: string): Promise<SearchResult[]> => {
       // 根据搜索词获取全部源信息
       try {
+        const searchApi = isAdultSearch ? '/api/adult/search' : '/api/search';
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(query.trim())}`
+          `${searchApi}?q=${encodeURIComponent(query.trim())}`
         );
         if (!response.ok) {
           throw new Error('搜索失败');

@@ -204,10 +204,47 @@ export async function getDetailFromApi(
   apiSite: ApiSite,
   id: string
 ): Promise<SearchResult> {
-  if (apiSite.detail) {
-    return handleSpecialSourceDetail(id, apiSite);
+  let jsonDetail: SearchResult | null = null;
+  let jsonError: unknown = null;
+
+  try {
+    jsonDetail = await getJsonDetailFromApi(apiSite, id);
+    if (jsonDetail.episodes.length > 0 || !apiSite.detail) {
+      return jsonDetail;
+    }
+  } catch (error) {
+    jsonError = error;
   }
 
+  if (apiSite.detail) {
+    try {
+      const htmlDetail = await handleSpecialSourceDetail(id, apiSite);
+      if (htmlDetail.episodes.length > 0) {
+        return {
+          ...htmlDetail,
+          title: htmlDetail.title || jsonDetail?.title || '',
+          poster: htmlDetail.poster || jsonDetail?.poster || '',
+          year: htmlDetail.year || jsonDetail?.year || 'unknown',
+          desc: htmlDetail.desc || jsonDetail?.desc || '',
+          type_name: htmlDetail.type_name || jsonDetail?.type_name,
+          douban_id: htmlDetail.douban_id || jsonDetail?.douban_id,
+        };
+      }
+    } catch (error) {
+      if (!jsonDetail) {
+        throw jsonError || error;
+      }
+    }
+  }
+
+  if (jsonDetail) return jsonDetail;
+  throw jsonError instanceof Error ? jsonError : new Error('获取视频详情失败');
+}
+
+async function getJsonDetailFromApi(
+  apiSite: ApiSite,
+  id: string
+): Promise<SearchResult> {
   const detailUrl = `${apiSite.api}${API_CONFIG.detail.path}${id}`;
 
   const controller = new AbortController();
@@ -236,25 +273,7 @@ export async function getDetailFromApi(
   }
 
   const videoDetail = data.list[0];
-  let episodes: string[] = [];
-
-  // 处理播放源拆分
-  if (videoDetail.vod_play_url) {
-    const playSources = videoDetail.vod_play_url.split('$$$');
-    if (playSources.length > 0) {
-      const mainSource = playSources[0];
-      const episodeList = mainSource.split('#');
-      episodes = episodeList
-        .map((ep: string) => {
-          const parts = ep.split('$');
-          return parts.length > 1 ? parts[1] : '';
-        })
-        .filter(
-          (url: string) =>
-            url && (url.startsWith('http://') || url.startsWith('https://'))
-        );
-    }
-  }
+  let episodes = parsePlayUrls(videoDetail.vod_play_url || '');
 
   // 如果播放源为空，则尝试从内容中解析 m3u8
   if (episodes.length === 0 && videoDetail.vod_content) {
@@ -277,6 +296,41 @@ export async function getDetailFromApi(
     type_name: videoDetail.type_name,
     douban_id: videoDetail.vod_douban_id,
   };
+}
+
+function parsePlayUrls(vodPlayUrl: string): string[] {
+  if (!vodPlayUrl) return [];
+
+  const groups = vodPlayUrl
+    .split('$$$')
+    .map((sourceGroup) =>
+      sourceGroup
+        .split('#')
+        .map((episode: string) => {
+          const dollarIndex = episode.indexOf('$');
+          const rawUrl =
+            dollarIndex >= 0 ? episode.slice(dollarIndex + 1) : episode;
+          const parenIndex = rawUrl.indexOf('(');
+          return (parenIndex > 0 ? rawUrl.slice(0, parenIndex) : rawUrl).trim();
+        })
+        .filter(
+          (url: string) =>
+            url && (url.startsWith('http://') || url.startsWith('https://'))
+        )
+    )
+    .filter((urls) => urls.length > 0);
+
+  if (groups.length === 0) return [];
+
+  const scoredGroups = groups.map((urls) => ({
+    urls,
+    m3u8Count: urls.filter((url) => url.includes('.m3u8')).length,
+  }));
+  scoredGroups.sort(
+    (a, b) => b.m3u8Count - a.m3u8Count || b.urls.length - a.urls.length
+  );
+
+  return Array.from(new Set(scoredGroups[0].urls));
 }
 
 async function handleSpecialSourceDetail(

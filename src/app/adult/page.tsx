@@ -431,7 +431,12 @@ function AdultClient() {
               <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
                 {filteredBrowse.map((item) => (
                   <div key={`${item.source}-${item.id}`} className='w-full'>
-                    <VideoCard from='search' items={[toSearchResult(item)]} />
+                    <VideoCard
+                      from='search'
+                      items={[toSearchResult(item)]}
+                      query={item.title}
+                      adultSearch
+                    />
                   </div>
                 ))}
               </div>
