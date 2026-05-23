@@ -363,11 +363,23 @@ export async function getCacheTime(): Promise<number> {
   return config.SiteConfig.SiteInterfaceCacheTime || 7200;
 }
 
+// 家庭區搜索用：排除所有 🔞* 群組
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
   return config.SourceConfig.filter(
     (s) => !s.disabled && !(s.group || '').startsWith('🔞')
   ).map((s) => ({
+    key: s.key,
+    name: s.name,
+    api: s.api,
+    detail: s.detail,
+  }));
+}
+
+// detail API / 彩虹頻道用：所有非停用的源（含 🔞）
+export async function getAllSources(): Promise<ApiSite[]> {
+  const config = await getConfig();
+  return config.SourceConfig.filter((s) => !s.disabled).map((s) => ({
     key: s.key,
     name: s.name,
     api: s.api,

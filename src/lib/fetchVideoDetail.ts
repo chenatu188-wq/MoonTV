@@ -1,4 +1,4 @@
-import { getAvailableApiSites } from '@/lib/config';
+import { getAllSources } from '@/lib/config';
 import { SearchResult } from '@/lib/types';
 
 import { getDetailFromApi, searchFromApi } from './downstream';
@@ -19,8 +19,8 @@ export async function fetchVideoDetail({
   id,
   fallbackTitle = '',
 }: FetchVideoDetailOptions): Promise<SearchResult> {
-  // 优先通过搜索接口查找精确匹配
-  const apiSites = await getAvailableApiSites();
+  // 优先通过搜索接口查找精确匹配（需要包含 🔞 源以支援彩虹頻道）
+  const apiSites = await getAllSources();
   const apiSite = apiSites.find((site) => site.key === source);
   if (!apiSite) {
     throw new Error('无效的API来源');

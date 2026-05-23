@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getAvailableApiSites, getCacheTime } from '@/lib/config';
+import { getAllSources, getCacheTime } from '@/lib/config';
 import { getDetailFromApi } from '@/lib/downstream';
 
 export const runtime = 'edge';
@@ -19,7 +19,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const apiSites = await getAvailableApiSites();
+    // detail 必須能找到任何源（含 🔞），不只家庭區源
+    const apiSites = await getAllSources();
     const apiSite = apiSites.find((site) => site.key === sourceCode);
 
     if (!apiSite) {
