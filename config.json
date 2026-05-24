@@ -178,6 +178,46 @@
       "name": "小猫咪资源",
       "group": "綜合影視"
     },
+    "maoyan_movie": {
+      "api": "https://api.maoyanapi.top/api.php/provide/vod",
+      "name": "猫眼资源",
+      "group": "電影"
+    },
+    "yzzy_movie": {
+      "api": "https://api.yzzy-api.com/inc/apijson.php",
+      "name": "优质资源",
+      "group": "電影"
+    },
+    "jinying_tv": {
+      "api": "https://jinyingzy.com/api.php/provide/vod",
+      "name": "金鹰点播",
+      "group": "電視劇"
+    },
+    "piaoling_tv": {
+      "api": "https://p2100.net/api.php/provide/vod",
+      "name": "飘零资源",
+      "group": "電視劇"
+    },
+    "subo_dj": {
+      "api": "https://subocaiji.com/api.php/provide/vod",
+      "name": "速播短剧",
+      "group": "短劇"
+    },
+    "lzcaiji_dj": {
+      "api": "https://cj.lzcaiji.com/api.php/provide/vod",
+      "name": "量子短剧",
+      "group": "短劇"
+    },
+    "modu_anime": {
+      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
+      "name": "魔都动漫",
+      "group": "動漫"
+    },
+    "huya_anime": {
+      "api": "https://www.huyaapi.com/api.php/provide/vod",
+      "name": "虎牙动漫",
+      "group": "動漫"
+    },
     "wwzy": {
       "api": "https://wwzy.tv/api.php/provide/vod",
       "name": "旺旺短剧",
