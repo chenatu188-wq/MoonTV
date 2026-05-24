@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import {
   getAvailableApiSites,
   getCacheTime,
+  hasAdultKeyword,
   isFamilyApiSite,
 } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
@@ -53,7 +54,19 @@ export async function GET(request: Request) {
     }
 
     const results = await searchFromApi(targetSite, query);
-    const result = results.filter((r) => r.title === query);
+    const result = results
+      .filter((r) => r.title === query)
+      .filter(
+        (r) =>
+          !hasAdultKeyword([
+            r.title,
+            r.source_name,
+            r.source_group,
+            r.class,
+            r.type_name,
+            r.desc,
+          ])
+      );
     const cacheTime = await getCacheTime();
 
     if (result.length === 0) {
