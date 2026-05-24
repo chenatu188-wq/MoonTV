@@ -4,6 +4,7 @@ import { toSimplified } from '@/lib/cn-converter';
 import {
   getAvailableApiSites,
   getCacheTime,
+  hasAdultKeyword,
   isFamilyApiSite,
 } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
@@ -40,6 +41,17 @@ export async function GET(request: Request) {
           name: r.source_name,
           group: r.source_group,
         })
+      )
+      .filter(
+        (r) =>
+          !hasAdultKeyword([
+            r.title,
+            r.source_name,
+            r.source_group,
+            r.class,
+            r.type_name,
+            r.desc,
+          ])
       )
       .filter((r) => {
         const key = `${r.source}|${r.id}`;

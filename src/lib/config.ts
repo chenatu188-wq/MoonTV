@@ -25,7 +25,9 @@ const FAMILY_SOURCE_GROUPS = new Set([
 
 const ADULT_SOURCE_KEYWORDS = [
   '🔞',
+  '🈲',
   '18禁',
+  '18🈲',
   '成人',
   '情色',
   '番号',
@@ -415,11 +417,20 @@ export function isFamilyApiSite(site: Partial<ApiSite>): boolean {
   const group = site.group || '';
   if (!FAMILY_SOURCE_GROUPS.has(group)) return false;
 
-  const text = [site.key, site.name, site.group, site.api, site.detail]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return !ADULT_SOURCE_KEYWORDS.some((keyword) =>
-    text.includes(keyword.toLowerCase())
+  return !hasAdultKeyword([
+    site.key,
+    site.name,
+    site.group,
+    site.api,
+    site.detail,
+  ]);
+}
+
+export function hasAdultKeyword(parts: unknown[]): boolean {
+  const text = parts.filter(Boolean).join(' ').normalize('NFKC').toLowerCase();
+
+  if (/18\s*[禁🈲]/u.test(text)) return true;
+  return ADULT_SOURCE_KEYWORDS.some((keyword) =>
+    text.includes(keyword.normalize('NFKC').toLowerCase())
   );
 }
