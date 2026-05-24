@@ -13,6 +13,39 @@ export interface ApiSite {
   group?: string;
 }
 
+const FAMILY_SOURCE_GROUPS = new Set([
+  '精選推薦',
+  '大陸劇',
+  '綜合影視',
+  '電影',
+  '電視劇',
+  '短劇',
+  '動漫',
+]);
+
+const ADULT_SOURCE_KEYWORDS = [
+  '🔞',
+  '18禁',
+  '成人',
+  '情色',
+  '番号',
+  '番號',
+  '无码',
+  '無碼',
+  '有码',
+  '有碼',
+  '女优',
+  '女優',
+  'av',
+  'jav',
+  'adult',
+  'porn',
+  'sex',
+  'xmm',
+  '小猫咪',
+  '小貓咪',
+];
+
 interface ConfigFileStruct {
   cache_time?: number;
   api_site: {
@@ -355,23 +388,20 @@ export async function getCacheTime(): Promise<number> {
 
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
-  // 家庭區：排除所有 🔞 開頭的群組（🔞 / 🔞歐美 等成人源）
+  // 家庭區：只放行明確家庭分類，並排除成人關鍵字源。
   // 只允許目前 runtime/config.json 裡存在且非成人的 key；DB 舊資料不再放行
   const fileSites = (runtimeConfig as any)?.api_site || {};
   const allowedKeys = new Set(
     Object.entries(fileSites)
-      .filter(([, site]: [string, any]) => {
-        const group = site.group || '';
-        const name = site.name || '';
-        return !group.startsWith('🔞') && !name.startsWith('🔞');
+      .filter(([key, site]: [string, any]) => {
+        return isFamilyApiSite({ ...site, key });
       })
       .map(([key]) => key)
   );
   return config.SourceConfig.filter((s) => {
     if (s.disabled) return false;
     if (!allowedKeys.has(s.key)) return false;
-    const group: string = (s as any).group || fileSites[s.key]?.group || '';
-    return !group.startsWith('🔞') && !s.name.startsWith('🔞');
+    return isFamilyApiSite({ ...fileSites[s.key], ...s });
   }).map((s) => ({
     key: s.key,
     name: s.name,
@@ -379,4 +409,17 @@ export async function getAvailableApiSites(): Promise<ApiSite[]> {
     detail: s.detail,
     group: (s as any).group || fileSites[s.key]?.group,
   }));
+}
+
+export function isFamilyApiSite(site: Partial<ApiSite>): boolean {
+  const group = site.group || '';
+  if (!FAMILY_SOURCE_GROUPS.has(group)) return false;
+
+  const text = [site.key, site.name, site.group, site.api, site.detail]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return !ADULT_SOURCE_KEYWORDS.some((keyword) =>
+    text.includes(keyword.toLowerCase())
+  );
 }

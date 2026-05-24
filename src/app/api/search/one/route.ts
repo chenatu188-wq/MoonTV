@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { getAvailableApiSites, getCacheTime } from '@/lib/config';
+import {
+  getAvailableApiSites,
+  getCacheTime,
+  isFamilyApiSite,
+} from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 
 export const runtime = 'edge';
@@ -38,7 +42,7 @@ export async function GET(request: Request) {
       );
     }
 
-    if ((targetSite.group || '').startsWith('🔞')) {
+    if (!isFamilyApiSite(targetSite)) {
       return NextResponse.json(
         {
           error: `未找到指定的视频源: ${resourceId}`,
