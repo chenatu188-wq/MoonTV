@@ -1,6 +1,16 @@
 'use client';
 
-import { Clapperboard, Clover, Film, Home, Menu, Search, Sparkles, Tv } from 'lucide-react';
+import {
+  Clapperboard,
+  Clover,
+  Film,
+  Heart,
+  Home,
+  Menu,
+  Search,
+  Sparkles,
+  Tv,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -141,12 +151,17 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     {
       icon: Clapperboard,
       label: '短剧',
-      href: '/search?q=' + encodeURIComponent('短剧'),
+      href: '/browse',
     },
     {
       icon: Sparkles,
       label: '动漫',
       href: '/search?q=' + encodeURIComponent('动漫'),
+    },
+    {
+      icon: Heart,
+      label: '演員',
+      href: '/actresses',
     },
   ];
 

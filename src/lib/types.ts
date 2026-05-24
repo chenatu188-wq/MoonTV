@@ -74,11 +74,13 @@ export interface SearchResult {
   episodes: string[];
   source: string;
   source_name: string;
+  source_group?: string;
   class?: string;
   year: string;
   desc?: string;
   type_name?: string;
   douban_id?: number;
+  score?: number;
 }
 
 // 豆瓣数据结构
