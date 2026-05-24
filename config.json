@@ -173,11 +173,6 @@
       "name": "魔爪资源",
       "group": "綜合影視"
     },
-    "xiaomaomi": {
-      "api": "https://zy.xmm.hk/api.php/provide/vod",
-      "name": "小猫咪资源",
-      "group": "綜合影視"
-    },
     "maoyan_movie": {
       "api": "https://api.maoyanapi.top/api.php/provide/vod",
       "name": "猫眼资源",

@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import { toSimplified } from '@/lib/cn-converter';
-import { getAvailableApiSites, getCacheTime } from '@/lib/config';
+import {
+  getAvailableApiSites,
+  getCacheTime,
+  isFamilyApiSite,
+} from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 
 export const runtime = 'edge';
@@ -30,7 +34,13 @@ export async function GET(request: Request) {
     const seen = new Set<string>();
     const dedupedResults = (await Promise.all(searchPromises))
       .flat()
-      .filter((r) => !(r.source_group || '').startsWith('🔞'))
+      .filter((r) =>
+        isFamilyApiSite({
+          key: r.source,
+          name: r.source_name,
+          group: r.source_group,
+        })
+      )
       .filter((r) => {
         const key = `${r.source}|${r.id}`;
         if (seen.has(key)) return false;
