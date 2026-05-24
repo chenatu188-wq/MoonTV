@@ -356,10 +356,20 @@ export async function getCacheTime(): Promise<number> {
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
   // 家庭區：排除所有 🔞 開頭的群組（🔞 / 🔞歐美 等成人源）
-  // group 沒存在 admin DB 裡，從 runtime.ts 反查
+  // 只允許目前 runtime/config.json 裡存在且非成人的 key；DB 舊資料不再放行
   const fileSites = (runtimeConfig as any)?.api_site || {};
+  const allowedKeys = new Set(
+    Object.entries(fileSites)
+      .filter(([, site]: [string, any]) => {
+        const group = site.group || '';
+        const name = site.name || '';
+        return !group.startsWith('🔞') && !name.startsWith('🔞');
+      })
+      .map(([key]) => key)
+  );
   return config.SourceConfig.filter((s) => {
     if (s.disabled) return false;
+    if (!allowedKeys.has(s.key)) return false;
     const group: string = (s as any).group || fileSites[s.key]?.group || '';
     return !group.startsWith('🔞') && !s.name.startsWith('🔞');
   }).map((s) => ({
