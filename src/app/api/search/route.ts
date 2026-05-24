@@ -30,6 +30,7 @@ export async function GET(request: Request) {
     const seen = new Set<string>();
     const dedupedResults = (await Promise.all(searchPromises))
       .flat()
+      .filter((r) => !(r.source_group || '').startsWith('🔞'))
       .filter((r) => {
         const key = `${r.source}|${r.id}`;
         if (seen.has(key)) return false;

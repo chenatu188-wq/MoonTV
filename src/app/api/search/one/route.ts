@@ -38,6 +38,16 @@ export async function GET(request: Request) {
       );
     }
 
+    if ((targetSite.group || '').startsWith('🔞')) {
+      return NextResponse.json(
+        {
+          error: `未找到指定的视频源: ${resourceId}`,
+          result: null,
+        },
+        { status: 404 }
+      );
+    }
+
     const results = await searchFromApi(targetSite, query);
     const result = results.filter((r) => r.title === query);
     const cacheTime = await getCacheTime();
