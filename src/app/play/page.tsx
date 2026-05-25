@@ -162,17 +162,18 @@ function PlayPageClient() {
     providerVideosRef.current = providerVideos;
   }, [providerVideos]);
 
-  // 抓同片商的其他電視劇（預設 600/頁），給「相關影片」區塊用
+  // 抓同片商的其他影片（adult 走全片庫，一般走電視劇），給「相關影片」區塊用
   useEffect(() => {
     if (!currentSource) {
       setProviderVideos([]);
       return;
     }
+    const cat = searchParams.get('adult') === '1' ? 'adult' : 'tv';
     setProviderLoading(true);
     fetch(
       `/api/browse?source=${encodeURIComponent(
         currentSource
-      )}&category=tv&page=${providerPage}`
+      )}&category=${cat}&page=${providerPage}`
     )
       .then((r) => r.json())
       .then((data) => {
@@ -182,7 +183,7 @@ function PlayPageClient() {
       })
       .catch(() => setProviderVideos([]))
       .finally(() => setProviderLoading(false));
-  }, [currentSource, providerPage]);
+  }, [currentSource, providerPage, searchParams]);
 
   // 换源相关状态
   const [availableSources, setAvailableSources] = useState<SearchResult[]>([]);
@@ -2429,7 +2430,7 @@ function PlayPageClient() {
               </div>
             ) : providerVideos.length === 0 ? (
               <div className='text-center py-8 text-gray-500 dark:text-gray-400 text-sm'>
-                此片商暫無其他電視劇
+                此片商暫無其他影片
               </div>
             ) : (
               <>
@@ -2438,6 +2439,7 @@ function PlayPageClient() {
                     <div key={`${item.source}-${item.id}`} className='w-full'>
                       <VideoCard
                         from='search'
+                        adultSearch={isAdultSearch}
                         items={[
                           {
                             id: item.id,
