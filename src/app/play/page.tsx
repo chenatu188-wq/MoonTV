@@ -23,6 +23,20 @@ import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 
 import EpisodeSelector from '@/components/EpisodeSelector';
 import PageLayout from '@/components/PageLayout';
+import VideoCard from '@/components/VideoCard';
+
+// 相關影片（同片商）資料結構，跟 /api/browse 回傳一致
+interface ProviderItem {
+  id: string;
+  title: string;
+  poster: string;
+  year: string;
+  remarks: string;
+  score?: number;
+  source: string;
+  source_name: string;
+  episodes: string[];
+}
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
 declare global {
@@ -136,6 +150,39 @@ function PlayPageClient() {
   const resumeTimeRef = useRef<number | null>(null);
   // 上次使用的音量，默认 0.7
   const lastVolumeRef = useRef<number>(0.7);
+
+  // 相關影片（同片商）狀態
+  const [providerVideos, setProviderVideos] = useState<ProviderItem[]>([]);
+  const [providerLoading, setProviderLoading] = useState(false);
+  const [providerPage, setProviderPage] = useState(1);
+  const [providerPagecount, setProviderPagecount] = useState(1);
+  const [providerTotal, setProviderTotal] = useState(0);
+  const providerVideosRef = useRef<ProviderItem[]>([]);
+  useEffect(() => {
+    providerVideosRef.current = providerVideos;
+  }, [providerVideos]);
+
+  // 抓同片商的其他電視劇（預設 600/頁），給「相關影片」區塊用
+  useEffect(() => {
+    if (!currentSource) {
+      setProviderVideos([]);
+      return;
+    }
+    setProviderLoading(true);
+    fetch(
+      `/api/browse?source=${encodeURIComponent(
+        currentSource
+      )}&category=tv&page=${providerPage}`
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        setProviderVideos(data.results || []);
+        setProviderTotal(data.total || 0);
+        setProviderPagecount(data.pagecount || 1);
+      })
+      .catch(() => setProviderVideos([]))
+      .finally(() => setProviderLoading(false));
+  }, [currentSource, providerPage]);
 
   // 换源相关状态
   const [availableSources, setAvailableSources] = useState<SearchResult[]>([]);
@@ -1696,7 +1743,7 @@ function PlayPageClient() {
         }
       });
 
-      // 监听视频播放结束事件，自动播放下一集
+      // 监听视频播放结束事件，自动播放下一集；本片播完則跳下一支相關影片
       artPlayerRef.current.on('video:ended', () => {
         const d = detailRef.current;
         const idx = currentEpisodeIndexRef.current;
@@ -1704,6 +1751,23 @@ function PlayPageClient() {
           setTimeout(() => {
             setCurrentEpisodeIndex(idx + 1);
           }, 1000);
+          return;
+        }
+        // 本片完，跳下一支相關影片
+        const list = providerVideosRef.current;
+        const curId = currentIdRef.current;
+        const i = list.findIndex((r) => r.id === curId);
+        if (i >= 0 && i < list.length - 1) {
+          const next = list[i + 1];
+          setTimeout(() => {
+            router.push(
+              `/play?source=${encodeURIComponent(
+                next.source
+              )}&id=${encodeURIComponent(next.id)}&title=${encodeURIComponent(
+                next.title
+              )}&year=${encodeURIComponent(next.year || '')}`
+            );
+          }, 2000);
         }
       });
 
@@ -2345,6 +2409,89 @@ function PlayPageClient() {
             </div>
           </div>
         </div>
+
+        {/* 相關影片（同片商）— 看完接續播下一支不用返回 */}
+        {currentSource && (
+          <div className='py-4 space-y-3 border-t border-gray-200 dark:border-gray-700 mt-4'>
+            <div className='flex items-center justify-between flex-wrap gap-2'>
+              <h2 className='text-lg font-semibold text-gray-800 dark:text-gray-100'>
+                相關影片
+                {providerTotal > 0 && (
+                  <span className='ml-2 text-sm text-gray-500 dark:text-gray-400 font-normal'>
+                    （同片商共 {providerTotal} 部 ・ 本片完自動播下一支）
+                  </span>
+                )}
+              </h2>
+            </div>
+            {providerLoading ? (
+              <div className='text-center py-8 text-gray-500 dark:text-gray-400 text-sm'>
+                載入中…
+              </div>
+            ) : providerVideos.length === 0 ? (
+              <div className='text-center py-8 text-gray-500 dark:text-gray-400 text-sm'>
+                此片商暫無其他電視劇
+              </div>
+            ) : (
+              <>
+                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
+                  {providerVideos.map((item) => (
+                    <div key={`${item.source}-${item.id}`} className='w-full'>
+                      <VideoCard
+                        from='search'
+                        items={[
+                          {
+                            id: item.id,
+                            title: item.title,
+                            poster: item.poster,
+                            year: item.year,
+                            episodes: item.episodes,
+                            source: item.source,
+                            source_name: item.source_name,
+                            score: item.score,
+                            desc: item.remarks,
+                          } as SearchResult,
+                        ]}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {providerPagecount > 1 && (
+                  <div className='flex flex-wrap items-center justify-center gap-2 mt-4'>
+                    <button
+                      disabled={providerPage <= 1}
+                      onClick={() => {
+                        setProviderPage((p) => p - 1);
+                        window.scrollTo({
+                          top: document.body.scrollHeight,
+                          behavior: 'smooth',
+                        });
+                      }}
+                      className='px-3 py-1 rounded text-sm bg-gray-200 hover:bg-green-500/30 disabled:opacity-40 dark:bg-gray-700'
+                    >
+                      ← 上一頁
+                    </button>
+                    <span className='text-sm text-gray-500 dark:text-gray-400'>
+                      {providerPage} / {providerPagecount}
+                    </span>
+                    <button
+                      disabled={providerPage >= providerPagecount}
+                      onClick={() => {
+                        setProviderPage((p) => p + 1);
+                        window.scrollTo({
+                          top: document.body.scrollHeight,
+                          behavior: 'smooth',
+                        });
+                      }}
+                      className='px-3 py-1 rounded text-sm bg-gray-200 hover:bg-green-500/30 disabled:opacity-40 dark:bg-gray-700'
+                    >
+                      下一頁 →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </PageLayout>
   );
