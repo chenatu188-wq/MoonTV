@@ -17,6 +17,42 @@ import { SearchResult } from '@/lib/types';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
+const ADULT_RESULT_PATTERNS: RegExp[] = [
+  /\b[a-z]{2,6}[-_ ]?\d{2,5}\b/i,
+  /无码av|無碼|有码|自拍偷拍|人妻|巨乳|爆乳|做爱|做愛|性奴|乱伦|淫|AV片|成人|porn|jav/i,
+];
+
+const ADULT_CODE_TOKENS = [
+  'SSIS',
+  'IPX',
+  'MIDE',
+  'JUQ',
+  'ABP',
+  'MIAA',
+  'STARS',
+  'PRED',
+  'ADN',
+  'MIDV',
+  'MEYD',
+  'SNIS',
+  'SAME',
+];
+
+function normalizeForAdultCheck(input: string): string {
+  return input
+    .normalize('NFKC')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+function isAdultLikeResult(input: { title?: string; desc?: string }): boolean {
+  const text = `${input.title || ''} ${input.desc || ''}`;
+  if (ADULT_RESULT_PATTERNS.some((p) => p.test(text))) return true;
+  const normalized = normalizeForAdultCheck(text);
+  if (ADULT_CODE_TOKENS.some((t) => normalized.includes(t))) return true;
+  return /[A-Z]{2,6}\d{2,5}/.test(normalized);
+}
+
 function SearchPageClient() {
   // 搜索历史
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -150,8 +186,12 @@ function SearchPageClient() {
         `/api/search?q=${encodeURIComponent(query.trim())}`
       );
       const data = await response.json();
+      const safeResults = (data.results || []).filter(
+        (r: SearchResult) =>
+          !isAdultLikeResult({ title: r.title, desc: r.desc })
+      );
       setSearchResults(
-        data.results.sort((a: SearchResult, b: SearchResult) => {
+        safeResults.sort((a: SearchResult, b: SearchResult) => {
           // 优先排序：标题与搜索词完全一致的排在前面
           const aExactMatch = a.title === query.trim();
           const bExactMatch = b.title === query.trim();
