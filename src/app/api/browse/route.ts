@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { API_CONFIG, getCacheTime, getConfig } from '@/lib/config';
+import {
+  API_CONFIG,
+  getCacheTime,
+  getConfig,
+  isAdultGroup,
+} from '@/lib/config';
 
 export const runtime = 'edge';
 
@@ -69,6 +74,12 @@ export async function GET(request: Request) {
   const site = (config.SourceConfig || []).find((s) => s.key === sourceKey);
   if (!site)
     return NextResponse.json({ error: 'source not found' }, { status: 404 });
+  if (category !== 'adult' && isAdultGroup(site.group)) {
+    return NextResponse.json(
+      { error: 'adult source is not allowed in non-adult category' },
+      { status: 403 }
+    );
+  }
 
   const yearParam = year ? `&y=${year}` : '';
   const cacheTime = await getCacheTime();

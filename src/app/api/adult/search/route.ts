@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { toSimplified } from '@/lib/cn-converter';
-import { getCacheTime, getConfig } from '@/lib/config';
+import { getCacheTime, getConfig, isAdultGroup } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { toJapanese } from '@/lib/jp-converter';
 
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
   const config = await getConfig();
   const allSites = (config.SourceConfig || [])
-    .filter((s) => !s.disabled)
+    .filter((s) => !s.disabled && isAdultGroup(s.group))
     .map((s) => ({ key: s.key, name: s.name, api: s.api, detail: s.detail }));
 
   if (allSites.length === 0) return NextResponse.json({ results: [] });

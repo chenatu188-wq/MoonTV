@@ -363,11 +363,15 @@ export async function getCacheTime(): Promise<number> {
   return config.SiteConfig.SiteInterfaceCacheTime || 7200;
 }
 
+export function isAdultGroup(group?: string | null): boolean {
+  return (group || '').startsWith('🔞');
+}
+
 // 家庭區搜索用：排除所有 🔞* 群組
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
   return config.SourceConfig.filter(
-    (s) => !s.disabled && !(s.group || '').startsWith('🔞')
+    (s) => !s.disabled && !isAdultGroup(s.group)
   ).map((s) => ({
     key: s.key,
     name: s.name,

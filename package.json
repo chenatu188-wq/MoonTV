@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit --incremental false",
     "test:watch": "jest --watch",
     "test": "jest",
+    "test:e2e:search-isolation": "bash scripts/e2e-search-isolation.sh",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "gen:runtime": "node scripts/convert-config.js",

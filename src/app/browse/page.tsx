@@ -54,7 +54,7 @@ function BrowseClient() {
   const sources = allSources.filter((s) =>
     category === 'duanju'
       ? s.group === '短劇'
-      : s.group !== '短劇' && s.group !== '🔞'
+      : s.group !== '短劇' && !(s.group || '').startsWith('🔞')
   );
 
   // Load all sources once

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getCacheTime, getConfig } from '@/lib/config';
+import { getCacheTime, getConfig, isAdultGroup } from '@/lib/config';
 
 export const runtime = 'edge';
 
@@ -10,7 +10,7 @@ export async function GET() {
     const cacheTime = await getCacheTime();
 
     const sites = (config.SourceConfig || [])
-      .filter((s) => !s.disabled)
+      .filter((s) => !s.disabled && isAdultGroup(s.group))
       .map((s) => ({
         key: s.key,
         name: s.name,
