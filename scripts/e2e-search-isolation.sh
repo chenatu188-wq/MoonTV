@@ -120,5 +120,17 @@ print(f"OUTER_SSIS_RESULT_COUNT={ssis_outer_count}")
 if ssis_outer_count != 0:
     raise SystemExit("❌ 外層搜尋 ssis 仍有結果")
 
+spaced_ssis_outer = json.loads(
+    urllib.request.urlopen(
+        f"http://127.0.0.1:{port}/api/search?q=S%20S%20I%20S", timeout=30
+    )
+    .read()
+    .decode("utf-8")
+)
+spaced_ssis_count = len(spaced_ssis_outer.get("results", []))
+print(f"OUTER_SPACED_SSIS_RESULT_COUNT={spaced_ssis_count}")
+if spaced_ssis_count != 0:
+    raise SystemExit("❌ 外層搜尋 S S I S 仍有結果")
+
 print("✅ 搜尋隔離驗證通過")
 PY
