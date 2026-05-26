@@ -107,5 +107,18 @@ if not adult_results:
 if leaks:
     raise SystemExit("❌ 外層搜尋仍出現成人來源結果")
 
+# 針對你回報的關鍵字：外層必須擋掉
+ssis_outer = json.loads(
+    urllib.request.urlopen(
+        f"http://127.0.0.1:{port}/api/search?q=ssis", timeout=30
+    )
+    .read()
+    .decode("utf-8")
+)
+ssis_outer_count = len(ssis_outer.get("results", []))
+print(f"OUTER_SSIS_RESULT_COUNT={ssis_outer_count}")
+if ssis_outer_count != 0:
+    raise SystemExit("❌ 外層搜尋 ssis 仍有結果")
+
 print("✅ 搜尋隔離驗證通過")
 PY
