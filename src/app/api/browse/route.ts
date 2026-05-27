@@ -35,6 +35,16 @@ const MOVIE_KEYWORDS = [
   '电影',
   '電影',
 ];
+const HOLLYWOOD_KEYWORDS = [
+  '欧美电影',
+  '科幻片',
+  '动作片',
+  '战争片',
+  '喜剧片',
+  '剧情片',
+  '电影',
+  '電影',
+];
 
 function matchCat(
   cats: Array<{ type_id: number; type_name: string }>,
@@ -92,7 +102,7 @@ export async function GET(request: Request) {
   const sourceKey = searchParams.get('source');
   const year = searchParams.get('year') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const category = searchParams.get('category') || 'duanju'; // movie | duanju | tv | adult
+  const category = searchParams.get('category') || 'duanju'; // movie | hollywood | duanju | tv | adult
 
   const config = await getConfig();
   const site = (config.SourceConfig || []).find((s) => s.key === sourceKey);
@@ -120,6 +130,8 @@ export async function GET(request: Request) {
       const keywords =
         category === 'tv'
           ? TV_KEYWORDS
+          : category === 'hollywood'
+          ? HOLLYWOOD_KEYWORDS
           : category === 'movie'
           ? MOVIE_KEYWORDS
           : DJ_KEYWORDS;

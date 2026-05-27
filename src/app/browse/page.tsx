@@ -8,15 +8,21 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
-type Category = 'movie' | 'duanju' | 'tv';
+type Category = 'movie' | 'hollywood' | 'duanju' | 'tv';
 const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'movie', label: '電影' },
+  { key: 'hollywood', label: '好萊塢' },
   { key: 'duanju', label: '短劇' },
   { key: 'tv', label: '電視劇' },
 ];
 
 function isCategory(value: string | null): value is Category {
-  return value === 'movie' || value === 'duanju' || value === 'tv';
+  return (
+    value === 'movie' ||
+    value === 'hollywood' ||
+    value === 'duanju' ||
+    value === 'tv'
+  );
 }
 
 interface BrowseResult {
@@ -58,6 +64,8 @@ function BrowseClient() {
   const sources = allSources.filter((s) =>
     category === 'duanju'
       ? s.group === '短劇'
+      : category === 'hollywood'
+      ? s.group === '好萊塢'
       : category === 'movie'
       ? s.group === '電影'
       : s.group === '電視劇'
@@ -152,6 +160,8 @@ function BrowseClient() {
         <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
           {category === 'movie'
             ? '電影瀏覽'
+            : category === 'hollywood'
+            ? '好萊塢大片'
             : category === 'duanju'
             ? '短劇瀏覽'
             : '電視劇瀏覽'}

@@ -127,27 +127,27 @@
     "wujin_movie": {
       "api": "https://api.wujinapi.com/api.php/provide/vod",
       "name": "无尽电影",
-      "group": "電影"
+      "group": "好萊塢"
     },
     "iqiyi_movie": {
       "api": "https://iqiyizyapi.com/api.php/provide/vod",
       "name": "爱奇艺电影",
-      "group": "電影"
+      "group": "好萊塢"
     },
     "maotai_movie": {
       "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
       "name": "茅台电影",
-      "group": "電影"
+      "group": "好萊塢"
     },
     "zuidazy_movie": {
       "api": "https://zuidazy.me/api.php/provide/vod",
       "name": "最大电影",
-      "group": "電影"
+      "group": "好萊塢"
     },
     "haohua_movie": {
       "api": "https://hhzyapi.com/api.php/provide/vod",
       "name": "豪华电影",
-      "group": "電影"
+      "group": "好萊塢"
     },
     "jinying_tv": {
       "api": "https://jinyingzy.com/api.php/provide/vod",

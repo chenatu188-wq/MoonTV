@@ -9,6 +9,7 @@ import {
   Menu,
   Search,
   Sparkles,
+  Star,
   Tv,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -137,6 +138,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Film,
       label: '电影',
       href: '/browse?category=movie',
+    },
+    {
+      icon: Star,
+      label: '好莱坞',
+      href: '/browse?category=hollywood',
     },
     {
       icon: Tv,
