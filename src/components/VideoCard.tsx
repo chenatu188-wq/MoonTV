@@ -36,6 +36,7 @@ interface VideoCardProps {
   items?: SearchResult[];
   type?: string;
   adultSearch?: boolean;
+  reloadOnNavigate?: boolean;
 }
 
 export default function VideoCard({
@@ -56,6 +57,7 @@ export default function VideoCard({
   items,
   type = '',
   adultSearch = false,
+  reloadOnNavigate = false,
 }: VideoCardProps) {
   const router = useRouter();
   const [favorited, setFavorited] = useState(false);
@@ -199,23 +201,33 @@ export default function VideoCard({
 
   const handleClick = useCallback(() => {
     if (from === 'douban') {
-      router.push(
-        `/play?title=${encodeURIComponent(actualTitle.trim())}${
-          actualYear ? `&year=${actualYear}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}`
-      );
+      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${
+        actualYear ? `&year=${encodeURIComponent(actualYear)}` : ''
+      }${
+        actualSearchType ? `&stype=${encodeURIComponent(actualSearchType)}` : ''
+      }`;
+      if (reloadOnNavigate) {
+        window.location.href = url;
+      } else {
+        router.push(url);
+      }
     } else if (actualSource && actualId) {
-      router.push(
-        `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
-          actualTitle
-        )}${actualYear ? `&year=${actualYear}` : ''}${
-          isAggregate ? '&prefer=true' : ''
-        }${
-          actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}${
-          adultSearch ? '&adult=1' : ''
-        }`
-      );
+      const url = `/play?source=${encodeURIComponent(
+        actualSource
+      )}&id=${encodeURIComponent(actualId)}&title=${encodeURIComponent(
+        actualTitle
+      )}${actualYear ? `&year=${encodeURIComponent(actualYear)}` : ''}${
+        isAggregate ? '&prefer=true' : ''
+      }${
+        actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
+      }${
+        actualSearchType ? `&stype=${encodeURIComponent(actualSearchType)}` : ''
+      }${adultSearch ? '&adult=1' : ''}`;
+      if (reloadOnNavigate) {
+        window.location.href = url;
+      } else {
+        router.push(url);
+      }
     }
   }, [
     from,
@@ -228,6 +240,7 @@ export default function VideoCard({
     actualQuery,
     actualSearchType,
     adultSearch,
+    reloadOnNavigate,
   ]);
 
   const config = useMemo(() => {

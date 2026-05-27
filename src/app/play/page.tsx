@@ -2440,6 +2440,7 @@ function PlayPageClient() {
                       <VideoCard
                         from='search'
                         adultSearch={isAdultSearch}
+                        reloadOnNavigate
                         items={[
                           {
                             id: item.id,
