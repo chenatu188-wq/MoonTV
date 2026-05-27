@@ -8,11 +8,16 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
-type Category = 'duanju' | 'tv';
+type Category = 'movie' | 'duanju' | 'tv';
 const CATEGORIES: { key: Category; label: string }[] = [
+  { key: 'movie', label: '電影' },
   { key: 'duanju', label: '短劇' },
   { key: 'tv', label: '電視劇' },
 ];
+
+function isCategory(value: string | null): value is Category {
+  return value === 'movie' || value === 'duanju' || value === 'tv';
+}
 
 interface BrowseResult {
   id: string;
@@ -35,7 +40,10 @@ interface ApiSiteInfo {
 function BrowseClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [category, setCategory] = useState<Category>('duanju');
+  const [category, setCategory] = useState<Category>(() => {
+    const categoryParam = searchParams.get('category');
+    return isCategory(categoryParam) ? categoryParam : 'duanju';
+  });
   const [allSources, setAllSources] = useState<ApiSiteInfo[]>([]);
   const [activeSource, setActiveSource] = useState<string>('');
   const [activeYear, setActiveYear] = useState<string>('');
@@ -46,15 +54,13 @@ function BrowseClient() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Suppress unused vars lint for router/searchParams (may be used later)
-  void router;
-  void searchParams;
-
   // Derived: sources filtered by current category
   const sources = allSources.filter((s) =>
     category === 'duanju'
       ? s.group === '短劇'
-      : s.group !== '短劇' && !(s.group || '').startsWith('🔞')
+      : category === 'movie'
+      ? s.group === '電影'
+      : s.group === '電視劇'
   );
 
   // Load all sources once
@@ -144,7 +150,11 @@ function BrowseClient() {
     <PageLayout>
       <div className='p-4 space-y-4'>
         <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
-          {category === 'duanju' ? '短劇瀏覽' : '電視劇瀏覽'}
+          {category === 'movie'
+            ? '電影瀏覽'
+            : category === 'duanju'
+            ? '短劇瀏覽'
+            : '電視劇瀏覽'}
         </h1>
 
         {/* Category tabs */}
@@ -157,6 +167,7 @@ function BrowseClient() {
                 setActiveYear('');
                 setFilterQuery('');
                 setResults([]);
+                router.replace(`/browse?category=${cat.key}`);
                 window.scrollTo({ top: 0 });
               }}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${

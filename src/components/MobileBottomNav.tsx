@@ -23,12 +23,12 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     {
       icon: Film,
       label: '电影',
-      href: '/douban?type=movie',
+      href: '/browse?category=movie',
     },
     {
       icon: Tv,
       label: '剧集',
-      href: '/douban?type=tv',
+      href: '/browse?category=tv',
     },
     {
       icon: Clover,
@@ -39,6 +39,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
 
   const isActive = (href: string) => {
     const typeMatch = href.match(/type=([^&]+)/)?.[1];
+    const categoryMatch = href.match(/category=([^&]+)/)?.[1];
 
     // 解码URL以进行正确的比较
     const decodedActive = decodeURIComponent(currentActive);
@@ -47,7 +48,9 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     return (
       decodedActive === decodedItemHref ||
       (decodedActive.startsWith('/douban') &&
-        decodedActive.includes(`type=${typeMatch}`))
+        decodedActive.includes(`type=${typeMatch}`)) ||
+      (decodedActive.startsWith('/browse') &&
+        decodedActive.includes(`category=${categoryMatch}`))
     );
   };
 

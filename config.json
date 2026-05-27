@@ -124,6 +124,31 @@
       "name": "优质资源",
       "group": "電影"
     },
+    "wujin_movie": {
+      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "name": "无尽电影",
+      "group": "電影"
+    },
+    "iqiyi_movie": {
+      "api": "https://iqiyizyapi.com/api.php/provide/vod",
+      "name": "爱奇艺电影",
+      "group": "電影"
+    },
+    "maotai_movie": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台电影",
+      "group": "電影"
+    },
+    "zuidazy_movie": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大电影",
+      "group": "電影"
+    },
+    "haohua_movie": {
+      "api": "https://hhzyapi.com/api.php/provide/vod",
+      "name": "豪华电影",
+      "group": "電影"
+    },
     "jinying_tv": {
       "api": "https://jinyingzy.com/api.php/provide/vod",
       "name": "金鹰点播",
@@ -132,6 +157,31 @@
     "piaoling_tv": {
       "api": "https://p2100.net/api.php/provide/vod",
       "name": "飘零资源",
+      "group": "電視劇"
+    },
+    "kuaiche_tv": {
+      "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
+      "name": "快车剧集",
+      "group": "電視劇"
+    },
+    "wujin_tv": {
+      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "name": "无尽剧集",
+      "group": "電視劇"
+    },
+    "iqiyi_tv": {
+      "api": "https://iqiyizyapi.com/api.php/provide/vod",
+      "name": "爱奇艺剧集",
+      "group": "電視劇"
+    },
+    "maotai_tv": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台剧集",
+      "group": "電視劇"
+    },
+    "zuidazy_tv": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大剧集",
       "group": "電視劇"
     },
     "subo_dj": {

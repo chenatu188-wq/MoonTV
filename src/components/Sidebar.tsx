@@ -136,12 +136,12 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     {
       icon: Film,
       label: '电影',
-      href: '/douban?type=movie',
+      href: '/browse?category=movie',
     },
     {
       icon: Tv,
       label: '剧集',
-      href: '/douban?type=tv',
+      href: '/browse?category=tv',
     },
     {
       icon: Clover,
@@ -151,7 +151,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     {
       icon: Clapperboard,
       label: '短剧',
-      href: '/browse',
+      href: '/browse?category=duanju',
     },
     {
       icon: Sparkles,

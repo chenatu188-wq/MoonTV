@@ -9,8 +9,32 @@ import {
 
 export const runtime = 'edge';
 
-const TV_KEYWORDS = ['电视剧', '連續劇', '连续剧'];
+const TV_KEYWORDS = [
+  '国产剧',
+  '大陆剧',
+  '欧美剧',
+  '美国剧',
+  '香港剧',
+  '台湾剧',
+  '韩剧',
+  '韩国剧',
+  '日剧',
+  '日本剧',
+  '电视剧',
+  '連續劇',
+  '连续剧',
+];
 const DJ_KEYWORDS = ['短剧', '短劇'];
+const MOVIE_KEYWORDS = [
+  '科幻片',
+  '动作片',
+  '欧美电影',
+  '电影片',
+  '劇情片',
+  '剧情片',
+  '电影',
+  '電影',
+];
 
 function matchCat(
   cats: Array<{ type_id: number; type_name: string }>,
@@ -68,7 +92,7 @@ export async function GET(request: Request) {
   const sourceKey = searchParams.get('source');
   const year = searchParams.get('year') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const category = searchParams.get('category') || 'duanju'; // duanju | tv | adult
+  const category = searchParams.get('category') || 'duanju'; // movie | duanju | tv | adult
 
   const config = await getConfig();
   const site = (config.SourceConfig || []).find((s) => s.key === sourceKey);
@@ -93,7 +117,12 @@ export async function GET(request: Request) {
     if (category === 'adult') {
       buildUrl = (pg) => `${site.api}?ac=videolist${yearParam}&pg=${pg}`;
     } else {
-      const keywords = category === 'tv' ? TV_KEYWORDS : DJ_KEYWORDS;
+      const keywords =
+        category === 'tv'
+          ? TV_KEYWORDS
+          : category === 'movie'
+          ? MOVIE_KEYWORDS
+          : DJ_KEYWORDS;
       const listResp = await fetch(`${site.api}?ac=list`, {
         headers: API_CONFIG.search.headers,
       });

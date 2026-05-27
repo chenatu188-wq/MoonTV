@@ -377,6 +377,7 @@ export async function getAvailableApiSites(): Promise<ApiSite[]> {
     name: s.name,
     api: s.api,
     detail: s.detail,
+    group: s.group,
   }));
 }
 
@@ -388,5 +389,6 @@ export async function getAllSources(): Promise<ApiSite[]> {
     name: s.name,
     api: s.api,
     detail: s.detail,
+    group: s.group,
   }));
 }
