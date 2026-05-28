@@ -45,6 +45,7 @@ const HOLLYWOOD_KEYWORDS = [
   '电影',
   '電影',
 ];
+const ANIME_3D_KEYWORDS = ['3D动漫', '3D動畫', '动漫', '動畫', '动画'];
 
 function matchCat(
   cats: Array<{ type_id: number; type_name: string }>,
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
   const sourceKey = searchParams.get('source');
   const year = searchParams.get('year') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const category = searchParams.get('category') || 'duanju'; // movie | hollywood | duanju | tv | adult
+  const category = searchParams.get('category') || 'duanju'; // movie | hollywood | duanju | tv | anime3d | adult
 
   const config = await getConfig();
   const site = (config.SourceConfig || []).find((s) => s.key === sourceKey);
@@ -134,6 +135,8 @@ export async function GET(request: Request) {
           ? HOLLYWOOD_KEYWORDS
           : category === 'movie'
           ? MOVIE_KEYWORDS
+          : category === 'anime3d'
+          ? ANIME_3D_KEYWORDS
           : DJ_KEYWORDS;
       const listResp = await fetch(`${site.api}?ac=list`, {
         headers: API_CONFIG.search.headers,
