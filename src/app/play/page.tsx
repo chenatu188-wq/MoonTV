@@ -498,18 +498,27 @@ function PlayPageClient() {
         const data = await response.json();
 
         // 处理搜索结果，根据规则过滤
-        const results = data.results.filter(
-          (result: SearchResult) =>
-            result.title.replaceAll(' ', '').toLowerCase() ===
-              videoTitleRef.current.replaceAll(' ', '').toLowerCase() &&
-            (videoYearRef.current
-              ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
-              : true) &&
+        const normalizedTitle = (videoTitleRef.current || '')
+          .replaceAll(' ', '')
+          .toLowerCase();
+        const normalizedYear = (videoYearRef.current || '').toLowerCase();
+        const results = (data.results || []).filter((result: SearchResult) => {
+          const resultTitle = (result?.title || '')
+            .replaceAll(' ', '')
+            .toLowerCase();
+          const resultYear = (result?.year || '').toLowerCase();
+          const episodesCount = Array.isArray(result?.episodes)
+            ? result.episodes.length
+            : 0;
+          return (
+            resultTitle === normalizedTitle &&
+            (videoYearRef.current ? resultYear === normalizedYear : true) &&
             (searchType
-              ? (searchType === 'tv' && result.episodes.length > 1) ||
-                (searchType === 'movie' && result.episodes.length === 1)
+              ? (searchType === 'tv' && episodesCount > 1) ||
+                (searchType === 'movie' && episodesCount === 1)
               : true)
-        );
+          );
+        });
         setAvailableSources(results);
         return results;
       } catch (err) {
@@ -522,90 +531,101 @@ function PlayPageClient() {
     };
 
     const initAll = async () => {
-      if (!currentSource && !currentId && !videoTitle && !searchTitle) {
-        setError('缺少必要参数');
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setLoadingStage(currentSource && currentId ? 'fetching' : 'searching');
-      setLoadingMessage(
-        currentSource && currentId
-          ? '🎬 正在获取视频详情...'
-          : '🔍 正在搜索播放源...'
-      );
-
-      let sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
-      if (
-        currentSource &&
-        currentId &&
-        !sourcesInfo.some(
-          (source) => source.source === currentSource && source.id === currentId
-        )
-      ) {
-        sourcesInfo = await fetchSourceDetail(currentSource, currentId);
-      }
-      if (sourcesInfo.length === 0) {
-        setError('未找到匹配结果');
-        setLoading(false);
-        return;
-      }
-
-      let detailData: SearchResult = sourcesInfo[0];
-      // 指定源和id且无需优选
-      if (currentSource && currentId && !needPreferRef.current) {
-        const target = sourcesInfo.find(
-          (source) => source.source === currentSource && source.id === currentId
+      try {
+        if (!currentSource && !currentId && !videoTitle && !searchTitle) {
+          setError('缺少必要参数');
+          setLoading(false);
+          return;
+        }
+        setLoading(true);
+        setLoadingStage(currentSource && currentId ? 'fetching' : 'searching');
+        setLoadingMessage(
+          currentSource && currentId
+            ? '🎬 正在获取视频详情...'
+            : '🔍 正在搜索播放源...'
         );
-        if (target) {
-          detailData = target;
-        } else {
+
+        let sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
+        if (
+          currentSource &&
+          currentId &&
+          !sourcesInfo.some(
+            (source) =>
+              source.source === currentSource && source.id === currentId
+          )
+        ) {
+          sourcesInfo = await fetchSourceDetail(currentSource, currentId);
+        }
+        if (sourcesInfo.length === 0) {
           setError('未找到匹配结果');
           setLoading(false);
           return;
         }
-      }
 
-      // 未指定源和 id 或需要优选，且开启优选开关
-      if (
-        (!currentSource || !currentId || needPreferRef.current) &&
-        optimizationEnabled
-      ) {
-        setLoadingStage('preferring');
-        setLoadingMessage('⚡ 正在优选最佳播放源...');
+        let detailData: SearchResult = sourcesInfo[0];
+        // 指定源和id且无需优选
+        if (currentSource && currentId && !needPreferRef.current) {
+          const target = sourcesInfo.find(
+            (source) =>
+              source.source === currentSource && source.id === currentId
+          );
+          if (target) {
+            detailData = target;
+          } else {
+            setError('未找到匹配结果');
+            setLoading(false);
+            return;
+          }
+        }
 
-        detailData = await preferBestSource(sourcesInfo);
-      }
+        // 未指定源和 id 或需要优选，且开启优选开关
+        if (
+          (!currentSource || !currentId || needPreferRef.current) &&
+          optimizationEnabled
+        ) {
+          setLoadingStage('preferring');
+          setLoadingMessage('⚡ 正在优选最佳播放源...');
 
-      console.log(detailData.source, detailData.id);
+          detailData = await preferBestSource(sourcesInfo);
+        }
 
-      setNeedPrefer(false);
-      setCurrentSource(detailData.source);
-      setCurrentId(detailData.id);
-      setVideoYear(detailData.year);
-      setVideoTitle(detailData.title || videoTitleRef.current);
-      setVideoCover(detailData.poster);
-      setDetail(detailData);
-      if (currentEpisodeIndex >= detailData.episodes.length) {
-        setCurrentEpisodeIndex(0);
-      }
+        console.log(detailData.source, detailData.id);
 
-      // 规范URL参数
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.set('source', detailData.source);
-      newUrl.searchParams.set('id', detailData.id);
-      newUrl.searchParams.set('year', detailData.year);
-      newUrl.searchParams.set('title', detailData.title);
-      newUrl.searchParams.delete('prefer');
-      window.history.replaceState({}, '', newUrl.toString());
+        setNeedPrefer(false);
+        setCurrentSource(detailData.source);
+        setCurrentId(detailData.id);
+        setVideoYear(detailData.year);
+        setVideoTitle(detailData.title || videoTitleRef.current);
+        setVideoCover(detailData.poster);
+        setDetail(detailData);
+        if (currentEpisodeIndex >= detailData.episodes.length) {
+          setCurrentEpisodeIndex(0);
+        }
 
-      setLoadingStage('ready');
-      setLoadingMessage('✨ 准备就绪，即将开始播放...');
+        // 规范URL参数
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('source', detailData.source);
+        newUrl.searchParams.set('id', detailData.id);
+        newUrl.searchParams.set('year', detailData.year || '');
+        newUrl.searchParams.set(
+          'title',
+          detailData.title || videoTitleRef.current || ''
+        );
+        newUrl.searchParams.delete('prefer');
+        window.history.replaceState({}, '', newUrl.toString());
 
-      // 短暂延迟让用户看到完成状态
-      setTimeout(() => {
+        setLoadingStage('ready');
+        setLoadingMessage('✨ 准备就绪，即将开始播放...');
+
+        // 短暂延迟让用户看到完成状态
+        setTimeout(() => {
+          setLoading(false);
+        }, 1000);
+      } catch (err) {
+        console.error('播放页初始化失败:', err);
+        setError('播放初始化失败，請返回重試');
         setLoading(false);
-      }, 1000);
+      }
     };
 
     initAll();
