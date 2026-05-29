@@ -208,6 +208,56 @@
       "name": "豪华电影",
       "group": "好萊塢"
     },
+    "jisu_movie": {
+      "api": "https://jszyapi.com/api.php/provide/vod",
+      "name": "极速电影",
+      "group": "電影"
+    },
+    "zuidapi_movie2": {
+      "api": "https://api.zuidapi.com/api.php/provide/vod",
+      "name": "最大资源电影",
+      "group": "電影"
+    },
+    "baidu_movie": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度电影",
+      "group": "電影"
+    },
+    "guangsu_movie": {
+      "api": "https://api.guangsuapi.com/api.php/provide/vod",
+      "name": "光速电影",
+      "group": "電影"
+    },
+    "xinlang_movie": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪电影",
+      "group": "電影"
+    },
+    "dbzy_hollywood": {
+      "api": "https://dbzy.tv/api.php/provide/vod",
+      "name": "豆瓣大片",
+      "group": "好萊塢"
+    },
+    "mdzy_hollywood": {
+      "api": "https://www.mdzyapi.com/api.php/provide/vod",
+      "name": "魔都大片",
+      "group": "好萊塢"
+    },
+    "jisu_hollywood": {
+      "api": "https://jszyapi.com/api.php/provide/vod",
+      "name": "极速大片",
+      "group": "好萊塢"
+    },
+    "baidu_hollywood": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度大片",
+      "group": "好萊塢"
+    },
+    "guangsu_hollywood": {
+      "api": "https://api.guangsuapi.com/api.php/provide/vod",
+      "name": "光速大片",
+      "group": "好萊塢"
+    },
     "jinying_tv": {
       "api": "https://jinyingzy.com/api.php/provide/vod",
       "name": "金鹰点播",
@@ -241,6 +291,31 @@
     "zuidazy_tv": {
       "api": "https://zuidazy.me/api.php/provide/vod",
       "name": "最大剧集",
+      "group": "電視劇"
+    },
+    "dbzy_tv": {
+      "api": "https://dbzy.tv/api.php/provide/vod",
+      "name": "豆瓣剧集",
+      "group": "電視劇"
+    },
+    "mdzy_tv": {
+      "api": "https://www.mdzyapi.com/api.php/provide/vod",
+      "name": "魔都剧集",
+      "group": "電視劇"
+    },
+    "jisu_tv2": {
+      "api": "https://jszyapi.com/api.php/provide/vod",
+      "name": "极速剧集",
+      "group": "電視劇"
+    },
+    "baidu_tv": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度剧集",
+      "group": "電視劇"
+    },
+    "guangsu_tv": {
+      "api": "https://api.guangsuapi.com/api.php/provide/vod",
+      "name": "光速剧集",
       "group": "電視劇"
     },
     "subo_dj": {
@@ -278,6 +353,11 @@
       "name": "量子3D动漫(中国)",
       "group": "3D動漫-中國"
     },
+    "huya_anime_3d_cn": {
+      "api": "https://www.huyaapi.com/api.php/provide/vod",
+      "name": "虎牙3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
     "huya_anime_3d_jp": {
       "api": "https://www.huyaapi.com/api.php/provide/vod",
       "name": "虎牙3D动漫(日本)",
@@ -293,6 +373,11 @@
       "name": "极速3D动漫(日本)",
       "group": "3D動漫-日本"
     },
+    "subo_anime_3d_jp": {
+      "api": "https://subocaiji.com/api.php/provide/vod",
+      "name": "速播3D动漫(日本)",
+      "group": "3D動漫-日本"
+    },
     "wujin_anime_3d_west": {
       "api": "https://api.wujinapi.com/api.php/provide/vod",
       "name": "无尽3D动漫(欧美)",
@@ -306,6 +391,11 @@
     "dbzy_anime_3d_west": {
       "api": "https://dbzy.tv/api.php/provide/vod",
       "name": "豆瓣3D动漫(欧美)",
+      "group": "3D動漫-歐美"
+    },
+    "modu_anime_3d_west": {
+      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
+      "name": "魔都3D动漫(欧美)",
       "group": "3D動漫-歐美"
     },
     "wwzy": {
@@ -329,6 +419,31 @@
       "api": "https://jszyapi.com/api.php/provide/vod",
       "name": "极速短剧",
       "detail": "https://jszyapi.com",
+      "group": "短劇"
+    },
+    "wujin_dj": {
+      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "name": "无尽短剧",
+      "group": "短劇"
+    },
+    "iqiyi_dj": {
+      "api": "https://iqiyizyapi.com/api.php/provide/vod",
+      "name": "爱奇艺短剧",
+      "group": "短劇"
+    },
+    "maotai_dj": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台短剧",
+      "group": "短劇"
+    },
+    "zuidazy_dj": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大短剧",
+      "group": "短劇"
+    },
+    "baidu_dj": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度短剧",
       "group": "短劇"
     }
   }
