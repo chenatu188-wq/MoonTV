@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
-type ChannelCategory = 'tw' | 'cn' | 'news';
+type ChannelCategory = 'tw' | 'cn' | 'news' | 'hk';
 
 type LiveChannel = {
   name: string;
@@ -13,6 +13,7 @@ type LiveChannel = {
 const PLAYLISTS: Record<ChannelCategory, string> = {
   tw: 'https://iptv-org.github.io/iptv/countries/tw.m3u',
   cn: 'https://iptv-org.github.io/iptv/countries/cn.m3u',
+  hk: 'https://iptv-org.github.io/iptv/countries/hk.m3u',
   news: 'https://iptv-org.github.io/iptv/categories/news.m3u',
 };
 
@@ -40,7 +41,8 @@ function parseM3U(content: string, category: ChannelCategory): LiveChannel[] {
       lowered.includes('/playlist') ||
       lowered.includes('/master');
 
-    if (!line.startsWith('https://') || !looksStreamLike) {
+    // 走站內 proxy 後，http/https 來源都可嘗試播放
+    if (!looksStreamLike) {
       pendingName = '';
       continue;
     }
@@ -61,22 +63,25 @@ export async function GET() {
     const ua =
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
-    const [twResp, cnResp, newsResp] = await Promise.all([
+    const [twResp, cnResp, hkResp, newsResp] = await Promise.all([
       fetch(PLAYLISTS.tw, { headers: { 'User-Agent': ua } }),
       fetch(PLAYLISTS.cn, { headers: { 'User-Agent': ua } }),
+      fetch(PLAYLISTS.hk, { headers: { 'User-Agent': ua } }),
       fetch(PLAYLISTS.news, { headers: { 'User-Agent': ua } }),
     ]);
 
-    const [twText, cnText, newsText] = await Promise.all([
+    const [twText, cnText, hkText, newsText] = await Promise.all([
       twResp.ok ? twResp.text() : Promise.resolve(''),
       cnResp.ok ? cnResp.text() : Promise.resolve(''),
+      hkResp.ok ? hkResp.text() : Promise.resolve(''),
       newsResp.ok ? newsResp.text() : Promise.resolve(''),
     ]);
 
     const channels = [
-      ...parseM3U(twText, 'tw').slice(0, 120),
-      ...parseM3U(cnText, 'cn').slice(0, 120),
-      ...parseM3U(newsText, 'news').slice(0, 160),
+      ...parseM3U(twText, 'tw').slice(0, 260),
+      ...parseM3U(cnText, 'cn').slice(0, 260),
+      ...parseM3U(hkText, 'hk').slice(0, 180),
+      ...parseM3U(newsText, 'news').slice(0, 260),
     ];
 
     return NextResponse.json(channels, {

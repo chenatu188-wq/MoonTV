@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 type NewsChannel = {
   name: string;
   url: string;
-  category: 'tw' | 'cn' | 'news';
+  category: 'tw' | 'cn' | 'news' | 'hk';
 };
 
 export default function NewsLivePlayer() {
@@ -21,9 +21,9 @@ export default function NewsLivePlayer() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const [activeCategory, setActiveCategory] = useState<'tw' | 'cn' | 'news'>(
-    'tw'
-  );
+  const [activeCategory, setActiveCategory] = useState<
+    'all' | 'tw' | 'cn' | 'news' | 'hk'
+  >('tw');
 
   const toPlayableUrl = (url: string) =>
     `/api/live/proxy?url=${encodeURIComponent(url)}`;
@@ -64,6 +64,11 @@ export default function NewsLivePlayer() {
     };
   }, []);
 
+  const channelsByCategory = useMemo(() => {
+    if (activeCategory === 'all') return channels;
+    return channels.filter((c) => c.category === activeCategory);
+  }, [channels, activeCategory]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeUrl) return;
@@ -85,9 +90,12 @@ export default function NewsLivePlayer() {
       hls.attachMedia(video);
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data?.fatal) {
-          const nextIndex = activeIndex + 1;
-          if (nextIndex < channels.length) {
-            const next = channels[nextIndex];
+          const pool = channelsByCategory;
+          const currentInPool = pool.findIndex((c) => c.url === activeUrl);
+          const nextInPool = currentInPool + 1;
+          if (nextInPool >= 0 && nextInPool < pool.length) {
+            const next = pool[nextInPool];
+            const nextIndex = channels.findIndex((c) => c.url === next.url);
             setActiveIndex(nextIndex);
             setActiveName(next.name);
             setActiveUrl(toPlayableUrl(next.url));
@@ -111,12 +119,7 @@ export default function NewsLivePlayer() {
         hlsRef.current = null;
       }
     };
-  }, [activeUrl, activeIndex, channels, activeName]);
-
-  const channelsByCategory = useMemo(
-    () => channels.filter((c) => c.category === activeCategory),
-    [channels, activeCategory]
-  );
+  }, [activeUrl, activeIndex, channels, channelsByCategory, activeName]);
 
   const filteredChannels = useMemo(() => {
     if (!filter.trim()) return channelsByCategory;
@@ -132,7 +135,7 @@ export default function NewsLivePlayer() {
       </div>
 
       <div className='mb-3 text-sm text-gray-600 dark:text-gray-300'>
-        先選地區再選台，預設優先台灣頻道。
+        先選地區再選台，預設台灣。當前分類共 {channelsByCategory.length} 台。
       </div>
 
       <div className='mb-4 overflow-hidden rounded-xl bg-black'>
@@ -162,16 +165,21 @@ export default function NewsLivePlayer() {
 
       <div className='mb-3 flex flex-wrap gap-2'>
         {[
+          { key: 'all', label: '全部' },
           { key: 'tw', label: '台灣' },
           { key: 'cn', label: '中國大陸' },
+          { key: 'hk', label: '香港' },
           { key: 'news', label: '國際新聞' },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => {
-              setActiveCategory(tab.key as 'tw' | 'cn' | 'news');
+              setActiveCategory(tab.key as 'all' | 'tw' | 'cn' | 'news' | 'hk');
               setFilter('');
-              const first = channels.find((c) => c.category === tab.key);
+              const first =
+                tab.key === 'all'
+                  ? channels[0]
+                  : channels.find((c) => c.category === tab.key);
               if (first) {
                 const idx = channels.findIndex((c) => c.url === first.url);
                 setActiveIndex(Math.max(0, idx));
