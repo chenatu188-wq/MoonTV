@@ -20,6 +20,9 @@ export default function NewsLivePlayer() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
 
+  const toPlayableUrl = (url: string) =>
+    `/api/live/proxy?url=${encodeURIComponent(url)}`;
+
   useEffect(() => {
     let cancelled = false;
 
@@ -34,7 +37,7 @@ export default function NewsLivePlayer() {
         setChannels(list);
         if (list.length > 0) {
           setActiveName(list[0].name);
-          setActiveUrl(list[0].url);
+          setActiveUrl(toPlayableUrl(list[0].url));
         }
       } catch {
         if (!cancelled) {
@@ -70,6 +73,11 @@ export default function NewsLivePlayer() {
       hlsRef.current = hls;
       hls.loadSource(activeUrl);
       hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data?.fatal) {
+          setError('此頻道目前無法播放，請切換其他新聞台。');
+        }
+      });
     } else {
       video.src = activeUrl;
     }
@@ -143,7 +151,8 @@ export default function NewsLivePlayer() {
               key={`${channel.name}-${channel.url}`}
               onClick={() => {
                 setActiveName(channel.name);
-                setActiveUrl(channel.url);
+                setError('');
+                setActiveUrl(toPlayableUrl(channel.url));
               }}
               className={`block w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                 activeUrl === channel.url
