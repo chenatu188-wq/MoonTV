@@ -22,6 +22,13 @@ export async function GET(request: Request) {
       { headers: { 'Cache-Control': `public, max-age=${cacheTime}` } }
     );
   }
+  if (hasAdultKeyword([query])) {
+    const cacheTime = await getCacheTime();
+    return NextResponse.json(
+      { results: [] },
+      { headers: { 'Cache-Control': `public, max-age=${cacheTime}` } }
+    );
+  }
 
   // 中國採集站標題以簡體儲存，把繁體查詢轉成簡體再搜
   const simplifiedQuery = toSimplified(query);

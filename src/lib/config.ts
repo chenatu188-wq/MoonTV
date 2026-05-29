@@ -79,6 +79,34 @@ const ADULT_SOURCE_KEYWORDS = [
   'xmm',
   '小猫咪',
   '小貓咪',
+  'ipzz',
+  'ipx',
+  'ssis',
+  'snis',
+  'mide',
+  'pred',
+  'adn',
+  'jul',
+  'juq',
+  'abw',
+  'miaa',
+];
+
+const ADULT_CODE_PREFIXES = [
+  'ipzz',
+  'ipx',
+  'ssis',
+  'snis',
+  'mide',
+  'pred',
+  'adn',
+  'jul',
+  'juq',
+  'abw',
+  'miaa',
+  'dass',
+  'star',
+  'midv',
 ];
 
 interface ConfigFileStruct {
@@ -463,6 +491,13 @@ export function hasAdultKeyword(parts: unknown[]): boolean {
   const text = parts.filter(Boolean).join(' ').normalize('NFKC').toLowerCase();
 
   if (/18\s*[禁🈲]/u.test(text)) return true;
+  if (
+    ADULT_CODE_PREFIXES.some((prefix) =>
+      new RegExp(`\\b${prefix}\\s*[-_]?\\s*\\d{2,5}\\b`, 'i').test(text)
+    )
+  ) {
+    return true;
+  }
   return ADULT_SOURCE_KEYWORDS.some((keyword) =>
     text.includes(keyword.normalize('NFKC').toLowerCase())
   );
