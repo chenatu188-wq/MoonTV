@@ -26,6 +26,18 @@ function parseM3UChannels(content: string): NewsChannel[] {
     if (line.startsWith('#')) continue;
 
     if (line.startsWith('http://') || line.startsWith('https://')) {
+      const lowered = line.toLowerCase();
+      const looksStreamLike =
+        lowered.includes('.m3u8') ||
+        lowered.includes('/playlist') ||
+        lowered.includes('/master');
+
+      // https 站點避免 http 串流被 mixed-content 封鎖
+      if (!line.startsWith('https://') || !looksStreamLike) {
+        pendingName = '';
+        continue;
+      }
+
       channels.push({
         name: pendingName || '未命名頻道',
         url: line,
