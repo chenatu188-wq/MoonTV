@@ -139,14 +139,14 @@ export async function GET(request: Request) {
 
   const yearParam = year ? `&y=${year}` : '';
   const cacheTime = await getCacheTime();
+  const PAGES_PER_LOGICAL = 20; // 上游每頁通常 30 筆，聚合後約 600 筆
 
   try {
-    let browseUrl: string;
-    let fallbackUrl: string | null = null;
+    let buildUrl: (pg: number) => string;
+    let fallbackBuildUrl: ((pg: number) => string) | null = null;
 
     if (category === 'adult') {
-      // Browse all content without type filtering
-      browseUrl = `${site.api}?ac=videolist${yearParam}&pg=${page}`;
+      buildUrl = (pg) => `${site.api}?ac=videolist${yearParam}&pg=${pg}`;
     } else {
       const keywords =
         category === 'tv'
@@ -158,7 +158,8 @@ export async function GET(request: Request) {
           : category === 'anime3d'
           ? ANIME_3D_REGION_KEYWORDS[site.group || ''] || ANIME_3D_KEYWORDS
           : DJ_KEYWORDS;
-      fallbackUrl = `${site.api}?ac=videolist${yearParam}&pg=${page}`;
+      fallbackBuildUrl = (pg) =>
+        `${site.api}?ac=videolist${yearParam}&pg=${pg}`;
       try {
         const listResp = await fetch(`${site.api}?ac=list`, {
           headers: API_CONFIG.search.headers,
@@ -167,37 +168,65 @@ export async function GET(request: Request) {
         const cats: Array<{ type_id: number; type_name: string }> =
           listData.class || [];
         const djCat = matchCat(cats, keywords);
-        browseUrl = djCat
-          ? `${site.api}?ac=videolist&t=${djCat.type_id}${yearParam}&pg=${page}`
-          : fallbackUrl;
+        buildUrl = djCat
+          ? (pg) =>
+              `${site.api}?ac=videolist&t=${djCat.type_id}${yearParam}&pg=${pg}`
+          : fallbackBuildUrl;
       } catch {
-        browseUrl = fallbackUrl;
+        buildUrl = fallbackBuildUrl;
       }
     }
 
-    let browseResp = await fetch(browseUrl, {
-      headers: API_CONFIG.search.headers,
-    });
-    let data = await browseResp.json();
+    const startPg = (page - 1) * PAGES_PER_LOGICAL + 1;
+    const upstreamPages = Array.from(
+      { length: PAGES_PER_LOGICAL },
+      (_, i) => startPg + i
+    );
+
+    const fetchMany = async (urlBuilder: (pg: number) => string) => {
+      const responses = await Promise.all(
+        upstreamPages.map(async (pg) => {
+          try {
+            const r = await fetch(urlBuilder(pg), {
+              headers: API_CONFIG.search.headers,
+            });
+            if (!r.ok) return null;
+            return await r.json();
+          } catch {
+            return null;
+          }
+        })
+      );
+      return responses;
+    };
+
+    let responses = await fetchMany(buildUrl);
+    let firstValid = responses.find((r) => r && Array.isArray(r.list));
+    let mergedList = responses.flatMap((r) =>
+      r && Array.isArray(r.list) ? (r.list as RawItem[]) : []
+    );
 
     // 分類命中但結果空時，降級回整體列表，避免前端整頁空白
-    if (
-      fallbackUrl &&
-      Array.isArray(data.list) &&
-      data.list.length === 0 &&
-      browseUrl !== fallbackUrl
-    ) {
-      browseResp = await fetch(fallbackUrl, {
-        headers: API_CONFIG.search.headers,
-      });
-      data = await browseResp.json();
+    if (mergedList.length === 0 && fallbackBuildUrl) {
+      responses = await fetchMany(fallbackBuildUrl);
+      firstValid = responses.find((r) => r && Array.isArray(r.list));
+      mergedList = responses.flatMap((r) =>
+        r && Array.isArray(r.list) ? (r.list as RawItem[]) : []
+      );
     }
+
+    const upstreamTotal: number = firstValid?.total || 0;
+    const upstreamPageCount: number = firstValid?.pagecount || 1;
+    const logicalPageCount = Math.max(
+      1,
+      Math.ceil(upstreamPageCount / PAGES_PER_LOGICAL)
+    );
 
     return NextResponse.json(
       {
-        results: mapItems(data.list || [], site.key, site.name),
-        total: data.total || 0,
-        pagecount: data.pagecount || 1,
+        results: mapItems(mergedList, site.key, site.name),
+        total: upstreamTotal,
+        pagecount: logicalPageCount,
         source_name: site.name,
         source_key: site.key,
       },
