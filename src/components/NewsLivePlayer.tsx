@@ -19,6 +19,7 @@ export default function NewsLivePlayer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const toPlayableUrl = (url: string) =>
     `/api/live/proxy?url=${encodeURIComponent(url)}`;
@@ -36,6 +37,7 @@ export default function NewsLivePlayer() {
         if (cancelled) return;
         setChannels(list);
         if (list.length > 0) {
+          setActiveIndex(0);
           setActiveName(list[0].name);
           setActiveUrl(toPlayableUrl(list[0].url));
         }
@@ -75,7 +77,16 @@ export default function NewsLivePlayer() {
       hls.attachMedia(video);
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data?.fatal) {
-          setError('此頻道目前無法播放，請切換其他新聞台。');
+          const nextIndex = activeIndex + 1;
+          if (nextIndex < channels.length) {
+            const next = channels[nextIndex];
+            setActiveIndex(nextIndex);
+            setActiveName(next.name);
+            setActiveUrl(toPlayableUrl(next.url));
+            setError(`「${activeName}」無法播放，已切到下一台。`);
+          } else {
+            setError('目前清單頻道暫時無法播放，請稍後重試。');
+          }
         }
       });
     } else {
@@ -92,7 +103,7 @@ export default function NewsLivePlayer() {
         hlsRef.current = null;
       }
     };
-  }, [activeUrl]);
+  }, [activeUrl, activeIndex, channels, activeName]);
 
   const filteredChannels = useMemo(() => {
     if (!filter.trim()) return channels;
@@ -150,6 +161,8 @@ export default function NewsLivePlayer() {
             <button
               key={`${channel.name}-${channel.url}`}
               onClick={() => {
+                const idx = channels.findIndex((c) => c.url === channel.url);
+                if (idx >= 0) setActiveIndex(idx);
                 setActiveName(channel.name);
                 setError('');
                 setActiveUrl(toPlayableUrl(channel.url));
