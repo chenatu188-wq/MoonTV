@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 
 import LiveSourcesPanel from '@/components/LiveSourcesPanel';
+import NewsLivePlayer from '@/components/NewsLivePlayer';
 import PageLayout from '@/components/PageLayout';
 
 function LivePageInner() {
@@ -14,7 +15,10 @@ function LivePageInner() {
             電視直播區
           </h1>
         </div>
-        <LiveSourcesPanel />
+        <div className='space-y-6'>
+          <NewsLivePlayer />
+          <LiveSourcesPanel />
+        </div>
       </div>
     </PageLayout>
   );
