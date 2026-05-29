@@ -4,9 +4,9 @@ import {
   Clapperboard,
   Clover,
   Film,
-  Heart,
   Home,
   Menu,
+  Radio,
   Search,
   Sparkles,
   Tv,
@@ -159,9 +159,9 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       href: '/search?q=' + encodeURIComponent('动漫'),
     },
     {
-      icon: Heart,
-      label: '演員',
-      href: '/actresses',
+      icon: Radio,
+      label: '直播',
+      href: '/live',
     },
   ];
 

@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import LiveSourcesPanel from '@/components/LiveSourcesPanel';
 import PageLayout from '@/components/PageLayout';
 
-function ActressesPageInner() {
+function LivePageInner() {
   return (
     <PageLayout activePath='/live'>
       <div className='px-4 sm:px-10 py-4 sm:py-8'>
@@ -20,10 +20,10 @@ function ActressesPageInner() {
   );
 }
 
-export default function ActressesPage() {
+export default function LivePage() {
   return (
     <Suspense>
-      <ActressesPageInner />
+      <LivePageInner />
     </Suspense>
   );
 }
