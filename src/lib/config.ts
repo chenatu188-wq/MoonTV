@@ -18,9 +18,13 @@ const FAMILY_SOURCE_GROUPS = new Set([
   '大陸劇',
   '綜合影視',
   '電影',
+  '好萊塢',
   '電視劇',
   '短劇',
   '動漫',
+  '3D動漫-中國',
+  '3D動漫-日本',
+  '3D動漫-歐美',
 ]);
 
 const ADULT_SOURCE_KEYWORDS = [

@@ -8,15 +8,23 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
-type Category = 'duanju' | 'tv' | 'anime3d';
+type Category = 'movie' | 'hollywood' | 'duanju' | 'tv' | 'anime3d';
 const CATEGORIES: { key: Category; label: string }[] = [
+  { key: 'movie', label: '電影' },
+  { key: 'hollywood', label: '好萊塢' },
   { key: 'duanju', label: '短劇' },
   { key: 'tv', label: '電視劇' },
   { key: 'anime3d', label: '3D動漫' },
 ];
 
 function isCategory(value: string | null): value is Category {
-  return value === 'duanju' || value === 'tv' || value === 'anime3d';
+  return (
+    value === 'movie' ||
+    value === 'hollywood' ||
+    value === 'duanju' ||
+    value === 'tv' ||
+    value === 'anime3d'
+  );
 }
 
 interface BrowseResult {
@@ -58,11 +66,13 @@ function BrowseClient() {
   const sources = allSources.filter((s) =>
     category === 'duanju'
       ? s.group === '短劇'
+      : category === 'hollywood'
+      ? s.group === '好萊塢'
+      : category === 'movie'
+      ? s.group === '電影'
       : category === 'anime3d'
       ? (s.group || '').startsWith('3D動漫')
-      : s.group !== '短劇' &&
-        s.group !== '🔞' &&
-        !(s.group || '').startsWith('3D動漫')
+      : s.group === '電視劇'
   );
 
   // Load all sources once
@@ -152,7 +162,11 @@ function BrowseClient() {
     <PageLayout>
       <div className='p-4 space-y-4'>
         <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
-          {category === 'duanju'
+          {category === 'movie'
+            ? '電影瀏覽'
+            : category === 'hollywood'
+            ? '好萊塢大片'
+            : category === 'duanju'
             ? '短劇瀏覽'
             : category === 'anime3d'
             ? '3D動漫瀏覽'

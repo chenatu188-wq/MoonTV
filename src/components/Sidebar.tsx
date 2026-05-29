@@ -9,6 +9,7 @@ import {
   Radio,
   Search,
   Sparkles,
+  Star,
   Tv,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -136,12 +137,17 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     {
       icon: Film,
       label: '电影',
-      href: '/douban?type=movie',
+      href: '/browse?category=movie',
+    },
+    {
+      icon: Star,
+      label: '好莱坞',
+      href: '/browse?category=hollywood',
     },
     {
       icon: Tv,
       label: '剧集',
-      href: '/douban?type=tv',
+      href: '/browse?category=tv',
     },
     {
       icon: Clover,
@@ -151,7 +157,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     {
       icon: Clapperboard,
       label: '短剧',
-      href: '/browse',
+      href: '/browse?category=duanju',
     },
     {
       icon: Sparkles,

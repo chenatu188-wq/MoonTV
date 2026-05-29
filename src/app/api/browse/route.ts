@@ -6,6 +6,26 @@ export const runtime = 'edge';
 
 const TV_KEYWORDS = ['电视剧', '連續劇', '连续剧'];
 const DJ_KEYWORDS = ['短剧', '短劇'];
+const MOVIE_KEYWORDS = [
+  '科幻片',
+  '动作片',
+  '欧美电影',
+  '电影片',
+  '劇情片',
+  '剧情片',
+  '电影',
+  '電影',
+];
+const HOLLYWOOD_KEYWORDS = [
+  '欧美电影',
+  '科幻片',
+  '动作片',
+  '战争片',
+  '喜剧片',
+  '剧情片',
+  '电影',
+  '電影',
+];
 const ANIME_3D_KEYWORDS = ['3D动漫', '3D動畫', '动漫', '動畫', '动画'];
 const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
   '3D動漫-中國': [
@@ -96,7 +116,7 @@ export async function GET(request: Request) {
   const sourceKey = searchParams.get('source');
   const year = searchParams.get('year') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const category = searchParams.get('category') || 'duanju'; // duanju | tv | anime3d | adult
+  const category = searchParams.get('category') || 'duanju'; // movie | hollywood | duanju | tv | anime3d | adult
 
   const sites = await getAvailableApiSites();
   const site = sites.find((s) => s.key === sourceKey);
@@ -116,6 +136,10 @@ export async function GET(request: Request) {
       const keywords =
         category === 'tv'
           ? TV_KEYWORDS
+          : category === 'hollywood'
+          ? HOLLYWOOD_KEYWORDS
+          : category === 'movie'
+          ? MOVIE_KEYWORDS
           : category === 'anime3d'
           ? ANIME_3D_REGION_KEYWORDS[site.group || ''] || ANIME_3D_KEYWORDS
           : DJ_KEYWORDS;
