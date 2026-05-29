@@ -6,6 +6,39 @@ export const runtime = 'edge';
 
 const TV_KEYWORDS = ['电视剧', '連續劇', '连续剧'];
 const DJ_KEYWORDS = ['短剧', '短劇'];
+const ANIME_3D_KEYWORDS = ['3D动漫', '3D動畫', '动漫', '動畫', '动画'];
+const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
+  '3D動漫-中國': [
+    '3D动漫',
+    '3D動畫',
+    '中国动漫',
+    '国产动漫',
+    '國產動漫',
+    '动漫',
+    '動畫',
+    '动画',
+  ],
+  '3D動漫-日本': [
+    '3D动漫',
+    '3D動畫',
+    '日本动漫',
+    '日韩动漫',
+    '日韓動漫',
+    '动漫',
+    '動畫',
+    '动画',
+  ],
+  '3D動漫-歐美': [
+    '3D动漫',
+    '3D動畫',
+    '欧美动漫',
+    '歐美動漫',
+    '海外动漫',
+    '动漫',
+    '動畫',
+    '动画',
+  ],
+};
 
 function matchCat(
   cats: Array<{ type_id: number; type_name: string }>,
@@ -63,7 +96,7 @@ export async function GET(request: Request) {
   const sourceKey = searchParams.get('source');
   const year = searchParams.get('year') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const category = searchParams.get('category') || 'duanju'; // duanju | tv | adult
+  const category = searchParams.get('category') || 'duanju'; // duanju | tv | anime3d | adult
 
   const sites = await getAvailableApiSites();
   const site = sites.find((s) => s.key === sourceKey);
@@ -80,7 +113,12 @@ export async function GET(request: Request) {
       // Browse all content without type filtering
       browseUrl = `${site.api}?ac=videolist${yearParam}&pg=${page}`;
     } else {
-      const keywords = category === 'tv' ? TV_KEYWORDS : DJ_KEYWORDS;
+      const keywords =
+        category === 'tv'
+          ? TV_KEYWORDS
+          : category === 'anime3d'
+          ? ANIME_3D_REGION_KEYWORDS[site.group || ''] || ANIME_3D_KEYWORDS
+          : DJ_KEYWORDS;
       const listResp = await fetch(`${site.api}?ac=list`, {
         headers: API_CONFIG.search.headers,
       });
