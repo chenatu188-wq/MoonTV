@@ -4,7 +4,21 @@ import { API_CONFIG, getAvailableApiSites, getCacheTime } from '@/lib/config';
 
 export const runtime = 'edge';
 
-const TV_KEYWORDS = ['电视剧', '連續劇', '连续剧'];
+const TV_KEYWORDS = [
+  '国产剧',
+  '大陆剧',
+  '欧美剧',
+  '美国剧',
+  '香港剧',
+  '台湾剧',
+  '韩剧',
+  '韩国剧',
+  '日剧',
+  '日本剧',
+  '电视剧',
+  '連續劇',
+  '连续剧',
+];
 const DJ_KEYWORDS = ['短剧', '短劇'];
 const MOVIE_KEYWORDS = [
   '科幻片',
@@ -128,6 +142,7 @@ export async function GET(request: Request) {
 
   try {
     let browseUrl: string;
+    let fallbackUrl: string | null = null;
 
     if (category === 'adult') {
       // Browse all content without type filtering
@@ -143,22 +158,40 @@ export async function GET(request: Request) {
           : category === 'anime3d'
           ? ANIME_3D_REGION_KEYWORDS[site.group || ''] || ANIME_3D_KEYWORDS
           : DJ_KEYWORDS;
-      const listResp = await fetch(`${site.api}?ac=list`, {
-        headers: API_CONFIG.search.headers,
-      });
-      const listData = await listResp.json();
-      const cats: Array<{ type_id: number; type_name: string }> =
-        listData.class || [];
-      const djCat = matchCat(cats, keywords);
-      if (!djCat)
-        return NextResponse.json({ results: [], total: 0, pagecount: 0 });
-      browseUrl = `${site.api}?ac=videolist&t=${djCat.type_id}${yearParam}&pg=${page}`;
+      fallbackUrl = `${site.api}?ac=videolist${yearParam}&pg=${page}`;
+      try {
+        const listResp = await fetch(`${site.api}?ac=list`, {
+          headers: API_CONFIG.search.headers,
+        });
+        const listData = await listResp.json();
+        const cats: Array<{ type_id: number; type_name: string }> =
+          listData.class || [];
+        const djCat = matchCat(cats, keywords);
+        browseUrl = djCat
+          ? `${site.api}?ac=videolist&t=${djCat.type_id}${yearParam}&pg=${page}`
+          : fallbackUrl;
+      } catch {
+        browseUrl = fallbackUrl;
+      }
     }
 
-    const browseResp = await fetch(browseUrl, {
+    let browseResp = await fetch(browseUrl, {
       headers: API_CONFIG.search.headers,
     });
-    const data = await browseResp.json();
+    let data = await browseResp.json();
+
+    // 分類命中但結果空時，降級回整體列表，避免前端整頁空白
+    if (
+      fallbackUrl &&
+      Array.isArray(data.list) &&
+      data.list.length === 0 &&
+      browseUrl !== fallbackUrl
+    ) {
+      browseResp = await fetch(fallbackUrl, {
+        headers: API_CONFIG.search.headers,
+      });
+      data = await browseResp.json();
+    }
 
     return NextResponse.json(
       {
