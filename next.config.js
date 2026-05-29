@@ -64,11 +64,29 @@ const nextConfig = {
   },
 };
 
+const defaultRuntimeCaching = require('next-pwa/cache');
+const runtimeCaching = defaultRuntimeCaching.map((entry) => {
+  const pattern = entry?.urlPattern?.toString?.() || '';
+  if (pattern.includes('\\.(?:js)$')) {
+    return {
+      ...entry,
+      handler: 'NetworkFirst',
+      options: {
+        ...entry.options,
+        cacheName: 'next-static-js-network-first',
+        networkTimeoutSeconds: 8,
+      },
+    };
+  }
+  return entry;
+});
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
+  runtimeCaching,
 });
 
 module.exports = withPWA(nextConfig);
