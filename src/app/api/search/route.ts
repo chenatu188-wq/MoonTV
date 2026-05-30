@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { toSimplified } from '@/lib/cn-converter';
+import { expandCdramaSearchQueries } from '@/lib/cdrama-aliases';
 import {
   getAvailableApiSites,
   getCacheTime,
@@ -30,12 +30,12 @@ export async function GET(request: Request) {
     );
   }
 
-  // 中國採集站標題以簡體儲存，把繁體查詢轉成簡體再搜
-  const simplifiedQuery = toSimplified(query);
+  // 陸劇別名詞庫展開：繁簡 / 英文名 / 常見別名一起搜
+  const expandedQueries = expandCdramaSearchQueries(query);
 
   const apiSites = await getAvailableApiSites();
-  const searchPromises = apiSites.map((site) =>
-    searchFromApi(site, simplifiedQuery)
+  const searchPromises = expandedQueries.flatMap((q) =>
+    apiSites.map((site) => searchFromApi(site, q))
   );
 
   try {
