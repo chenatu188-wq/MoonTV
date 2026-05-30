@@ -152,6 +152,7 @@ function PlayPageClient() {
   // 折叠状态（仅在 lg 及以上屏幕有效）
   const [isEpisodeSelectorCollapsed, setIsEpisodeSelectorCollapsed] =
     useState(false);
+  const [externalPlaybackRate, setExternalPlaybackRate] = useState<number>(1);
 
   // 换源加载状态
   const [isVideoLoading, setIsVideoLoading] = useState(true);
@@ -780,6 +781,26 @@ function PlayPageClient() {
     }
   };
 
+  const handleExternalPlaybackRateChange = (rate: number) => {
+    setExternalPlaybackRate(rate);
+    if (artPlayerRef.current) {
+      artPlayerRef.current.playbackRate = rate;
+    }
+  };
+
+  const handleSkipIntro = () => {
+    if (!artPlayerRef.current) return;
+    const current = artPlayerRef.current.currentTime || 0;
+    artPlayerRef.current.currentTime = current + 90;
+  };
+
+  const handleSkipOutro = () => {
+    if (!artPlayerRef.current) return;
+    const duration = artPlayerRef.current.duration || 0;
+    if (!duration || !Number.isFinite(duration)) return;
+    artPlayerRef.current.currentTime = Math.max(0, duration - 120);
+  };
+
   // ---------------------------------------------------------------------------
   // 键盘快捷键
   // ---------------------------------------------------------------------------
@@ -1226,6 +1247,12 @@ function PlayPageClient() {
         lastVolumeRef.current = artPlayerRef.current.volume;
       });
 
+      artPlayerRef.current.on('video:ratechange', () => {
+        if (artPlayerRef.current?.playbackRate) {
+          setExternalPlaybackRate(artPlayerRef.current.playbackRate);
+        }
+      });
+
       // 监听视频可播放事件，这时恢复播放进度更可靠
       artPlayerRef.current.on('video:canplay', () => {
         // 若存在需要恢复的播放进度，则跳转
@@ -1487,8 +1514,36 @@ function PlayPageClient() {
         </div>
         {/* 第二行：播放器和选集 */}
         <div className='space-y-2'>
-          {/* 折叠控制 - 仅在 lg 及以上屏幕显示 */}
-          <div className='hidden lg:flex justify-end'>
+          {/* 外部播放控制 + 折叠控制（仅 lg 以上显示） */}
+          <div className='hidden lg:flex justify-end items-center gap-2'>
+            <select
+              value={externalPlaybackRate}
+              onChange={(e) =>
+                handleExternalPlaybackRateChange(Number(e.target.value))
+              }
+              className='px-2.5 py-1.5 rounded-full text-xs font-medium bg-white/80 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
+              title='播放速度'
+            >
+              {[0.5, 0.75, 1, 1.25, 1.5, 2, 3].map((rate) => (
+                <option key={rate} value={rate}>
+                  {rate}x
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleSkipIntro}
+              className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
+              title='跳過片頭（+90 秒）'
+            >
+              片頭 +90s
+            </button>
+            <button
+              onClick={handleSkipOutro}
+              className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
+              title='跳到片尾前（-120 秒）'
+            >
+              去片尾
+            </button>
             <button
               onClick={() =>
                 setIsEpisodeSelectorCollapsed(!isEpisodeSelectorCollapsed)
@@ -1516,8 +1571,6 @@ function PlayPageClient() {
               <span className='text-xs font-medium text-gray-600 dark:text-gray-300'>
                 {isEpisodeSelectorCollapsed ? '显示' : '隐藏'}
               </span>
-
-              {/* 精致的状态指示点 */}
               <div
                 className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full transition-all duration-200 ${
                   isEpisodeSelectorCollapsed
