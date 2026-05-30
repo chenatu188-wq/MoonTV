@@ -120,8 +120,8 @@ export default function VideoCard({
       try {
         const fav = await isFavorited(actualSource, actualId);
         setFavorited(fav);
-      } catch (err) {
-        throw new Error('检查收藏状态失败');
+      } catch {
+        // 忽略单卡片收藏状态错误，避免整页崩溃
       }
     };
 
@@ -163,8 +163,8 @@ export default function VideoCard({
           });
           setFavorited(true);
         }
-      } catch (err) {
-        throw new Error('切换收藏状态失败');
+      } catch {
+        // 收藏失败不阻断页面渲染
       }
     },
     [
@@ -188,8 +188,8 @@ export default function VideoCard({
       try {
         await deletePlayRecord(actualSource, actualId);
         onDelete?.();
-      } catch (err) {
-        throw new Error('删除播放记录失败');
+      } catch {
+        // 删除失败不阻断页面渲染
       }
     },
     [from, actualSource, actualId, onDelete]
