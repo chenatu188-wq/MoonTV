@@ -10,7 +10,7 @@ import { searchFromApi } from '@/lib/downstream';
 
 export const runtime = 'edge';
 
-// OrionTV 兼容接口
+// 单片源搜索接口（仅搜索指定 resourceId）
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
@@ -53,40 +53,27 @@ export async function GET(request: Request) {
       );
     }
 
-    const results = await searchFromApi(targetSite, query);
-    const result = results
-      .filter((r) => r.title === query)
-      .filter(
-        (r) =>
-          !hasAdultKeyword([
-            r.title,
-            r.source_name,
-            r.source_group,
-            r.class,
-            r.type_name,
-            r.desc,
-          ])
-      );
+    const results = (await searchFromApi(targetSite, query)).filter(
+      (r) =>
+        !hasAdultKeyword([
+          r.title,
+          r.source_name,
+          r.source_group,
+          r.class,
+          r.type_name,
+          r.desc,
+        ])
+    );
     const cacheTime = await getCacheTime();
 
-    if (result.length === 0) {
-      return NextResponse.json(
-        {
-          error: '未找到结果',
-          result: null,
+    return NextResponse.json(
+      { results },
+      {
+        headers: {
+          'Cache-Control': `public, max-age=${cacheTime}`,
         },
-        { status: 404 }
-      );
-    } else {
-      return NextResponse.json(
-        { results: result },
-        {
-          headers: {
-            'Cache-Control': `public, max-age=${cacheTime}`,
-          },
-        }
-      );
-    }
+      }
+    );
   } catch (error) {
     return NextResponse.json(
       {

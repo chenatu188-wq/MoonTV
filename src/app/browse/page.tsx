@@ -57,6 +57,9 @@ function BrowseClient() {
   const [activeYear, setActiveYear] = useState<string>('');
   const [results, setResults] = useState<BrowseResult[]>([]);
   const [filterQuery, setFilterQuery] = useState('');
+  const [sourceSearchQuery, setSourceSearchQuery] = useState('');
+  const [sourceSearchLoading, setSourceSearchLoading] = useState(false);
+  const [isSourceSearchMode, setIsSourceSearchMode] = useState(false);
   const [total, setTotal] = useState(0);
   const [pagecount, setPagecount] = useState(1);
   const [page, setPage] = useState(1);
@@ -93,6 +96,8 @@ function BrowseClient() {
     if (sources.length > 0) {
       setActiveSource(sources[0].key);
       setPage(1);
+      setSourceSearchQuery('');
+      setIsSourceSearchMode(false);
     } else {
       setActiveSource('');
     }
@@ -125,6 +130,7 @@ function BrowseClient() {
   useEffect(() => {
     if (activeSource) {
       setPage(1);
+      setIsSourceSearchMode(false);
       fetchBrowse(activeSource, activeYear, 1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,6 +158,47 @@ function BrowseClient() {
     score: item.score,
     desc: item.remarks,
   });
+
+  const handleSourceSearch = async () => {
+    const q = sourceSearchQuery.trim();
+    if (!q || !activeSource) return;
+    setSourceSearchLoading(true);
+    try {
+      const resp = await fetch(
+        `/api/search/one?resourceId=${encodeURIComponent(
+          activeSource
+        )}&q=${encodeURIComponent(q)}`
+      );
+      if (!resp.ok) throw new Error('source search failed');
+      const data = await resp.json();
+      const mapped: BrowseResult[] = (data.results || []).map(
+        (item: SearchResult) => ({
+          id: item.id,
+          title: item.title,
+          poster: item.poster,
+          year: item.year || '',
+          remarks: item.desc || '',
+          score: item.score,
+          source: item.source,
+          source_name: item.source_name,
+          episodes: item.episodes || [],
+        })
+      );
+      setResults(mapped);
+      setTotal(mapped.length);
+      setPagecount(1);
+      setPage(1);
+      setFilterQuery('');
+      setIsSourceSearchMode(true);
+    } catch {
+      setResults([]);
+      setTotal(0);
+      setPagecount(1);
+      setIsSourceSearchMode(true);
+    } finally {
+      setSourceSearchLoading(false);
+    }
+  };
 
   const btnBase = 'px-3 py-1 rounded-full text-sm border transition-colors';
   const btnActive = 'bg-green-500 text-white border-green-500';
@@ -206,6 +253,8 @@ function BrowseClient() {
                 onClick={() => {
                   setActiveSource(s.key);
                   setFilterQuery('');
+                  setSourceSearchQuery('');
+                  setIsSourceSearchMode(false);
                   window.scrollTo({ top: 0 });
                 }}
                 className={`${btnBase} ${
@@ -215,6 +264,44 @@ function BrowseClient() {
                 {s.name}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Source search: search in selected source only */}
+        {activeSource && (
+          <div className='flex flex-col sm:flex-row gap-2'>
+            <input
+              type='text'
+              value={sourceSearchQuery}
+              onChange={(e) => setSourceSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSourceSearch();
+              }}
+              placeholder='搜尋目前片源...'
+              className='w-full sm:w-80 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400'
+            />
+            <div className='flex gap-2'>
+              <button
+                onClick={handleSourceSearch}
+                disabled={sourceSearchLoading || !sourceSearchQuery.trim()}
+                className='px-3 py-2 rounded-lg text-sm bg-green-500 text-white disabled:opacity-50'
+              >
+                {sourceSearchLoading ? '搜尋中…' : '片源內搜尋'}
+              </button>
+              {isSourceSearchMode && (
+                <button
+                  onClick={() => {
+                    setSourceSearchQuery('');
+                    setIsSourceSearchMode(false);
+                    setPage(1);
+                    fetchBrowse(activeSource, activeYear, 1);
+                  }}
+                  className='px-3 py-2 rounded-lg text-sm bg-gray-200 dark:bg-gray-700'
+                >
+                  回到瀏覽
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -268,7 +355,9 @@ function BrowseClient() {
         {/* Results info */}
         {!loading && total > 0 && (
           <p className='text-sm text-gray-500 dark:text-gray-400'>
-            共 {total} 部，第 {page} / {pagecount} 頁
+            {isSourceSearchMode
+              ? `片源內搜尋結果 ${total} 筆`
+              : `共 ${total} 部，第 ${page} / ${pagecount} 頁`}
             {filterQuery && filteredResults.length !== results.length && (
               <span className='ml-2 text-green-600 dark:text-green-400'>
                 篩選出 {filteredResults.length} 筆
@@ -297,7 +386,7 @@ function BrowseClient() {
         )}
 
         {/* Pagination */}
-        {pagecount > 1 && (
+        {!isSourceSearchMode && pagecount > 1 && (
           <div className='flex flex-wrap items-center justify-center gap-2 mt-4'>
             <button
               disabled={page <= 1}
