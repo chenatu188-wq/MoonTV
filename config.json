@@ -84,12 +84,6 @@
       "detail": "https://jszyapi.com",
       "group": "綜合影視"
     },
-    "bwzyz": {
-      "api": "https://api.bwzyz.com/api.php/provide/vod",
-      "name": "百万影视",
-      "detail": "https://api.bwzyz.com",
-      "group": "綜合影視"
-    },
     "hhzy": {
       "api": "https://hhzyapi.com/api.php/provide/vod",
       "name": "火火资源",
