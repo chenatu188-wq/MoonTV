@@ -5,7 +5,6 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 
-import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 function LoginPageClient() {
@@ -15,7 +14,6 @@ function LoginPageClient() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { siteName } = useSite();
 
   // 当 STORAGE_TYPE 不为空且不为 localstorage 时，要求输入用户名
   const shouldAskUsername =
@@ -94,9 +92,6 @@ function LoginPageClient() {
         <ThemeToggle />
       </div>
       <div className='relative z-10 w-full max-w-md rounded-3xl bg-zinc-900 shadow-2xl p-10 border border-zinc-800'>
-        <h1 className='text-green-600 tracking-tight text-center text-3xl font-extrabold mb-8 bg-clip-text drop-shadow-sm'>
-          {siteName}
-        </h1>
         <form onSubmit={handleSubmit} className='space-y-8'>
           {shouldAskUsername && (
             <div>
