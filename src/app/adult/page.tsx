@@ -50,7 +50,7 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   };
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm'>
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black'>
       <div className='bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 w-80 flex flex-col items-center gap-5'>
         <div className='text-4xl'>🔞</div>
         <div className='text-center'>
