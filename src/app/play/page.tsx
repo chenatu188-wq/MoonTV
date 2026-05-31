@@ -1514,8 +1514,8 @@ function PlayPageClient() {
         </div>
         {/* 第二行：播放器和选集 */}
         <div className='space-y-2'>
-          {/* 外部播放控制 + 折叠控制（仅 lg 以上显示） */}
-          <div className='hidden lg:flex justify-end items-center gap-2'>
+          {/* 外部播放控制（全裝置可見） + 折叠控制（僅 lg 以上） */}
+          <div className='flex flex-wrap justify-start lg:justify-end items-center gap-2'>
             <select
               value={externalPlaybackRate}
               onChange={(e) =>
@@ -1548,7 +1548,7 @@ function PlayPageClient() {
               onClick={() =>
                 setIsEpisodeSelectorCollapsed(!isEpisodeSelectorCollapsed)
               }
-              className='group relative flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-200'
+              className='group relative hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-200'
               title={
                 isEpisodeSelectorCollapsed ? '显示选集面板' : '隐藏选集面板'
               }
