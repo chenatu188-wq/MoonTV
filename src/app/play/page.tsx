@@ -801,6 +801,18 @@ function PlayPageClient() {
     artPlayerRef.current.currentTime = Math.max(0, duration - 120);
   };
 
+  const handleSmartSkip = () => {
+    if (!artPlayerRef.current) return;
+    const current = artPlayerRef.current.currentTime || 0;
+    const duration = artPlayerRef.current.duration || 0;
+    // 前段：跳片頭；中後段：去片尾前 120 秒
+    if (duration && Number.isFinite(duration) && current > duration * 0.6) {
+      handleSkipOutro();
+      return;
+    }
+    handleSkipIntro();
+  };
+
   // ---------------------------------------------------------------------------
   // 键盘快捷键
   // ---------------------------------------------------------------------------
@@ -1246,19 +1258,10 @@ function PlayPageClient() {
           {
             position: 'right',
             index: 11,
-            html: '片頭+90s',
-            tooltip: '跳過片頭',
+            html: '跳過',
+            tooltip: '智慧跳過（前段片頭 / 後段片尾）',
             click: function () {
-              handleSkipIntro();
-            },
-          },
-          {
-            position: 'right',
-            index: 10,
-            html: '去片尾',
-            tooltip: '跳到片尾前 120 秒',
-            click: function () {
-              handleSkipOutro();
+              handleSmartSkip();
             },
           },
           {
