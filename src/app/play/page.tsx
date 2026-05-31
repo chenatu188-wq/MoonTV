@@ -1227,6 +1227,41 @@ function PlayPageClient() {
         // 控制栏配置
         controls: [
           {
+            position: 'right',
+            index: 12,
+            html: `${externalPlaybackRate}x`,
+            tooltip: `速度 ${externalPlaybackRate}x（點擊切換）`,
+            click: function () {
+              const rates = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+              const current = artPlayerRef.current?.playbackRate || 1;
+              const currentIndex = rates.findIndex(
+                (r) => Math.abs(r - current) < 0.001
+              );
+              const nextRate =
+                rates[(currentIndex + 1 + rates.length) % rates.length];
+              handleExternalPlaybackRateChange(nextRate);
+              return `${nextRate}x`;
+            },
+          },
+          {
+            position: 'right',
+            index: 11,
+            html: '片頭+90s',
+            tooltip: '跳過片頭',
+            click: function () {
+              handleSkipIntro();
+            },
+          },
+          {
+            position: 'right',
+            index: 10,
+            html: '去片尾',
+            tooltip: '跳到片尾前 120 秒',
+            click: function () {
+              handleSkipOutro();
+            },
+          },
+          {
             position: 'left',
             index: 13,
             html: '<i class="art-icon flex"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" fill="currentColor"/></svg></i>',
@@ -1571,36 +1606,6 @@ function PlayPageClient() {
                   ref={artRef}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
-                <div className='absolute top-3 right-3 z-[450] flex items-center gap-2'>
-                  <select
-                    value={externalPlaybackRate}
-                    onChange={(e) =>
-                      handleExternalPlaybackRateChange(Number(e.target.value))
-                    }
-                    className='px-2.5 py-1.5 rounded-full text-xs font-medium bg-white/85 dark:bg-gray-800/85 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
-                    title='播放速度'
-                  >
-                    {[0.5, 0.75, 1, 1.25, 1.5, 2, 3].map((rate) => (
-                      <option key={rate} value={rate}>
-                        {rate}x
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleSkipIntro}
-                    className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/85 hover:bg-white dark:bg-gray-800/85 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
-                    title='跳過片頭（+90 秒）'
-                  >
-                    片頭 +90s
-                  </button>
-                  <button
-                    onClick={handleSkipOutro}
-                    className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/85 hover:bg-white dark:bg-gray-800/85 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
-                    title='跳到片尾前（-120 秒）'
-                  >
-                    去片尾
-                  </button>
-                </div>
 
                 {/* 换源加载蒙层 */}
                 {isVideoLoading && (
