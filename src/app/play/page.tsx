@@ -788,6 +788,15 @@ function PlayPageClient() {
     }
   };
 
+  const updateSpeedControlLabel = (rate: number) => {
+    if (!artRef.current) return;
+    const el = artRef.current.querySelector(
+      '.art-control-smart-speed-label'
+    ) as HTMLElement | null;
+    if (!el) return;
+    el.textContent = `${rate}x`;
+  };
+
   const handleSkipIntro = () => {
     if (!artPlayerRef.current) return;
     const current = artPlayerRef.current.currentTime || 0;
@@ -1241,8 +1250,11 @@ function PlayPageClient() {
           {
             position: 'right',
             index: 12,
-            html: `${externalPlaybackRate}x`,
+            html: `<span class="art-control-smart-speed-label">${externalPlaybackRate}x</span>`,
             tooltip: `速度 ${externalPlaybackRate}x（點擊切換）`,
+            mounted: function () {
+              updateSpeedControlLabel(externalPlaybackRate);
+            },
             click: function () {
               const rates = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
               const current = artPlayerRef.current?.playbackRate || 1;
@@ -1252,6 +1264,7 @@ function PlayPageClient() {
               const nextRate =
                 rates[(currentIndex + 1 + rates.length) % rates.length];
               handleExternalPlaybackRateChange(nextRate);
+              updateSpeedControlLabel(nextRate);
               return `${nextRate}x`;
             },
           },
@@ -1287,7 +1300,9 @@ function PlayPageClient() {
 
       artPlayerRef.current.on('video:ratechange', () => {
         if (artPlayerRef.current?.playbackRate) {
-          setExternalPlaybackRate(artPlayerRef.current.playbackRate);
+          const rate = artPlayerRef.current.playbackRate;
+          setExternalPlaybackRate(rate);
+          updateSpeedControlLabel(rate);
         }
       });
 
