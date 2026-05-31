@@ -1514,36 +1514,8 @@ function PlayPageClient() {
         </div>
         {/* 第二行：播放器和选集 */}
         <div className='space-y-2'>
-          {/* 外部播放控制（全裝置可見） + 折叠控制（僅 lg 以上） */}
+          {/* 折叠控制（僅 lg 以上） */}
           <div className='flex flex-wrap justify-start lg:justify-end items-center gap-2'>
-            <select
-              value={externalPlaybackRate}
-              onChange={(e) =>
-                handleExternalPlaybackRateChange(Number(e.target.value))
-              }
-              className='px-2.5 py-1.5 rounded-full text-xs font-medium bg-white/80 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
-              title='播放速度'
-            >
-              {[0.5, 0.75, 1, 1.25, 1.5, 2, 3].map((rate) => (
-                <option key={rate} value={rate}>
-                  {rate}x
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleSkipIntro}
-              className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
-              title='跳過片頭（+90 秒）'
-            >
-              片頭 +90s
-            </button>
-            <button
-              onClick={handleSkipOutro}
-              className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
-              title='跳到片尾前（-120 秒）'
-            >
-              去片尾
-            </button>
             <button
               onClick={() =>
                 setIsEpisodeSelectorCollapsed(!isEpisodeSelectorCollapsed)
@@ -1599,6 +1571,36 @@ function PlayPageClient() {
                   ref={artRef}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
+                <div className='absolute top-3 right-3 z-[450] flex items-center gap-2'>
+                  <select
+                    value={externalPlaybackRate}
+                    onChange={(e) =>
+                      handleExternalPlaybackRateChange(Number(e.target.value))
+                    }
+                    className='px-2.5 py-1.5 rounded-full text-xs font-medium bg-white/85 dark:bg-gray-800/85 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
+                    title='播放速度'
+                  >
+                    {[0.5, 0.75, 1, 1.25, 1.5, 2, 3].map((rate) => (
+                      <option key={rate} value={rate}>
+                        {rate}x
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleSkipIntro}
+                    className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/85 hover:bg-white dark:bg-gray-800/85 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
+                    title='跳過片頭（+90 秒）'
+                  >
+                    片頭 +90s
+                  </button>
+                  <button
+                    onClick={handleSkipOutro}
+                    className='px-3 py-1.5 rounded-full text-xs font-medium bg-white/85 hover:bg-white dark:bg-gray-800/85 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 text-gray-700 dark:text-gray-200 shadow-sm'
+                    title='跳到片尾前（-120 秒）'
+                  >
+                    去片尾
+                  </button>
+                </div>
 
                 {/* 换源加载蒙层 */}
                 {isVideoLoading && (
