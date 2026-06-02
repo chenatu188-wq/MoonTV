@@ -249,17 +249,6 @@
       "name": "豆瓣3D动漫(欧美)",
       "group": "3D動漫-歐美"
     },
-    "wwzy": {
-      "api": "https://wwzy.tv/api.php/provide/vod",
-      "name": "旺旺短剧",
-      "group": "短劇"
-    },
-    "wwzy_api": {
-      "api": "https://api.wwzy.tv/api.php/provide/vod",
-      "name": "旺旺短剧(备用)",
-      "detail": "https://api.wwzy.tv",
-      "group": "短劇"
-    },
     "bfzy_dj": {
       "api": "https://bfzyapi.com/api.php/provide/vod",
       "name": "暴风短剧",
@@ -270,6 +259,31 @@
       "api": "https://jszyapi.com/api.php/provide/vod",
       "name": "极速短剧",
       "detail": "https://jszyapi.com",
+      "group": "短劇"
+    },
+    "wujin_dj": {
+      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "name": "无尽短剧",
+      "group": "短劇"
+    },
+    "iqiyi_dj": {
+      "api": "https://iqiyizyapi.com/api.php/provide/vod",
+      "name": "爱奇艺短剧",
+      "group": "短劇"
+    },
+    "maotai_dj": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台短剧",
+      "group": "短劇"
+    },
+    "zuidazy_dj": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大短剧",
+      "group": "短劇"
+    },
+    "baidu_dj": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度短剧",
       "group": "短劇"
     },
     "ikun": {
