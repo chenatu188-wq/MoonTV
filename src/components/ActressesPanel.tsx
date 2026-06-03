@@ -72,6 +72,15 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
             return typeof name === 'string' && name.includes(f);
           })
         : base;
+      if (!showFavOnly && favorites.size > 0) {
+        const favList: PoolEntry[] = [];
+        const restList: PoolEntry[] = [];
+        for (const entry of matched) {
+          if (favorites.has(entry?.[0])) favList.push(entry);
+          else restList.push(entry);
+        }
+        matched = [...favList, ...restList];
+      }
     } catch {
       matched = [];
     }
@@ -121,8 +130,8 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
       {/* 標題 */}
       <div className='mb-4'>
         <p className='text-sm text-gray-500 dark:text-gray-400'>
-          收錄 <strong>{pool.length.toLocaleString()}</strong>{' '}
-          位演員，按熱門度排序 · 點名字直接搜尋 · 點 ❤ 加入個人收藏
+          收錄 <strong>{pool.length.toLocaleString()}</strong> 位演員，收藏優先
+          · 其餘按熱門度排序 · 點名字直接搜尋 · 點 ❤ 加入個人收藏
           {favorites.size > 0 && (
             <span>
               {' '}
@@ -179,7 +188,8 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
         ) : (
           <span>
             共 {pool.length.toLocaleString()} 位 · 第 {currentPage}/{totalPages}{' '}
-            頁 · 按熱門度排序
+            頁 ·{' '}
+            {favorites.size > 0 ? '收藏優先 · 其餘按熱門度' : '按熱門度排序'}
           </span>
         )}
       </div>
