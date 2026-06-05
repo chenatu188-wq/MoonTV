@@ -125,6 +125,20 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
     }
   };
 
+  // Enter 鍵觸發：pool 有完全相符 → 自動加收藏 + 跳搜尋頁；無相符 → 仍跳搜尋頁不收藏
+  const handleFilterEnter = () => {
+    const target = filter.trim();
+    if (!target) return;
+    const exact = pool.find((entry) => entry?.[0] === target);
+    if (exact && !favorites.has(target)) {
+      const next = new Set(favorites);
+      next.add(target);
+      setFavorites(next);
+      saveFavorites(next);
+    }
+    handleSearch(target);
+  };
+
   return (
     <div className='px-0 sm:px-6 py-2 mb-10'>
       {/* 標題 */}
@@ -149,7 +163,13 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
             type='text'
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder='輸入關鍵字過濾（例：三上 / ゆみ / ひな）'
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleFilterEnter();
+              }
+            }}
+            placeholder='輸入關鍵字過濾，Enter 直接搜尋（完全相符會自動加收藏）'
             className='w-full h-10 rounded-lg bg-gray-50/80 py-2 pl-10 pr-10 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:bg-white border border-gray-200/50 shadow-sm dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:bg-gray-700 dark:border-gray-700'
           />
           {filter && (
