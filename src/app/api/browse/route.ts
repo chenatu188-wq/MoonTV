@@ -19,6 +19,7 @@ const TV_KEYWORDS = [
   '連續劇',
   '连续剧',
 ];
+const TV_KOREAN_KEYWORDS = ['韩剧', '韩国剧', '韓劇', '韓國劇'];
 const DJ_KEYWORDS = ['短剧', '短劇'];
 const MOVIE_KEYWORDS = [
   '科幻片',
@@ -151,6 +152,8 @@ export async function GET(request: Request) {
       const keywords =
         category === 'tv'
           ? TV_KEYWORDS
+          : category === 'tv_korean'
+          ? TV_KOREAN_KEYWORDS
           : category === 'hollywood'
           ? HOLLYWOOD_KEYWORDS
           : category === 'movie'

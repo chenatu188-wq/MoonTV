@@ -8,12 +8,19 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
-type Category = 'movie' | 'hollywood' | 'duanju' | 'tv' | 'anime3d';
+type Category =
+  | 'movie'
+  | 'hollywood'
+  | 'duanju'
+  | 'tv'
+  | 'tv_korean'
+  | 'anime3d';
 const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'movie', label: '電影' },
   { key: 'hollywood', label: '好萊塢' },
   { key: 'duanju', label: '短劇' },
   { key: 'tv', label: '電視劇' },
+  { key: 'tv_korean', label: '🇰🇷 韓劇' },
   { key: 'anime3d', label: '3D動漫' },
 ];
 
@@ -23,6 +30,7 @@ function isCategory(value: string | null): value is Category {
     value === 'hollywood' ||
     value === 'duanju' ||
     value === 'tv' ||
+    value === 'tv_korean' ||
     value === 'anime3d'
   );
 }

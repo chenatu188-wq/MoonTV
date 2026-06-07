@@ -150,6 +150,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       href: '/browse?category=tv',
     },
     {
+      icon: Tv,
+      label: '🇰🇷 韓劇',
+      href: '/browse?category=tv_korean',
+    },
+    {
       icon: Clover,
       label: '综艺',
       href: '/douban?type=show',
