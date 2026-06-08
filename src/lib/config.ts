@@ -474,9 +474,16 @@ export async function getAvailableApiSites(): Promise<ApiSite[]> {
   }));
 }
 
+// 已知偽裝成家庭源的 18 禁 API endpoint 黑名單（domain match）
+// 即使 admin DB 把它用其他 key/name/group 偽裝加回來，這層也會擋下
+const EXPLICIT_ADULT_API_DOMAINS = ['api.bwzyz.com', 'bwzyz.com'];
+
 export function isFamilyApiSite(site: Partial<ApiSite>): boolean {
   const group = site.group || '';
   if (!FAMILY_SOURCE_GROUPS.has(group)) return false;
+
+  const apiUrl = (site.api || '').toLowerCase();
+  if (EXPLICIT_ADULT_API_DOMAINS.some((d) => apiUrl.includes(d))) return false;
 
   return !hasAdultKeyword([
     site.key,
