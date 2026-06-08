@@ -367,11 +367,20 @@ export function isAdultGroup(group?: string | null): boolean {
   return (group || '').startsWith('🔞');
 }
 
-// 家庭區搜索用：排除所有 🔞* 群組
+// 已知偽裝成家庭源的 18 禁 API endpoint（domain match）
+// 例：「百万影视」(bwzyz) 被 admin DB 加進 group=綜合影視 但實際 endpoint 是 18 禁
+const EXPLICIT_ADULT_API_DOMAINS = ['api.bwzyz.com', 'bwzyz.com'];
+
+function isExplicitAdultApi(api?: string): boolean {
+  const url = (api || '').toLowerCase();
+  return EXPLICIT_ADULT_API_DOMAINS.some((d) => url.includes(d));
+}
+
+// 家庭區搜索用：排除所有 🔞* 群組 + explicit 黑名單 API endpoint
 export async function getAvailableApiSites(): Promise<ApiSite[]> {
   const config = await getConfig();
   return config.SourceConfig.filter(
-    (s) => !s.disabled && !isAdultGroup(s.group)
+    (s) => !s.disabled && !isAdultGroup(s.group) && !isExplicitAdultApi(s.api)
   ).map((s) => ({
     key: s.key,
     name: s.name,
