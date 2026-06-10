@@ -1685,6 +1685,23 @@ function PlayPageClient() {
               // 顯示更新交給下方 video:ratechange listener，這裡不直接操作 DOM
             },
           },
+          {
+            name: 'skip30s',
+            position: 'right',
+            index: 11,
+            html: '<span class="art-icon" style="padding: 0 8px; font-size: 13px; font-weight: 600;">跳過</span>',
+            tooltip: '跳過 30 秒（片頭/廣告）',
+            click: function () {
+              if (artPlayerRef.current) {
+                const dur = artPlayerRef.current.duration || 0;
+                artPlayerRef.current.currentTime = Math.min(
+                  dur - 1,
+                  artPlayerRef.current.currentTime + 30
+                );
+                artPlayerRef.current.notice.show = '跳過 30 秒';
+              }
+            },
+          },
         ],
       });
 
