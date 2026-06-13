@@ -420,6 +420,16 @@
       "name": "🔞素播采集",
       "detail": "https://subocaiji.com",
       "group": "🔞"
+    },
+    "xiaojizy.live": {
+      "api": "https://api.xiaojizy.live/provide/vod",
+      "name": "🔞小鸡资源",
+      "group": "🔞"
+    },
+    "apilj.com": {
+      "api": "https://pz.v88.qzz.io/?url=https://apilj.com/api.php/provide/vod",
+      "name": "🔞辣椒资源",
+      "group": "🔞"
     }
   }
 }
