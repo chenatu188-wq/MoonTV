@@ -430,6 +430,16 @@
       "api": "https://pz.v88.qzz.io/?url=https://apilj.com/api.php/provide/vod",
       "name": "🔞辣椒资源",
       "group": "🔞"
+    },
+    "lzcaiji.com": {
+      "api": "https://cj.lzcaiji.com/api.php/provide/vod",
+      "name": "🔞量子采集",
+      "group": "🔞"
+    },
+    "guangsuapi.com": {
+      "api": "https://api.guangsuapi.com/api.php/provide/vod",
+      "name": "🔞光速资源",
+      "group": "🔞"
     }
   }
 }
