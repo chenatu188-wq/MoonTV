@@ -144,8 +144,6 @@ function AdultClient() {
     { key: 'all', label: '全部' },
     { key: '🔞', label: '🇯🇵 日本' },
     { key: '🔞歐美', label: '🇺🇸 歐美' },
-    { key: '🔞韓國', label: '🇰🇷 韓國' },
-    { key: '🔞台灣', label: '🇹🇼 台灣' },
   ];
 
   const adultSources = allSources.filter((s) => s.group?.startsWith('🔞'));
