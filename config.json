@@ -118,11 +118,6 @@
       "name": "萬影资源",
       "group": "綜合影視"
     },
-    "ikun": {
-      "api": "https://ikunzyapi.com/api.php/provide/vod",
-      "name": "iKun资源",
-      "group": "綜合影視"
-    },
     "lzi": {
       "api": "https://cj.lziapi.com/api.php/provide/vod",
       "name": "量子资源站",
@@ -212,11 +207,6 @@
       "api": "https://api.guangsuapi.com/api.php/provide/vod",
       "name": "光速大片",
       "group": "好萊塢"
-    },
-    "jinying_tv": {
-      "api": "https://jinyingzy.com/api.php/provide/vod",
-      "name": "金鹰点播",
-      "group": "電視劇"
     },
     "piaoling_tv": {
       "api": "https://p2100.net/api.php/provide/vod",
@@ -379,6 +369,16 @@
       "api": "https://api.apibdzy.com/api.php/provide/vod",
       "name": "百度短剧",
       "group": "短劇"
+    },
+    "zuidazy_mix": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大综合",
+      "group": "綜合影視"
+    },
+    "p2100_tv2": {
+      "api": "https://p2100.net/api.php/provide/vod",
+      "name": "飘零剧集2",
+      "group": "電視劇"
     }
   }
 }
