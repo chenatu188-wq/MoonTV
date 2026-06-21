@@ -116,11 +116,6 @@
       "name": "豪华电影",
       "group": "好萊塢"
     },
-    "jinying_tv": {
-      "api": "https://jinyingzy.com/api.php/provide/vod",
-      "name": "金鹰点播",
-      "group": "電視劇"
-    },
     "piaoling_tv": {
       "api": "https://p2100.net/api.php/provide/vod",
       "name": "飘零资源",
@@ -243,20 +238,9 @@
       "name": "百度短剧",
       "group": "短劇"
     },
-    "ikun": {
-      "api": "https://ikunzyapi.com/api.php/provide/vod",
-      "name": "iKun资源",
-      "group": "綜合影視"
-    },
     "lzi": {
       "api": "https://cj.lziapi.com/api.php/provide/vod",
       "name": "量子资源站",
-      "group": "綜合影視"
-    },
-    "bwzyz": {
-      "api": "https://api.bwzyz.com/api.php/provide/vod",
-      "name": "百万影视",
-      "detail": "https://api.bwzyz.com",
       "group": "綜合影視"
     },
     "hhzy": {
@@ -475,6 +459,21 @@
       "api": "https://thzy.me/api.php/provide/vod",
       "name": "🔞桃花资源",
       "group": "🔞"
+    },
+    "zuidazy_mix_a": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大综合A",
+      "group": "綜合影視"
+    },
+    "p2100_mix_a": {
+      "api": "https://p2100.net/api.php/provide/vod",
+      "name": "飘零综合A",
+      "group": "綜合影視"
+    },
+    "mdzy_tv2": {
+      "api": "https://www.mdzyapi.com/api.php/provide/vod",
+      "name": "魔都剧集2",
+      "group": "電視劇"
     }
   }
 }
