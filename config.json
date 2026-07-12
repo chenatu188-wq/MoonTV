@@ -148,11 +148,6 @@
       "name": "爱奇艺电影",
       "group": "好萊塢"
     },
-    "maotai_movie": {
-      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
-      "name": "茅台电影",
-      "group": "好萊塢"
-    },
     "zuidazy_movie": {
       "api": "https://zuidazy.me/api.php/provide/vod",
       "name": "最大电影",
@@ -221,11 +216,6 @@
     "iqiyi_tv": {
       "api": "https://iqiyizyapi.com/api.php/provide/vod",
       "name": "爱奇艺剧集",
-      "group": "電視劇"
-    },
-    "maotai_tv": {
-      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
-      "name": "茅台剧集",
       "group": "電視劇"
     },
     "zuidazy_tv": {
@@ -355,11 +345,6 @@
       "name": "爱奇艺短剧",
       "group": "短劇"
     },
-    "maotai_dj": {
-      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
-      "name": "茅台短剧",
-      "group": "短劇"
-    },
     "zuidazy_dj": {
       "api": "https://zuidazy.me/api.php/provide/vod",
       "name": "最大短剧",
@@ -379,6 +364,23 @@
       "api": "https://p2100.net/api.php/provide/vod",
       "name": "飘零剧集2",
       "group": "電視劇"
+    },
+    "hnzy_hollywood": {
+      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
+      "name": "红牛大片",
+      "detail": "https://www.hongniuzy2.com",
+      "group": "好萊塢"
+    },
+    "fnzy_tv": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟剧集",
+      "detail": "https://hongniuzy3.com",
+      "group": "電視劇"
+    },
+    "zy360_dj": {
+      "api": "https://360zy.com/api.php/provide/vod",
+      "name": "360短剧",
+      "group": "短劇"
     }
   }
 }
