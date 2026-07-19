@@ -475,6 +475,36 @@
       "api": "https://apilsbzy3.com/api.php/provide/vod",
       "name": "apilsbzy3",
       "group": "🔞"
+    },
+    "apilsbzy5.com": {
+      "api": "https://apilsbzy5.com/api.php/provide/vod",
+      "name": "apilsbzy5",
+      "group": "🔞"
+    },
+    "apilsbzy7.com": {
+      "api": "https://apilsbzy7.com/api.php/provide/vod",
+      "name": "apilsbzy7",
+      "group": "🔞"
+    },
+    "moduapi_adult": {
+      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
+      "name": "魔都成人",
+      "group": "🔞"
+    },
+    "dbzy_adult": {
+      "api": "https://dbzy.tv/api.php/provide/vod",
+      "name": "豆瓣成人",
+      "group": "🔞"
+    },
+    "lovedan_adult": {
+      "api": "https://lovedan.net/api.php/provide/vod",
+      "name": "艾旦成人",
+      "group": "🔞"
+    },
+    "hongniuzy4_adult": {
+      "api": "https://hongniuzy4.com/api.php/provide/vod",
+      "name": "红牛成人4",
+      "group": "🔞"
     }
   }
 }
