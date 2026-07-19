@@ -86,12 +86,6 @@
       "detail": "https://www.hongniuzy2.com",
       "group": "綜合影視"
     },
-    "ukuzy": {
-      "api": "https://api.ukuapi.com/api.php/provide/vod",
-      "name": "U酷资源",
-      "detail": "https://api.ukuapi.com",
-      "group": "綜合影視"
-    },
     "fnzy": {
       "api": "https://hongniuzy3.com/api.php/provide/vod",
       "name": "蜂鸟资源",
@@ -381,6 +375,11 @@
       "api": "https://360zy.com/api.php/provide/vod",
       "name": "360短剧",
       "group": "短劇"
+    },
+    "mdzy_mix": {
+      "api": "https://www.mdzyapi.com/api.php/provide/vod",
+      "name": "魔都综合",
+      "group": "綜合影視"
     }
   }
 }
