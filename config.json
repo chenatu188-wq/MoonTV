@@ -92,7 +92,7 @@
       "group": "電影"
     },
     "wujin_movie": {
-      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "api": "https://api.wujinapi.me/api.php/provide/vod",
       "name": "无尽电影",
       "group": "好萊塢"
     },
@@ -117,7 +117,7 @@
       "group": "電視劇"
     },
     "wujin_tv": {
-      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "api": "https://api.wujinapi.me/api.php/provide/vod",
       "name": "无尽剧集",
       "group": "電視劇"
     },
@@ -177,7 +177,7 @@
       "group": "3D動漫-日本"
     },
     "wujin_anime_3d_west": {
-      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "api": "https://api.wujinapi.me/api.php/provide/vod",
       "name": "无尽3D动漫(欧美)",
       "group": "3D動漫-歐美"
     },
@@ -204,7 +204,7 @@
       "group": "短劇"
     },
     "wujin_dj": {
-      "api": "https://api.wujinapi.com/api.php/provide/vod",
+      "api": "https://api.wujinapi.me/api.php/provide/vod",
       "name": "无尽短剧",
       "group": "短劇"
     },
