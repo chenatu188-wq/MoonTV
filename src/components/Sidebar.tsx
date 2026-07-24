@@ -6,7 +6,6 @@ import {
   Film,
   Home,
   Menu,
-  Radio,
   Search,
   Sparkles,
   Star,
@@ -168,11 +167,6 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Sparkles,
       label: '动漫',
       href: '/browse?category=anime3d',
-    },
-    {
-      icon: Radio,
-      label: '直播',
-      href: '/live',
     },
   ];
 
