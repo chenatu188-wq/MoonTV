@@ -380,6 +380,231 @@
       "api": "https://www.mdzyapi.com/api.php/provide/vod",
       "name": "魔都综合",
       "group": "綜合影視"
+    },
+    "dyttzy_dj": {
+      "api": "http://caiji.dyttzyapi.com/api.php/provide/vod",
+      "name": "电影天堂短剧",
+      "group": "短劇"
+    },
+    "ffzy_dj": {
+      "api": "http://ffzy5.tv/api.php/provide/vod",
+      "name": "非凡短剧",
+      "group": "短劇"
+    },
+    "zuidapi_dj": {
+      "api": "https://api.zuidapi.com/api.php/provide/vod",
+      "name": "最大短剧2",
+      "group": "短劇"
+    },
+    "ruyi_dj": {
+      "api": "https://cj.rycjapi.com/api.php/provide/vod",
+      "name": "如意短剧",
+      "group": "短劇"
+    },
+    "maoyan_dj2": {
+      "api": "https://api.maoyanapi.top/api.php/provide/vod",
+      "name": "猫眼短剧",
+      "group": "短劇"
+    },
+    "lovedan_dj": {
+      "api": "https://lovedan.net/api.php/provide/vod",
+      "name": "艾旦短剧",
+      "group": "短劇"
+    },
+    "dbzy_dj": {
+      "api": "https://dbzy.tv/api.php/provide/vod",
+      "name": "豆瓣短剧",
+      "group": "短劇"
+    },
+    "p2100_dj": {
+      "api": "https://p2100.net/api.php/provide/vod",
+      "name": "飘零短剧",
+      "group": "短劇"
+    },
+    "hhzy_dj": {
+      "api": "https://hhzyapi.com/api.php/provide/vod",
+      "name": "豪华短剧",
+      "group": "短劇"
+    },
+    "yzzy_dj": {
+      "api": "https://api.yzzy-api.com/inc/apijson.php",
+      "name": "优质短剧",
+      "group": "短劇"
+    },
+    "hongniuzy3_dj": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟短剧",
+      "group": "短劇"
+    },
+    "dyttzy_anime": {
+      "api": "http://caiji.dyttzyapi.com/api.php/provide/vod",
+      "name": "电影天堂动漫",
+      "group": "動漫"
+    },
+    "ffzy_anime": {
+      "api": "http://ffzy5.tv/api.php/provide/vod",
+      "name": "非凡动漫",
+      "group": "動漫"
+    },
+    "zuidapi_anime": {
+      "api": "https://api.zuidapi.com/api.php/provide/vod",
+      "name": "最大动漫2",
+      "group": "動漫"
+    },
+    "ruyi_anime": {
+      "api": "https://cj.rycjapi.com/api.php/provide/vod",
+      "name": "如意动漫",
+      "group": "動漫"
+    },
+    "wujin_anime": {
+      "api": "https://api.wujinapi.me/api.php/provide/vod",
+      "name": "无尽动漫",
+      "group": "動漫"
+    },
+    "zy360_anime": {
+      "api": "https://360zy.com/api.php/provide/vod",
+      "name": "360动漫",
+      "group": "動漫"
+    },
+    "maoyan_anime": {
+      "api": "https://api.maoyanapi.top/api.php/provide/vod",
+      "name": "猫眼动漫",
+      "group": "動漫"
+    },
+    "bfzy_anime": {
+      "api": "https://bfzyapi.com/api.php/provide/vod",
+      "name": "暴风动漫",
+      "group": "動漫"
+    },
+    "lovedan_anime": {
+      "api": "https://lovedan.net/api.php/provide/vod",
+      "name": "艾旦动漫",
+      "group": "動漫"
+    },
+    "iqiyizy_anime": {
+      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
+      "name": "爱奇艺动漫",
+      "group": "動漫"
+    },
+    "p2100_anime": {
+      "api": "https://p2100.net/api.php/provide/vod",
+      "name": "飘零动漫",
+      "group": "動漫"
+    },
+    "zuidazy_anime": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大动漫",
+      "group": "動漫"
+    },
+    "hhzy_anime": {
+      "api": "https://hhzyapi.com/api.php/provide/vod",
+      "name": "豪华动漫",
+      "group": "動漫"
+    },
+    "yzzy_anime": {
+      "api": "https://api.yzzy-api.com/inc/apijson.php",
+      "name": "优质动漫",
+      "group": "動漫"
+    },
+    "subo_anime": {
+      "api": "https://subocaiji.com/api.php/provide/vod",
+      "name": "速播动漫",
+      "group": "動漫"
+    },
+    "lzi_anime": {
+      "api": "https://cj.lziapi.com/api.php/provide/vod",
+      "name": "量子动漫",
+      "group": "動漫"
+    },
+    "apibdzy_anime": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度动漫",
+      "group": "動漫"
+    },
+    "lzcaiji_anime": {
+      "api": "https://cj.lzcaiji.com/api.php/provide/vod",
+      "name": "量子动漫2",
+      "group": "動漫"
+    },
+    "dyttzy_anime_3d_cn": {
+      "api": "http://caiji.dyttzyapi.com/api.php/provide/vod",
+      "name": "电影天堂3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "ffzy_anime_3d_cn": {
+      "api": "http://ffzy5.tv/api.php/provide/vod",
+      "name": "非凡3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "zuidapi_anime_3d_cn": {
+      "api": "https://api.zuidapi.com/api.php/provide/vod",
+      "name": "最大3D动漫2(中国)",
+      "group": "3D動漫-中國"
+    },
+    "ruyi_anime_3d_cn": {
+      "api": "https://cj.rycjapi.com/api.php/provide/vod",
+      "name": "如意3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "wujin_anime_3d_cn": {
+      "api": "https://api.wujinapi.me/api.php/provide/vod",
+      "name": "无尽3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "zy360_anime_3d_cn": {
+      "api": "https://360zy.com/api.php/provide/vod",
+      "name": "360 3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "maoyan_anime_3d_cn": {
+      "api": "https://api.maoyanapi.top/api.php/provide/vod",
+      "name": "猫眼3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "bfzy_anime_3d_cn": {
+      "api": "https://bfzyapi.com/api.php/provide/vod",
+      "name": "暴风3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "lovedan_anime_3d_cn": {
+      "api": "https://lovedan.net/api.php/provide/vod",
+      "name": "艾旦3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "iqiyizy_anime_3d_cn": {
+      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
+      "name": "爱奇艺3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "zuidazy_anime_3d_cn": {
+      "api": "https://zuidazy.me/api.php/provide/vod",
+      "name": "最大3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "hhzy_anime_3d_cn": {
+      "api": "https://hhzyapi.com/api.php/provide/vod",
+      "name": "豪华3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "yzzy_anime_3d_cn": {
+      "api": "https://api.yzzy-api.com/inc/apijson.php",
+      "name": "优质3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "apibdzy_anime_3d_cn": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度3D动漫(中国)",
+      "group": "3D動漫-中國"
+    },
+    "lzcaiji_anime_3d_cn": {
+      "api": "https://cj.lzcaiji.com/api.php/provide/vod",
+      "name": "量子3D动漫2(中国)",
+      "group": "3D動漫-中國"
+    },
+    "mdzy_anime_3d_cn": {
+      "api": "https://www.mdzyapi.com/api.php/provide/vod",
+      "name": "魔都3D动漫2(中国)",
+      "group": "3D動漫-中國"
     }
   }
 }
