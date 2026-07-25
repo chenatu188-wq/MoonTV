@@ -20,6 +20,7 @@ import {
 } from '@/lib/db.client';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
+import { ensureVideoSource } from '@/lib/video-source';
 
 import EpisodeSelector from '@/components/EpisodeSelector';
 import PageLayout from '@/components/PageLayout';
@@ -552,26 +553,6 @@ function PlayPageClient() {
   };
   const skipMarksRef = useRef<{ intro?: number; outro?: number }>({});
   const skippedIntroRef = useRef(false);
-
-  const ensureVideoSource = (video: HTMLVideoElement | null, url: string) => {
-    if (!video || !url) return;
-    const sources = Array.from(video.getElementsByTagName('source'));
-    const existed = sources.some((s) => s.src === url);
-    if (!existed) {
-      // 移除旧的 source，保持唯一
-      sources.forEach((s) => s.remove());
-      const sourceEl = document.createElement('source');
-      sourceEl.src = url;
-      video.appendChild(sourceEl);
-    }
-
-    // 始终允许远程播放（AirPlay / Cast）
-    video.disableRemotePlayback = false;
-    // 如果曾经有禁用属性，移除之
-    if (video.hasAttribute('disableRemotePlayback')) {
-      video.removeAttribute('disableRemotePlayback');
-    }
-  };
 
   // 去广告：辨識「短廣告 + DISCONTINUITY + 長主片」的 pre-roll 結構，整段廣告連 DISCONTINUITY 一起刪。
   // 安全機制：只有當 DISC 前的 segment 數 ≤ 30（典型廣告長度）且後段顯著更長時才剪。
