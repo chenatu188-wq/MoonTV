@@ -505,6 +505,56 @@
       "api": "https://hongniuzy4.com/api.php/provide/vod",
       "name": "红牛成人4",
       "group": "🔞"
+    },
+    "ruyi_adult": {
+      "api": "https://cj.rycjapi.com/api.php/provide/vod",
+      "name": "如意成人",
+      "group": "🔞"
+    },
+    "dyttzy_adult": {
+      "api": "http://caiji.dyttzyapi.com/api.php/provide/vod",
+      "name": "电影天堂成人",
+      "group": "🔞"
+    },
+    "zuidapi_adult": {
+      "api": "https://api.zuidapi.com/api.php/provide/vod",
+      "name": "最大成人2",
+      "group": "🔞"
+    },
+    "jisu_adult": {
+      "api": "https://jszyapi.com/api.php/provide/vod",
+      "name": "极速成人",
+      "group": "🔞"
+    },
+    "maoyan_adult": {
+      "api": "https://api.maoyanapi.top/api.php/provide/vod",
+      "name": "猫眼成人",
+      "group": "🔞"
+    },
+    "zy360_adult": {
+      "api": "https://360zy.com/api.php/provide/vod",
+      "name": "360成人",
+      "group": "🔞"
+    },
+    "hhzy_adult": {
+      "api": "https://hhzyapi.com/api.php/provide/vod",
+      "name": "豪华成人",
+      "group": "🔞"
+    },
+    "iqiyizy_adult": {
+      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
+      "name": "爱奇艺成人2",
+      "group": "🔞"
+    },
+    "hongniuzy2_adult": {
+      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
+      "name": "红牛成人2",
+      "group": "🔞"
+    },
+    "apibdzy_adult": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度成人",
+      "group": "🔞"
     }
   }
 }
