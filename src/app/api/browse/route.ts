@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { firstNonEmpty, matchCategories } from '@/lib/browse-category';
 import {
   API_CONFIG,
   getCacheTime,
@@ -79,17 +80,6 @@ const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
   ],
 };
 
-function matchCat(
-  cats: Array<{ type_id: number; type_name: string }>,
-  keywords: string[]
-) {
-  for (const kw of keywords) {
-    const c = cats.find((c) => c.type_name.includes(kw));
-    if (c) return c;
-  }
-  return null;
-}
-
 type RawItem = {
   vod_id?: unknown;
   vod_name?: string;
@@ -155,10 +145,10 @@ export async function GET(request: Request) {
   const PAGES_PER_LOGICAL = 20;
 
   try {
-    let buildUrl: (pg: number) => string;
+    let buildUrls: Array<(pg: number) => string>;
 
     if (category === 'adult') {
-      buildUrl = (pg) => `${site.api}?ac=videolist${yearParam}&pg=${pg}`;
+      buildUrls = [(pg) => `${site.api}?ac=videolist${yearParam}&pg=${pg}`];
     } else {
       const keywords =
         category === 'tv'
@@ -170,17 +160,26 @@ export async function GET(request: Request) {
           : category === 'anime3d'
           ? ANIME_3D_REGION_KEYWORDS[site.group || ''] || ANIME_3D_KEYWORDS
           : DJ_KEYWORDS;
-      const listResp = await fetch(`${site.api}?ac=list`, {
-        headers: API_CONFIG.search.headers,
-      });
-      const listData = await listResp.json();
-      const cats: Array<{ type_id: number; type_name: string }> =
-        listData.class || [];
-      const djCat = matchCat(cats, keywords);
-      if (!djCat)
-        return NextResponse.json({ results: [], total: 0, pagecount: 0 });
-      buildUrl = (pg) =>
-        `${site.api}?ac=videolist&t=${djCat.type_id}${yearParam}&pg=${pg}`;
+      const fallbackBuildUrl = (pg: number) =>
+        `${site.api}?ac=videolist${yearParam}&pg=${pg}`;
+      try {
+        const listResp = await fetch(`${site.api}?ac=list`, {
+          headers: API_CONFIG.search.headers,
+        });
+        const listData = await listResp.json();
+        const cats: Array<{ type_id: number; type_name: string }> =
+          listData.class || [];
+        const matchedCategories = matchCategories(cats, keywords);
+        buildUrls = [
+          ...matchedCategories.map(
+            (matchedCategory) => (pg: number) =>
+              `${site.api}?ac=videolist&t=${matchedCategory.type_id}${yearParam}&pg=${pg}`
+          ),
+          fallbackBuildUrl,
+        ];
+      } catch {
+        buildUrls = [fallbackBuildUrl];
+      }
     }
 
     const startPg = (page - 1) * PAGES_PER_LOGICAL + 1;
@@ -189,30 +188,41 @@ export async function GET(request: Request) {
       (_, i) => startPg + i
     );
 
-    const responses = await Promise.all(
-      upstreamPages.map(async (pg) => {
-        try {
-          const r = await fetch(buildUrl(pg), {
-            headers: API_CONFIG.search.headers,
-          });
-          if (!r.ok) return null;
-          return await r.json();
-        } catch {
-          return null;
-        }
-      })
-    );
+    const fetchMany = async (urlBuilder: (pg: number) => string) => {
+      const responses = await Promise.all(
+        upstreamPages.map(async (pg) => {
+          try {
+            const r = await fetch(urlBuilder(pg), {
+              headers: API_CONFIG.search.headers,
+            });
+            if (!r.ok) return null;
+            return await r.json();
+          } catch {
+            return null;
+          }
+        })
+      );
+      return responses;
+    };
 
+    const resolved = await firstNonEmpty(buildUrls, async (urlBuilder) => {
+      const candidateResponses = await fetchMany(urlBuilder);
+      return candidateResponses.flatMap((response) =>
+        response && Array.isArray(response.list) && response.list.length > 0
+          ? [response]
+          : []
+      );
+    });
+    const responses = resolved.result;
     const firstValid = responses.find((r) => r && Array.isArray(r.list));
+    const mergedList = responses.flatMap((r) =>
+      r && Array.isArray(r.list) ? (r.list as RawItem[]) : []
+    );
     const upstreamTotal: number = firstValid?.total || 0;
     const upstreamPageCount: number = firstValid?.pagecount || 1;
     const logicalPageCount = Math.max(
       1,
       Math.ceil(upstreamPageCount / PAGES_PER_LOGICAL)
-    );
-
-    const mergedList = responses.flatMap((r) =>
-      r && Array.isArray(r.list) ? (r.list as RawItem[]) : []
     );
 
     return NextResponse.json(
