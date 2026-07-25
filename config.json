@@ -720,6 +720,56 @@
       "api": "https://hhzyapi.com/api.php/provide/vod",
       "name": "豪华电影2",
       "group": "電影"
+    },
+    "hongniuzy2_movie": {
+      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
+      "name": "红牛电影",
+      "group": "電影"
+    },
+    "hongniuzy3_movie": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟电影",
+      "group": "電影"
+    },
+    "mdzy_movie2": {
+      "api": "https://www.mdzyapi.com/api.php/provide/vod",
+      "name": "魔都电影2",
+      "group": "電影"
+    },
+    "modu_movie": {
+      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
+      "name": "魔都电影3",
+      "group": "電影"
+    },
+    "jisu_movie3": {
+      "api": "https://jszyapi.com/api.php/provide/vod",
+      "name": "极速电影3",
+      "group": "電影"
+    },
+    "zuidapi_movie3": {
+      "api": "https://api.zuidapi.com/api.php/provide/vod",
+      "name": "最大电影3",
+      "group": "電影"
+    },
+    "apibdzy_movie3": {
+      "api": "https://api.apibdzy.com/api.php/provide/vod",
+      "name": "百度电影3",
+      "group": "電影"
+    },
+    "guangsu_movie3": {
+      "api": "https://api.guangsuapi.com/api.php/provide/vod",
+      "name": "光速电影3",
+      "group": "電影"
+    },
+    "sdzy_movie": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电电影",
+      "group": "電影"
+    },
+    "tyyszy_movie": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯电影",
+      "group": "電影"
     }
   }
 }
