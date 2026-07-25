@@ -501,6 +501,71 @@
       "name": "艾旦成人",
       "group": "🔞"
     },
+    "jkunzyapi.com": {
+      "api": "https://jkunzyapi.com/api.php/provide/vod",
+      "name": "🔞爱坤资源",
+      "group": "🔞"
+    },
+    "jkunzy.com": {
+      "api": "https://jkunzy.com/api.php/provide/vod",
+      "name": "🔞爱坤资源2",
+      "group": "🔞"
+    },
+    "naixxzy.com": {
+      "api": "https://naixxzy.com/api.php/provide/vod",
+      "name": "🔞奶昔资源",
+      "group": "🔞"
+    },
+    "naixxzy1.com": {
+      "api": "https://naixxzy1.com/api.php/provide/vod",
+      "name": "🔞奶昔资源1",
+      "group": "🔞"
+    },
+    "naixxzy2.com": {
+      "api": "https://naixxzy2.com/api.php/provide/vod",
+      "name": "🔞奶昔资源2",
+      "group": "🔞"
+    },
+    "madouse.la": {
+      "api": "https://madouse.la/api.php/provide/vod",
+      "name": "🔞麻豆社",
+      "group": "🔞"
+    },
+    "91md.me": {
+      "api": "https://91md.me/api.php/provide/vod",
+      "name": "🔞91麻豆",
+      "group": "🔞"
+    },
+    "apidanaizi.com": {
+      "api": "https://apidanaizi.com/api.php/provide/vod",
+      "name": "🔞大奶子资源",
+      "group": "🔞"
+    },
+    "hsckzy.xyz": {
+      "api": "https://hsckzy.xyz/api.php/provide/vod",
+      "name": "🔞黑丝资源",
+      "group": "🔞"
+    },
+    "hsckzy888.com": {
+      "api": "https://hsckzy888.com/api.php/provide/vod",
+      "name": "🔞黑丝资源2",
+      "group": "🔞"
+    },
+    "jingpinx.com": {
+      "api": "https://jingpinx.com/api.php/provide/vod",
+      "name": "🔞精品资源",
+      "group": "🔞"
+    },
+    "didizy.com": {
+      "api": "https://www.didizy.com/api.php/provide/vod",
+      "name": "🔞滴滴资源",
+      "group": "🔞"
+    },
+    "slapibf.com": {
+      "api": "https://slapibf.com/api.php/provide/vod",
+      "name": "🔞索拉资源",
+      "group": "🔞"
+    },
     "hongniuzy4_adult": {
       "api": "https://hongniuzy4.com/api.php/provide/vod",
       "name": "红牛资源4",
