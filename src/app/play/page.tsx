@@ -20,6 +20,7 @@ import {
 } from '@/lib/db.client';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
+import { ensureVideoSource } from '@/lib/video-source';
 
 import EpisodeSelector from '@/components/EpisodeSelector';
 import PageLayout from '@/components/PageLayout';
@@ -386,26 +387,6 @@ function PlayPageClient() {
     const newUrl = detailData?.episodes[episodeIndex] || '';
     if (newUrl !== videoUrl) {
       setVideoUrl(newUrl);
-    }
-  };
-
-  const ensureVideoSource = (video: HTMLVideoElement | null, url: string) => {
-    if (!video || !url) return;
-    const sources = Array.from(video.getElementsByTagName('source'));
-    const existed = sources.some((s) => s.src === url);
-    if (!existed) {
-      // 移除旧的 source，保持唯一
-      sources.forEach((s) => s.remove());
-      const sourceEl = document.createElement('source');
-      sourceEl.src = url;
-      video.appendChild(sourceEl);
-    }
-
-    // 始终允许远程播放（AirPlay / Cast）
-    video.disableRemotePlayback = false;
-    // 如果曾经有禁用属性，移除之
-    if (video.hasAttribute('disableRemotePlayback')) {
-      video.removeAttribute('disableRemotePlayback');
     }
   };
 
