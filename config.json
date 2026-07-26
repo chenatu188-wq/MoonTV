@@ -35,9 +35,9 @@
       "detail": "http://caiji.dyttzyapi.com",
       "group": "大陸劇"
     },
-    "ruyi": {
-      "api": "https://cj.rycjapi.com/api.php/provide/vod",
-      "name": "如意资源",
+    "yinghua_mix": {
+      "api": "https://m3u8.apiyhzy.com/api.php/provide/vod",
+      "name": "樱花综合",
       "group": "綜合影視"
     },
     "bfzy": {
@@ -107,9 +107,9 @@
       "name": "速播资源",
       "group": "綜合影視"
     },
-    "p2100": {
-      "api": "https://p2100.net/api.php/provide/vod",
-      "name": "萬影资源",
+    "xinlang_mix": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪综合",
       "group": "綜合影視"
     },
     "lzi": {
@@ -142,9 +142,9 @@
       "name": "爱奇艺电影",
       "group": "好萊塢"
     },
-    "zuidazy_movie": {
-      "api": "https://zuidazy.me/api.php/provide/vod",
-      "name": "最大电影",
+    "maotai_hollywood": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台大片",
       "group": "好萊塢"
     },
     "haohua_movie": {
@@ -197,9 +197,9 @@
       "name": "光速大片",
       "group": "好萊塢"
     },
-    "piaoling_tv": {
-      "api": "https://p2100.net/api.php/provide/vod",
-      "name": "飘零资源",
+    "yinghua_tv": {
+      "api": "https://m3u8.apiyhzy.com/api.php/provide/vod",
+      "name": "樱花剧集",
       "group": "電視劇"
     },
     "wujin_tv": {
@@ -212,9 +212,9 @@
       "name": "爱奇艺剧集",
       "group": "電視劇"
     },
-    "zuidazy_tv": {
-      "api": "https://zuidazy.me/api.php/provide/vod",
-      "name": "最大剧集",
+    "xinlang_tv": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪剧集",
       "group": "電視劇"
     },
     "dbzy_tv": {
@@ -339,9 +339,9 @@
       "name": "爱奇艺短剧",
       "group": "短劇"
     },
-    "zuidazy_dj": {
-      "api": "https://zuidazy.me/api.php/provide/vod",
-      "name": "最大短剧",
+    "xinlang_dj": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪短剧",
       "group": "短劇"
     },
     "baidu_dj": {
@@ -349,14 +349,14 @@
       "name": "百度短剧",
       "group": "短劇"
     },
-    "zuidazy_mix": {
-      "api": "https://zuidazy.me/api.php/provide/vod",
-      "name": "最大综合",
+    "kuaiche_mix": {
+      "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
+      "name": "快车综合",
       "group": "綜合影視"
     },
-    "p2100_tv2": {
-      "api": "https://p2100.net/api.php/provide/vod",
-      "name": "飘零剧集2",
+    "kuaiche_tv": {
+      "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
+      "name": "快车剧集",
       "group": "電視劇"
     },
     "hnzy_hollywood": {
@@ -396,9 +396,9 @@
       "name": "最大短剧2",
       "group": "短劇"
     },
-    "ruyi_dj": {
-      "api": "https://cj.rycjapi.com/api.php/provide/vod",
-      "name": "如意短剧",
+    "ikun_dj": {
+      "api": "https://ikunzy.com/api.php/provide/vod",
+      "name": "iKun短剧",
       "group": "短劇"
     },
     "maoyan_dj2": {
@@ -416,9 +416,9 @@
       "name": "豆瓣短剧",
       "group": "短劇"
     },
-    "p2100_dj": {
-      "api": "https://p2100.net/api.php/provide/vod",
-      "name": "飘零短剧",
+    "z360zyzz_dj": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360短剧2",
       "group": "短劇"
     },
     "hhzy_dj": {
@@ -451,9 +451,9 @@
       "name": "最大动漫2",
       "group": "動漫"
     },
-    "ruyi_anime": {
-      "api": "https://cj.rycjapi.com/api.php/provide/vod",
-      "name": "如意动漫",
+    "yinghua_anime": {
+      "api": "https://m3u8.apiyhzy.com/api.php/provide/vod",
+      "name": "樱花动漫",
       "group": "動漫"
     },
     "wujin_anime": {
@@ -486,14 +486,14 @@
       "name": "爱奇艺动漫",
       "group": "動漫"
     },
-    "p2100_anime": {
-      "api": "https://p2100.net/api.php/provide/vod",
-      "name": "飘零动漫",
+    "xinlang_anime": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪动漫",
       "group": "動漫"
     },
-    "zuidazy_anime": {
-      "api": "https://zuidazy.me/api.php/provide/vod",
-      "name": "最大动漫",
+    "kuaiche_anime": {
+      "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
+      "name": "快车动漫",
       "group": "動漫"
     },
     "hhzy_anime": {
@@ -541,9 +541,9 @@
       "name": "最大3D动漫2(中国)",
       "group": "3D動漫-中國"
     },
-    "ruyi_anime_3d_cn": {
-      "api": "https://cj.rycjapi.com/api.php/provide/vod",
-      "name": "如意3D动漫(中国)",
+    "maotai_anime_3d_cn": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台3D动漫(中国)",
       "group": "3D動漫-中國"
     },
     "wujin_anime_3d_cn": {
@@ -576,9 +576,9 @@
       "name": "爱奇艺3D动漫(中国)",
       "group": "3D動漫-中國"
     },
-    "zuidazy_anime_3d_cn": {
-      "api": "https://zuidazy.me/api.php/provide/vod",
-      "name": "最大3D动漫(中国)",
+    "z360zyzz_anime_3d_cn": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360 3D动漫2(中国)",
       "group": "3D動漫-中國"
     },
     "hhzy_anime_3d_cn": {
@@ -621,9 +621,9 @@
       "name": "非凡剧集",
       "group": "電視劇"
     },
-    "ruyi_tv": {
-      "api": "https://cj.rycjapi.com/api.php/provide/vod",
-      "name": "如意剧集",
+    "z360zyzz_tv": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360剧集2",
       "group": "電視劇"
     },
     "bfzy_tv": {
@@ -661,9 +661,9 @@
       "name": "非凡电影",
       "group": "電影"
     },
-    "ruyi_movie": {
-      "api": "https://cj.rycjapi.com/api.php/provide/vod",
-      "name": "如意电影",
+    "yinghua_movie2": {
+      "api": "https://m3u8.apiyhzy.com/api.php/provide/vod",
+      "name": "樱花电影2",
       "group": "電影"
     },
     "bfzy_movie": {
@@ -696,9 +696,9 @@
       "name": "速播电影",
       "group": "電影"
     },
-    "p2100_movie": {
-      "api": "https://p2100.net/api.php/provide/vod",
-      "name": "飘零电影",
+    "xinlang_movie3": {
+      "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
+      "name": "新浪电影3",
       "group": "電影"
     },
     "lzi_movie": {
@@ -711,9 +711,9 @@
       "name": "爱奇艺电影2",
       "group": "電影"
     },
-    "zuidazy_movie2": {
-      "api": "https://zuidazy.me/api.php/provide/vod",
-      "name": "最大电影2",
+    "kuaiche_movie2": {
+      "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
+      "name": "快车电影2",
       "group": "電影"
     },
     "hhzy_movie2": {
@@ -786,9 +786,9 @@
       "name": "红牛资源4",
       "group": "綜合影視"
     },
-    "ruyi_adult": {
-      "api": "https://cj.rycjapi.com/api.php/provide/vod",
-      "name": "如意资源2",
+    "ikun_mix": {
+      "api": "https://ikunzy.com/api.php/provide/vod",
+      "name": "iKun综合",
       "group": "綜合影視"
     },
     "dyttzy_adult": {
