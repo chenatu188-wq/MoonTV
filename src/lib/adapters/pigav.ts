@@ -30,14 +30,16 @@ export function isPigavSite(api?: string): boolean {
 }
 
 // 包成 HLS 代理路徑，繞過 pigav CDN 的 origin 鎖 CORS。
-// 設了 PIGAV_HLS_PROXY（Cloudflare Worker 網址）就走它卸載頻寬 + 加速；
-// 沒設則退回同源 /api/hls-proxy（走 Zeabur 中轉，較慢但可用）。
+// 預設走 Cloudflare Worker 卸載頻寬 + 加速；PIGAV_HLS_PROXY 可覆蓋成別的代理網址。
+// （edge runtime 會在 build 時 inline env，故用硬預設確保一定生效。）
+const HLS_PROXY_BASE =
+  process.env.PIGAV_HLS_PROXY ||
+  'https://green-morning-893c.chenatu188.workers.dev';
+
 function proxied(url: string): string {
-  const base = process.env.PIGAV_HLS_PROXY;
-  if (base) {
-    return `${base.replace(/\/+$/, '')}/?url=${encodeURIComponent(url)}`;
-  }
-  return `/api/hls-proxy?url=${encodeURIComponent(url)}`;
+  return `${HLS_PROXY_BASE.replace(/\/+$/, '')}/?url=${encodeURIComponent(
+    url
+  )}`;
 }
 
 interface PeerTubeVideo {
