@@ -29,8 +29,14 @@ export function isPigavSite(api?: string): boolean {
   return (api || '').includes('pigav.ws');
 }
 
-// 包成同源 HLS 代理路徑，繞過 pigav CDN 的 origin 鎖 CORS
+// 包成 HLS 代理路徑，繞過 pigav CDN 的 origin 鎖 CORS。
+// 設了 PIGAV_HLS_PROXY（Cloudflare Worker 網址）就走它卸載頻寬 + 加速；
+// 沒設則退回同源 /api/hls-proxy（走 Zeabur 中轉，較慢但可用）。
 function proxied(url: string): string {
+  const base = process.env.PIGAV_HLS_PROXY;
+  if (base) {
+    return `${base.replace(/\/+$/, '')}/?url=${encodeURIComponent(url)}`;
+  }
   return `/api/hls-proxy?url=${encodeURIComponent(url)}`;
 }
 
