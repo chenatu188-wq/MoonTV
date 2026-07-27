@@ -1,3 +1,4 @@
+import { isPigavSite, pigavDetail, pigavSearch } from '@/lib/adapters/pigav';
 import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
@@ -21,6 +22,10 @@ export async function searchFromApi(
   apiSite: ApiSite,
   query: string
 ): Promise<SearchResult[]> {
+  // pigav（PeerTube）走專用轉接，不是蘋果 CMS
+  if (isPigavSite(apiSite.api)) {
+    return pigavSearch(apiSite, query);
+  }
   try {
     const apiBaseUrl = apiSite.api;
     const apiUrl =
@@ -204,6 +209,11 @@ export async function getDetailFromApi(
   apiSite: ApiSite,
   id: string
 ): Promise<SearchResult> {
+  // pigav（PeerTube）走專用轉接，不是蘋果 CMS
+  if (isPigavSite(apiSite.api)) {
+    return pigavDetail(apiSite, id);
+  }
+
   let jsonDetail: SearchResult | null = null;
   let jsonError: unknown = null;
 

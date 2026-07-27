@@ -1,6 +1,11 @@
 {
   "cache_time": 7200,
   "api_site": {
+    "pigav": {
+      "api": "https://pigav.ws/api/v1/videos",
+      "name": "🔞朱古力",
+      "group": "🔞"
+    },
     "lovedan": {
       "api": "https://lovedan.net/api.php/provide/vod",
       "name": "艾旦影视",

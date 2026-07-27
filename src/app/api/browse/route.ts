@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { isPigavSite, pigavBrowse } from '@/lib/adapters/pigav';
 import { firstNonEmpty, matchCategories } from '@/lib/browse-category';
 import {
   API_CONFIG,
@@ -136,6 +137,26 @@ export async function GET(request: Request) {
       { error: 'adult source is not allowed in non-adult category' },
       { status: 403 }
     );
+  }
+
+  // pigav（PeerTube）走專用轉接
+  if (isPigavSite(site.api)) {
+    const cacheTime = await getCacheTime();
+    try {
+      const { results, total, pagecount } = await pigavBrowse(site, page);
+      return NextResponse.json(
+        {
+          results,
+          total,
+          pagecount,
+          source_name: site.name,
+          source_key: site.key,
+        },
+        { headers: { 'Cache-Control': `public, max-age=${cacheTime}` } }
+      );
+    } catch {
+      return NextResponse.json({ error: 'fetch failed' }, { status: 500 });
+    }
   }
 
   const yearParam = year ? `&y=${year}` : '';
