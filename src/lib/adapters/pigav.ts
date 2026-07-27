@@ -15,6 +15,9 @@ const PIGAV_API = 'https://pigav.ws/api/v1';
 const PAGE_SIZE = 30;
 // pigav 的六個分類（/api/v1/videos/categories）
 const CATEGORY_IDS = [20, 21, 22, 23, 24, 25];
+// 瀏覽每邏輯頁顯示 600 部（對齊其他來源）；PeerTube count 上限 100，故抓 6 個上游頁湊 600
+const BROWSE_PAGE_SIZE = 600;
+const UPSTREAM_MAX = 100;
 
 const HEADERS = {
   'User-Agent':
@@ -157,29 +160,45 @@ export async function pigavBrowse(
   page: number,
   typeId?: number
 ): Promise<PigavBrowseResult> {
-  const start = (Math.max(1, page) - 1) * PAGE_SIZE;
   const cats = typeId ? [typeId] : CATEGORY_IDS;
   const catParam = cats.map((c) => `&categoryOneOf=${c}`).join('');
-  const data = await ptFetch(
-    `/videos?count=${PAGE_SIZE}&start=${start}&sort=-publishedAt&nsfw=both${catParam}`
+
+  // 每邏輯頁湊 600：抓 BROWSE_PAGE_SIZE/UPSTREAM_MAX 個上游頁並行合併
+  const base = (Math.max(1, page) - 1) * BROWSE_PAGE_SIZE;
+  const offsets = Array.from(
+    { length: Math.ceil(BROWSE_PAGE_SIZE / UPSTREAM_MAX) },
+    (_, i) => base + i * UPSTREAM_MAX
   );
-  const list: PeerTubeVideo[] = data?.data || [];
-  const total: number = data?.total || 0;
-  const results = list
-    .filter((v) => v && v.uuid && v.name)
-    .map((v) => ({
-      id: v.uuid,
-      title: v.name.trim(),
-      poster: posterOf(v),
-      year: yearOf(v),
-      remarks: v.duration ? `${Math.floor(v.duration / 60)} 分鐘` : '',
-      source: site.key,
-      source_name: site.name,
-      episodes: [] as string[],
-    }));
+  const responses = await Promise.all(
+    offsets.map((start) =>
+      ptFetch(
+        `/videos?count=${UPSTREAM_MAX}&start=${start}&sort=-publishedAt&nsfw=both${catParam}`
+      )
+    )
+  );
+
+  const total: number =
+    responses.find((r) => r && typeof r.total === 'number')?.total || 0;
+  const seen = new Set<string>();
+  const list: PeerTubeVideo[] = responses
+    .flatMap((r) => (r?.data as PeerTubeVideo[]) || [])
+    .filter(
+      (v) => v && v.uuid && v.name && !seen.has(v.uuid) && seen.add(v.uuid)
+    );
+
+  const results = list.map((v) => ({
+    id: v.uuid,
+    title: v.name.trim(),
+    poster: posterOf(v),
+    year: yearOf(v),
+    remarks: v.duration ? `${Math.floor(v.duration / 60)} 分鐘` : '',
+    source: site.key,
+    source_name: site.name,
+    episodes: [] as string[],
+  }));
   return {
     results,
     total,
-    pagecount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    pagecount: Math.max(1, Math.ceil(total / BROWSE_PAGE_SIZE)),
   };
 }
