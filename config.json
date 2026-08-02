@@ -122,9 +122,9 @@
       "name": "iqiyi资源",
       "group": "綜合影視"
     },
-    "maoyan_movie": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼资源",
+    "z360zyzz_movie": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360电影2",
       "group": "電影"
     },
     "yzzy_movie": {
@@ -401,9 +401,9 @@
       "name": "iKun短剧",
       "group": "短劇"
     },
-    "maoyan_dj2": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼短剧",
+    "hongniuzy2_dj": {
+      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
+      "name": "红牛短剧2",
       "group": "短劇"
     },
     "lovedan_dj": {
@@ -466,9 +466,9 @@
       "name": "360动漫",
       "group": "動漫"
     },
-    "maoyan_anime": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼动漫",
+    "hongniuzy3_anime": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟动漫",
       "group": "動漫"
     },
     "bfzy_anime": {
@@ -556,9 +556,9 @@
       "name": "360 3D动漫(中国)",
       "group": "3D動漫-中國"
     },
-    "maoyan_anime_3d_cn": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼3D动漫(中国)",
+    "hongniuzy3_anime_3d_cn": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟3D动漫(中国)",
       "group": "3D動漫-中國"
     },
     "bfzy_anime_3d_cn": {
@@ -636,9 +636,9 @@
       "name": "360剧集",
       "group": "電視劇"
     },
-    "maoyan_tv": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼剧集",
+    "yzzy_tv": {
+      "api": "https://api.yzzy-api.com/inc/apijson.php",
+      "name": "优质剧集",
       "group": "電視劇"
     },
     "lovedan_tv": {
@@ -806,9 +806,9 @@
       "name": "极速资源2",
       "group": "綜合影視"
     },
-    "maoyan_adult": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼资源2",
+    "z360zyzz_mix": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360综合2",
       "group": "綜合影視"
     },
     "zy360_adult": {
