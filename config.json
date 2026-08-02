@@ -86,9 +86,9 @@
       "name": "iqiyi资源",
       "group": "綜合影視"
     },
-    "maoyan_movie": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼资源",
+    "jisu_movie2": {
+      "api": "https://jszyapi.com/api.php/provide/vod",
+      "name": "极速电影2",
       "group": "電影"
     },
     "yzzy_movie": {
@@ -586,9 +586,9 @@
       "name": "电影天堂资源2",
       "group": "綜合影視"
     },
-    "zuidapi_adult": {
-      "api": "https://api.zuidapi.com/api.php/provide/vod",
-      "name": "最大资源3",
+    "lovedan_mix_a": {
+      "api": "https://lovedan.net/api.php/provide/vod",
+      "name": "艾旦综合A",
       "group": "綜合影視"
     },
     "jisu_adult": {
@@ -596,9 +596,9 @@
       "name": "极速资源2",
       "group": "綜合影視"
     },
-    "maoyan_adult": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼资源2",
+    "tyyszy_mix_a": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯综合A",
       "group": "綜合影視"
     },
     "zy360_adult": {
@@ -646,9 +646,9 @@
       "name": "iKun短剧",
       "group": "短劇"
     },
-    "maoyan_dj2": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼短剧",
+    "hongniuzy2_dj": {
+      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
+      "name": "红牛短剧2",
       "group": "短劇"
     },
     "lovedan_dj": {
@@ -711,9 +711,9 @@
       "name": "360动漫",
       "group": "動漫"
     },
-    "maoyan_anime": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼动漫",
+    "hongniuzy3_anime": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟动漫",
       "group": "動漫"
     },
     "bfzy_anime": {
@@ -801,9 +801,9 @@
       "name": "360 3D动漫(中国)",
       "group": "3D動漫-中國"
     },
-    "maoyan_anime_3d_cn": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼3D动漫(中国)",
+    "hongniuzy3_anime_3d_cn": {
+      "api": "https://hongniuzy3.com/api.php/provide/vod",
+      "name": "蜂鸟3D动漫(中国)",
       "group": "3D動漫-中國"
     },
     "bfzy_anime_3d_cn": {
@@ -881,9 +881,9 @@
       "name": "360剧集",
       "group": "電視劇"
     },
-    "maoyan_tv": {
-      "api": "https://api.maoyanapi.top/api.php/provide/vod",
-      "name": "猫眼剧集",
+    "dbzy_tv": {
+      "api": "https://dbzy.tv/api.php/provide/vod",
+      "name": "豆瓣剧集",
       "group": "電視劇"
     },
     "lovedan_tv": {
