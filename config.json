@@ -6,10 +6,10 @@
       "name": "🔞朱古力",
       "group": "🔞"
     },
-    "lovedan": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦影视",
-      "detail": "https://lovedan.net",
+    "xgzy": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果资源",
+      "detail": "https://caiji.xgzyapi.com",
       "group": "精選推薦"
     },
     "jyzy": {
@@ -501,9 +501,9 @@
       "name": "豆瓣资源2",
       "group": "綜合影視"
     },
-    "lovedan_adult": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦成人",
+    "api155_adult": {
+      "api": "https://155api.com/api.php/provide/vod",
+      "name": "🔞155资源",
       "group": "🔞"
     },
     "jkunzyapi.com": {
@@ -586,9 +586,9 @@
       "name": "电影天堂资源2",
       "group": "綜合影視"
     },
-    "lovedan_mix_a": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦综合A",
+    "xgzy_mix_a": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果综合A",
       "group": "綜合影視"
     },
     "jisu_adult": {
@@ -651,9 +651,9 @@
       "name": "红牛短剧2",
       "group": "短劇"
     },
-    "lovedan_dj": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦短剧",
+    "xgzy_dj": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果短剧",
       "group": "短劇"
     },
     "dbzy_dj": {
@@ -721,9 +721,9 @@
       "name": "暴风动漫",
       "group": "動漫"
     },
-    "lovedan_anime": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦动漫",
+    "xgzy_anime": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果动漫",
       "group": "動漫"
     },
     "iqiyizy_anime": {
@@ -811,9 +811,9 @@
       "name": "暴风3D动漫(中国)",
       "group": "3D動漫-中國"
     },
-    "lovedan_anime_3d_cn": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦3D动漫(中国)",
+    "xgzy_anime_3d_cn": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果3D动漫(中国)",
       "group": "3D動漫-中國"
     },
     "iqiyizy_anime_3d_cn": {
@@ -886,9 +886,9 @@
       "name": "豆瓣剧集",
       "group": "電視劇"
     },
-    "lovedan_tv": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦剧集",
+    "xgzy_tv": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果剧集",
       "group": "電視劇"
     },
     "hhzy_tv": {
@@ -951,9 +951,9 @@
       "name": "360电影",
       "group": "電影"
     },
-    "lovedan_movie": {
-      "api": "https://lovedan.net/api.php/provide/vod",
-      "name": "艾旦电影",
+    "xgzy_movie": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果电影",
       "group": "電影"
     },
     "dbzy_movie2": {
