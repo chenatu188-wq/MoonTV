@@ -1367,13 +1367,56 @@ function PlayPageClient() {
         // HLS 支持配置
         customType: {
           m3u8: function (video: HTMLVideoElement, url: string) {
-            if (!Hls) {
-              console.error('HLS.js 未加载');
-              return;
-            }
-
             if (video.hls) {
               video.hls.destroy();
+              video.hls = undefined;
+            }
+
+            // iPhone Safari 沒有 video 用的 MediaSource，hls.js 物件建得起來、
+            // loadSource 也不報錯，但永遠餵不到資料 → 畫面卡在「視頻加載中」。
+            // 這種瀏覽器要改走 Safari 內建的原生 HLS。
+            // （Android Chrome 有 MSE，走下面 hls.js 那條，行為不變。）
+            const canNativeHls =
+              video.canPlayType('application/vnd.apple.mpegurl') !== '';
+            if (!Hls || !Hls.isSupported()) {
+              if (!canNativeHls) {
+                console.error('[hls] 無 MSE 也無原生 HLS，此瀏覽器播不了');
+                setFatalError(
+                  '此瀏覽器不支援 HLS 播放，請改用 Safari 或 Chrome'
+                );
+                return;
+              }
+              console.warn('[hls] 無 MSE，改用原生 HLS 播放');
+              // crossOrigin='anonymous' 會讓原生播放以 CORS 模式請求分片，
+              // 多數片源 CDN 不回 ACAO 標頭，留著就直接播不出來。
+              video.removeAttribute('crossorigin');
+              video.crossOrigin = null;
+              video.src = url;
+              video.load();
+
+              // 原生路徑同樣要 watchdog：卡住就跳下一源（跟 hls.js 那條同規格）
+              if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+              stallTimerRef.current = setTimeout(() => {
+                if (video.readyState < 2 || video.currentTime === 0) {
+                  console.warn('[stallWatchdog] 原生 HLS 5 秒沒進度，視為卡死');
+                  if (!tryNextAvailableSource('STALL_TIMEOUT')) {
+                    setFatalError('所有來源都連線超時，請稍後再試');
+                  }
+                }
+              }, 5000);
+              const cancelNativeWatchdog = () => {
+                if (stallTimerRef.current) {
+                  clearTimeout(stallTimerRef.current);
+                  stallTimerRef.current = null;
+                }
+              };
+              video.addEventListener('playing', cancelNativeWatchdog, {
+                once: true,
+              });
+              video.addEventListener('timeupdate', cancelNativeWatchdog, {
+                once: true,
+              });
+              return;
             }
             const hls = new Hls({
               debug: false, // 关闭日志
