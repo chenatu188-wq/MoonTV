@@ -86,6 +86,8 @@ const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
 const KOREAN_ADULT_CATEGORY_IDS: Record<string, number> = {
   kuaiche_korea: 57,
   zuidazy_korea: 57,
+  wujin_korea: 48,
+  sdzy_korea: 57,
 };
 
 type RawItem = {
