@@ -66,6 +66,11 @@
       "name": "最大资源",
       "group": "綜合影視"
     },
+    "zuidazy_korea": {
+      "api": "https://api.zuidapi.com/api.php/provide/vod",
+      "name": "🔞最大韩国伦理",
+      "group": "🔞韓國"
+    },
     "wujin": {
       "api": "https://api.wujinapi.me/api.php/provide/vod",
       "name": "无尽资源",
@@ -443,6 +448,11 @@
       "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
       "name": "快车综合A",
       "group": "綜合影視"
+    },
+    "kuaiche_korea": {
+      "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
+      "name": "🔞快车韩国伦理",
+      "group": "🔞韓國"
     },
     "ikun_mix_a": {
       "api": "https://ikunzy.com/api.php/provide/vod",

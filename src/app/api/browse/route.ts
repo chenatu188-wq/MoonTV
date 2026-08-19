@@ -81,6 +81,13 @@ const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
   ],
 };
 
+// 這兩個來源各自提供獨立的「韩国伦理」分類（type 57），不以關鍵字搜尋
+// 來猜測內容，確保彩虹頻道的韓國分頁只顯示該上游分類。
+const KOREAN_ADULT_CATEGORY_IDS: Record<string, number> = {
+  kuaiche_korea: 57,
+  zuidazy_korea: 57,
+};
+
 type RawItem = {
   vod_id?: unknown;
   vod_name?: string;
@@ -171,7 +178,12 @@ export async function GET(request: Request) {
     if (category === 'adult') {
       // 韓國分區為專用的來源入口；瀏覽時固定向上游取得韓國內容，避免只按
       // 最新片單而混入其他地區的影片。
-      const koreanQuery = site.group === '🔞韓國' ? '&wd=韩国' : '';
+      const koreanCategoryId = KOREAN_ADULT_CATEGORY_IDS[site.key];
+      const koreanQuery = koreanCategoryId
+        ? `&t=${koreanCategoryId}`
+        : site.group === '🔞韓國'
+        ? '&wd=韩国'
+        : '';
       buildUrls = [
         (pg) => `${site.api}?ac=videolist${koreanQuery}${yearParam}&pg=${pg}`,
       ];
