@@ -511,6 +511,11 @@
       "name": "🔞爱坤资源",
       "group": "🔞"
     },
+    "jkunzy_korea": {
+      "api": "https://jkunzyapi.com/api.php/provide/vod",
+      "name": "🔞爱坤资源（韓國）",
+      "group": "🔞韓國"
+    },
     "jkunzy.com": {
       "api": "https://jkunzy.com/api.php/provide/vod",
       "name": "🔞爱坤资源2",

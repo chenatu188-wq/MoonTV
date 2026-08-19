@@ -169,7 +169,12 @@ export async function GET(request: Request) {
     let buildUrls: Array<(pg: number) => string>;
 
     if (category === 'adult') {
-      buildUrls = [(pg) => `${site.api}?ac=videolist${yearParam}&pg=${pg}`];
+      // 韓國分區為專用的來源入口；瀏覽時固定向上游取得韓國內容，避免只按
+      // 最新片單而混入其他地區的影片。
+      const koreanQuery = site.group === '🔞韓國' ? '&wd=韩国' : '';
+      buildUrls = [
+        (pg) => `${site.api}?ac=videolist${koreanQuery}${yearParam}&pg=${pg}`,
+      ];
     } else {
       const keywords =
         category === 'tv'

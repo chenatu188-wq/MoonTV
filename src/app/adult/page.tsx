@@ -143,6 +143,7 @@ function AdultClient() {
   const REGIONS = [
     { key: 'all', label: '全部' },
     { key: '🔞', label: '🇯🇵 日本' },
+    { key: '🔞韓國', label: '🇰🇷 韓國' },
     { key: '🔞歐美', label: '🇺🇸 歐美' },
   ];
 
