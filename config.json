@@ -12,10 +12,9 @@
       "detail": "https://caiji.xgzyapi.com",
       "group": "精選推薦"
     },
-    "jyzy": {
-      "api": "https://jyzyapi.com/provide/vod",
-      "name": "金鹰资源",
-      "detail": "https://jyzyapi.com",
+    "tyyszy_mainland_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯陆剧R",
       "group": "大陸劇"
     },
     "dyttzy": {
@@ -40,9 +39,9 @@
       "detail": "http://ffzy5.tv",
       "group": "綜合影視"
     },
-    "zy360": {
-      "api": "https://360zy.com/api.php/provide/vod",
-      "name": "360资源",
+    "tyyszy_mix_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯综合R",
       "group": "綜合影視"
     },
     "jisu": {
@@ -51,9 +50,9 @@
       "detail": "https://jszyapi.com",
       "group": "綜合影視"
     },
-    "dbzy": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣资源",
+    "tyyszy_reco_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯推荐R",
       "group": "精選推薦"
     },
     "mdzy": {
@@ -91,9 +90,9 @@
       "name": "新浪综合A",
       "group": "綜合影視"
     },
-    "iqiyi": {
-      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
-      "name": "iqiyi资源",
+    "maotai_mix_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台综合R",
       "group": "綜合影視"
     },
     "jisu_movie2": {
@@ -111,9 +110,9 @@
       "name": "无尽电影",
       "group": "好萊塢"
     },
-    "iqiyi_movie": {
-      "api": "https://iqiyizyapi.com/api.php/provide/vod",
-      "name": "爱奇艺电影",
+    "maotai_hollywood_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台大片R",
       "group": "好萊塢"
     },
     "maotai_hollywood": {
@@ -136,9 +135,9 @@
       "name": "无尽剧集",
       "group": "電視劇"
     },
-    "iqiyi_tv": {
-      "api": "https://iqiyizyapi.com/api.php/provide/vod",
-      "name": "爱奇艺剧集",
+    "tyyszy_tv_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯剧集R",
       "group": "電視劇"
     },
     "xinlang_tv": {
@@ -156,19 +155,19 @@
       "name": "量子短剧",
       "group": "短劇"
     },
-    "modu_anime": {
-      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
-      "name": "魔都动漫",
+    "tyyszy_anime_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯动漫R",
       "group": "動漫"
     },
-    "dbzy_anime": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣动漫",
+    "tyyszy_anime2_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯动漫2R",
       "group": "動漫"
     },
-    "modu_anime_3d_cn": {
-      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
-      "name": "魔都3D动漫(中国)",
+    "tyyszy_anime_3d_cn_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯3D动漫R(中国)",
       "group": "3D動漫-中國"
     },
     "subo_anime_3d_cn": {
@@ -201,9 +200,9 @@
       "name": "非凡3D动漫(欧美)",
       "group": "3D動漫-歐美"
     },
-    "dbzy_anime_3d_west": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣3D动漫(欧美)",
+    "sdzy_anime_3d_west_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电3D动漫R(欧美)",
       "group": "3D動漫-歐美"
     },
     "bfzy_dj": {
@@ -223,9 +222,9 @@
       "name": "无尽短剧",
       "group": "短劇"
     },
-    "iqiyi_dj": {
-      "api": "https://iqiyizyapi.com/api.php/provide/vod",
-      "name": "爱奇艺短剧",
+    "tyyszy_dj_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯短剧R",
       "group": "短劇"
     },
     "xinlang_dj2": {
@@ -249,10 +248,9 @@
       "detail": "https://hhzyapi.com",
       "group": "綜合影視"
     },
-    "gszy": {
-      "api": "https://api.guangsuapi.com/api.php/provide/vod",
-      "name": "光速资源",
-      "detail": "https://api.guangsuapi.com",
+    "ckzy_mix3_r": {
+      "api": "https://ckzy.me/api.php/provide/vod",
+      "name": "CK综合3R",
       "group": "綜合影視"
     },
     "bdzy": {
@@ -261,22 +259,19 @@
       "detail": "https://api.apibdzy.com",
       "group": "綜合影視"
     },
-    "hnzy": {
-      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
-      "name": "红牛资源",
-      "detail": "https://www.hongniuzy2.com",
+    "maotai_mix2_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台综合2R",
       "group": "綜合影視"
     },
-    "fnzy": {
-      "api": "https://hongniuzy3.com/api.php/provide/vod",
-      "name": "蜂鸟资源",
-      "detail": "https://hongniuzy3.com",
+    "ckzy_mix2_r": {
+      "api": "https://ckzy.me/api.php/provide/vod",
+      "name": "CK综合2R",
       "group": "綜合影視"
     },
-    "dbzy2": {
-      "api": "https://caiji.dbzy5.com/api.php/provide/vod",
-      "name": "豆瓣电影2",
-      "detail": "https://caiji.dbzy5.com",
+    "sdzy_reco_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电推荐R",
       "group": "精選推薦"
     },
     "lbapiby.com": {
@@ -429,9 +424,9 @@
       "name": "🔞量子韩国",
       "group": "🔞韓國"
     },
-    "guangsuapi.com": {
-      "api": "https://api.guangsuapi.com/api.php/provide/vod",
-      "name": "🔞光速资源",
+    "api155_adult_b": {
+      "api": "https://155api.com/api.php/provide/vod",
+      "name": "🔞155资源B",
       "group": "🔞"
     },
     "lziapi.com": {
@@ -474,9 +469,9 @@
       "name": "🔞快车韩国伦理",
       "group": "🔞韓國"
     },
-    "ikun_mix_a": {
-      "api": "https://ikunzy.com/api.php/provide/vod",
-      "name": "iKun综合A",
+    "sdzy_mix_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电综合R",
       "group": "綜合影視"
     },
     "mdzy_tv2": {
@@ -484,21 +479,19 @@
       "name": "魔都剧集2",
       "group": "電視劇"
     },
-    "hnzy_hollywood": {
-      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
-      "name": "红牛大片",
-      "detail": "https://www.hongniuzy2.com",
+    "sdzy_hollywood_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电大片R",
       "group": "好萊塢"
     },
-    "fnzy_tv": {
-      "api": "https://hongniuzy3.com/api.php/provide/vod",
-      "name": "蜂鸟剧集",
-      "detail": "https://hongniuzy3.com",
+    "maotai_tv2_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台剧集2R",
       "group": "電視劇"
     },
-    "zy360_dj": {
-      "api": "https://360zy.com/api.php/provide/vod",
-      "name": "360短剧",
+    "sdzy_dj_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电短剧R",
       "group": "短劇"
     },
     "mdzy_mix_a": {
@@ -521,14 +514,14 @@
       "name": "apilsbzy7",
       "group": "🔞"
     },
-    "moduapi_adult": {
-      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
-      "name": "魔都资源2",
+    "maotai_mix_r2": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台综合R2",
       "group": "綜合影視"
     },
-    "dbzy_adult": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣资源2",
+    "tyyszy_mix_b_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯综合BR",
       "group": "綜合影視"
     },
     "api155_adult": {
@@ -611,9 +604,9 @@
       "name": "🔞索拉资源",
       "group": "🔞"
     },
-    "hongniuzy4_adult": {
-      "api": "https://hongniuzy4.com/api.php/provide/vod",
-      "name": "红牛资源4",
+    "sdzy_mix_b_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电综合BR",
       "group": "綜合影視"
     },
     "z360zyzz_mix_a": {
@@ -641,9 +634,9 @@
       "name": "天涯综合A",
       "group": "綜合影視"
     },
-    "zy360_adult": {
-      "api": "https://360zy.com/api.php/provide/vod",
-      "name": "360资源2",
+    "z360zyzz_mix_r": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360综合R",
       "group": "綜合影視"
     },
     "hhzy_adult": {
@@ -651,14 +644,14 @@
       "name": "豪华资源2",
       "group": "綜合影視"
     },
-    "iqiyizy_adult": {
-      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
-      "name": "爱奇艺资源2",
+    "xgzy_mix_r": {
+      "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
+      "name": "芒果综合R",
       "group": "綜合影視"
     },
-    "hongniuzy2_adult": {
-      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
-      "name": "红牛资源2",
+    "ckzy_mix_b_r": {
+      "api": "https://ckzy.me/api.php/provide/vod",
+      "name": "CK综合BR",
       "group": "綜合影視"
     },
     "apibdzy_adult": {
@@ -681,14 +674,14 @@
       "name": "最大短剧2",
       "group": "短劇"
     },
-    "ikun_dj": {
-      "api": "https://ikunzy.com/api.php/provide/vod",
-      "name": "iKun短剧",
+    "maotai_dj_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台短剧R",
       "group": "短劇"
     },
-    "hongniuzy2_dj": {
-      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
-      "name": "红牛短剧2",
+    "ckzy_dj_r": {
+      "api": "https://ckzy.me/api.php/provide/vod",
+      "name": "CK短剧R",
       "group": "短劇"
     },
     "xgzy_dj": {
@@ -696,9 +689,9 @@
       "name": "芒果短剧",
       "group": "短劇"
     },
-    "dbzy_dj": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣短剧",
+    "tyyszy_dj2_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯短剧2R",
       "group": "短劇"
     },
     "z360zyzz_dj": {
@@ -716,9 +709,9 @@
       "name": "优质短剧",
       "group": "短劇"
     },
-    "hongniuzy3_dj": {
-      "api": "https://hongniuzy3.com/api.php/provide/vod",
-      "name": "蜂鸟短剧",
+    "z360zyzz_dj3_r": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360短剧3R",
       "group": "短劇"
     },
     "dyttzy_anime": {
@@ -746,14 +739,14 @@
       "name": "无尽动漫",
       "group": "動漫"
     },
-    "zy360_anime": {
-      "api": "https://360zy.com/api.php/provide/vod",
-      "name": "360动漫",
+    "z360zyzz_anime_r": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360动漫R",
       "group": "動漫"
     },
-    "hongniuzy3_anime": {
-      "api": "https://hongniuzy3.com/api.php/provide/vod",
-      "name": "蜂鸟动漫",
+    "sdzy_anime_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电动漫R",
       "group": "動漫"
     },
     "bfzy_anime": {
@@ -766,9 +759,9 @@
       "name": "芒果动漫",
       "group": "動漫"
     },
-    "iqiyizy_anime": {
-      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
-      "name": "爱奇艺动漫",
+    "maotai_anime_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台动漫R",
       "group": "動漫"
     },
     "xinlang_anime": {
@@ -836,14 +829,14 @@
       "name": "无尽3D动漫(中国)",
       "group": "3D動漫-中國"
     },
-    "zy360_anime_3d_cn": {
-      "api": "https://360zy.com/api.php/provide/vod",
-      "name": "360 3D动漫(中国)",
+    "sdzy_anime_3d_cn_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电3D动漫R(中国)",
       "group": "3D動漫-中國"
     },
-    "hongniuzy3_anime_3d_cn": {
-      "api": "https://hongniuzy3.com/api.php/provide/vod",
-      "name": "蜂鸟3D动漫(中国)",
+    "ckzy_anime_3d_cn_r": {
+      "api": "https://ckzy.me/api.php/provide/vod",
+      "name": "CK3D动漫R(中国)",
       "group": "3D動漫-中國"
     },
     "bfzy_anime_3d_cn": {
@@ -856,9 +849,9 @@
       "name": "芒果3D动漫(中国)",
       "group": "3D動漫-中國"
     },
-    "iqiyizy_anime_3d_cn": {
-      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
-      "name": "爱奇艺3D动漫(中国)",
+    "tyyszy5_anime_3d_cn_r": {
+      "api": "https://ty.tyyszy5.com/api.php/provide/vod",
+      "name": "天涯3D动漫2R(中国)",
       "group": "3D動漫-中國"
     },
     "z360zyzz_anime_3d_cn": {
@@ -891,9 +884,9 @@
       "name": "魔都3D动漫2(中国)",
       "group": "3D動漫-中國"
     },
-    "dbzy_anime_3d_cn": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣3D动漫(中国)",
+    "tyyszy_anime_3d_cn2_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯3D动漫3R(中国)",
       "group": "3D動漫-中國"
     },
     "dyttzy_tv2": {
@@ -916,14 +909,14 @@
       "name": "暴风剧集",
       "group": "電視劇"
     },
-    "zy360_tv": {
-      "api": "https://360zy.com/api.php/provide/vod",
-      "name": "360剧集",
+    "sdzy_tv_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电剧集R",
       "group": "電視劇"
     },
-    "dbzy_tv": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣剧集",
+    "tyyszy_tv2_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯剧集2R",
       "group": "電視劇"
     },
     "xgzy_tv": {
@@ -956,14 +949,14 @@
       "name": "量子剧集2",
       "group": "電視劇"
     },
-    "hongniuzy2_tv": {
-      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
-      "name": "红牛剧集",
+    "ckzy_tv_r": {
+      "api": "https://ckzy.me/api.php/provide/vod",
+      "name": "CK剧集R",
       "group": "電視劇"
     },
-    "modu_tv": {
-      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
-      "name": "魔都剧集3",
+    "maotai_tv_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台剧集R",
       "group": "電視劇"
     },
     "dyttzy_movie2": {
@@ -986,9 +979,9 @@
       "name": "暴风电影",
       "group": "電影"
     },
-    "zy360_movie": {
-      "api": "https://360zy.com/api.php/provide/vod",
-      "name": "360电影",
+    "z360zyzz_movie_r": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360电影R",
       "group": "電影"
     },
     "xgzy_movie": {
@@ -996,9 +989,9 @@
       "name": "芒果电影",
       "group": "電影"
     },
-    "dbzy_movie2": {
-      "api": "https://dbzy.tv/api.php/provide/vod",
-      "name": "豆瓣电影2",
+    "sdzy_movie2_r": {
+      "api": "https://sdzyapi.com/api.php/provide/vod",
+      "name": "闪电电影2R",
       "group": "電影"
     },
     "wujin_movie2": {
@@ -1011,9 +1004,9 @@
       "name": "速播电影",
       "group": "電影"
     },
-    "ikun_movie": {
-      "api": "https://ikunzy.com/api.php/provide/vod",
-      "name": "iKun电影",
+    "tyyszy_movie_r": {
+      "api": "https://tyyszy.com/api.php/provide/vod",
+      "name": "天涯电影R",
       "group": "電影"
     },
     "lzi_movie": {
@@ -1021,9 +1014,9 @@
       "name": "量子电影",
       "group": "電影"
     },
-    "iqiyizy_movie2": {
-      "api": "https://www.iqiyizyapi.com/api.php/provide/vod",
-      "name": "爱奇艺电影2",
+    "maotai_movie_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台电影R",
       "group": "電影"
     },
     "tyyszy5_movie": {
@@ -1036,14 +1029,14 @@
       "name": "豪华电影2",
       "group": "電影"
     },
-    "hongniuzy2_movie": {
-      "api": "https://www.hongniuzy2.com/api.php/provide/vod",
-      "name": "红牛电影",
+    "maotai_movie3_r": {
+      "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
+      "name": "茅台电影3R",
       "group": "電影"
     },
-    "hongniuzy3_movie": {
-      "api": "https://hongniuzy3.com/api.php/provide/vod",
-      "name": "蜂鸟电影",
+    "z360zyzz_movie4_r": {
+      "api": "https://360zyzz.com/api.php/provide/vod",
+      "name": "360电影4R",
       "group": "電影"
     },
     "mdzy_movie2": {
@@ -1051,9 +1044,9 @@
       "name": "魔都电影2",
       "group": "電影"
     },
-    "modu_movie": {
-      "api": "https://caiji.moduapi.cc/api.php/provide/vod",
-      "name": "魔都电影3",
+    "ckzy_movie_r": {
+      "api": "https://ckzy.me/api.php/provide/vod",
+      "name": "CK电影R",
       "group": "電影"
     },
     "jisu_movie3": {
@@ -1071,9 +1064,9 @@
       "name": "百度电影3",
       "group": "電影"
     },
-    "guangsu_movie3": {
-      "api": "https://api.guangsuapi.com/api.php/provide/vod",
-      "name": "光速电影3",
+    "tyyszy5_movie2_r": {
+      "api": "https://ty.tyyszy5.com/api.php/provide/vod",
+      "name": "天涯电影3R",
       "group": "電影"
     },
     "sdzy_movie": {
