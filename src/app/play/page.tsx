@@ -1397,7 +1397,13 @@ function PlayPageClient() {
               // 原生路徑同樣要 watchdog：卡住就跳下一源（跟 hls.js 那條同規格）
               if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
               stallTimerRef.current = setTimeout(() => {
-                if (video.readyState < 2 || video.currentTime === 0) {
+                // iOS 一律擋未靜音 autoplay：資料到了但 user 還沒按播放時
+                // paused=true、currentTime=0，這不是源掛掉，不能跳源
+                // （否則 5 秒一輪把全部源燒光，最後噴「所有來源都連線超時」）
+                if (
+                  video.readyState < 2 ||
+                  (video.currentTime === 0 && !video.paused)
+                ) {
                   console.warn('[stallWatchdog] 原生 HLS 5 秒沒進度，視為卡死');
                   if (!tryNextAvailableSource('STALL_TIMEOUT')) {
                     setFatalError('所有來源都連線超時，請稍後再試');
@@ -1414,6 +1420,11 @@ function PlayPageClient() {
                 once: true,
               });
               video.addEventListener('timeupdate', cancelNativeWatchdog, {
+                once: true,
+              });
+              // iOS 原生 HLS 在 user 按播放前 readyState 可能停在 1（只有
+              // metadata）——manifest 抓得到就代表源活著，直接取消 watchdog
+              video.addEventListener('loadedmetadata', cancelNativeWatchdog, {
                 once: true,
               });
               return;
@@ -1445,7 +1456,9 @@ function PlayPageClient() {
             if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
             stallTimerRef.current = setTimeout(() => {
               const v = video as HTMLVideoElement;
-              if (v.readyState < 2 || v.currentTime === 0) {
+              // paused 守衛同原生路徑：行動裝置擋 autoplay 時 currentTime=0
+              // 是「還沒按播放」不是卡死（Android Chrome 走這條）
+              if (v.readyState < 2 || (v.currentTime === 0 && !v.paused)) {
                 console.warn('[stallWatchdog] 5 秒沒進度，視為卡死');
                 try {
                   hls.destroy();
