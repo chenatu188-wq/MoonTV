@@ -1143,13 +1143,29 @@ function PlayPageClient() {
         // HLS 支持配置
         customType: {
           m3u8: function (video: HTMLVideoElement, url: string) {
-            if (!Hls) {
-              console.error('HLS.js 未加载');
-              return;
-            }
-
             if (video.hls) {
               video.hls.destroy();
+              video.hls = undefined;
+            }
+
+            // iPhone Safari 沒有 video 用的 MediaSource，hls.js 物件建得起來
+            // 但永遠餵不到資料 → 卡在「視頻加載中」。這種瀏覽器要改走
+            // Safari 內建的原生 HLS。（Android Chrome 有 MSE，行為不變。）
+            const canNativeHls =
+              video.canPlayType('application/vnd.apple.mpegurl') !== '';
+            if (!Hls || !Hls.isSupported()) {
+              if (!canNativeHls) {
+                console.error('[hls] 無 MSE 也無原生 HLS，此瀏覽器播不了');
+                return;
+              }
+              console.warn('[hls] 無 MSE，改用原生 HLS 播放');
+              // crossOrigin='anonymous' 會讓原生播放以 CORS 模式請求分片，
+              // 多數片源 CDN 不回 ACAO 標頭，留著就直接播不出來。
+              video.removeAttribute('crossorigin');
+              video.crossOrigin = null;
+              video.src = url;
+              video.load();
+              return;
             }
             const hls = new Hls({
               debug: false, // 关闭日志
