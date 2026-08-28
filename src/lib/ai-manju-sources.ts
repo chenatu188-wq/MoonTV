@@ -40,6 +40,19 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     type: 'playlist',
     id: 'PLrIcwAmL3er5OW2xaktg1XFGeyyYjXhbF',
   },
+  {
+    key: 'ai_duanju_manju',
+    name: 'AI 短剧-漫剧',
+    type: 'playlist',
+    id: 'PLWwFFXPVMu4B9LcNj0pQhqDSgLXtl_C0m',
+  },
+  {
+    // 2026-08 验证：能抓到 15 部，但频道最后更新停在 2026-04，属于存量片源
+    key: 'zhizun_manju',
+    name: '至尊漫剧',
+    type: 'channel',
+    id: 'UCQ_f1iGR3FE49rnBc9W-JiA',
+  },
 ];
 
 export function feedUrl(source: AiManjuSource): string {

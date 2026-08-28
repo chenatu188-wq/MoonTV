@@ -10,7 +10,7 @@ import type { AiManjuVideo } from '@/app/api/ai-manju/route';
 interface ApiResponse {
   videos: AiManjuVideo[];
   sources: { key: string; name: string }[];
-  failed: string[];
+  failed: { name: string; error: string }[];
 }
 
 function timeAgo(iso: string): string {
@@ -115,8 +115,15 @@ function AiManjuClient() {
         )}
 
         {data && data.failed.length > 0 && (
-          <div className='mb-4 text-sm text-amber-600 dark:text-amber-400'>
-            这些来源暂时抓不到：{data.failed.join('、')}
+          <div className='mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'>
+            <div className='font-medium'>这些来源暂时抓不到：</div>
+            <ul className='mt-1 space-y-0.5'>
+              {data.failed.map((f) => (
+                <li key={f.name}>
+                  {f.name} — <span className='opacity-80'>{f.error}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
