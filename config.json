@@ -339,6 +339,11 @@
       "name": "爱奇艺短剧",
       "group": "短劇"
     },
+    "ai_short_drama": {
+      "api": "https://iqiyizyapi.com/api.php/provide/vod?t=43",
+      "name": "AI 漫劇／短劇",
+      "group": "短劇"
+    },
     "xinlang_dj": {
       "api": "https://api.xinlangapi.com/xinlangapi.php/provide/vod",
       "name": "新浪短剧",

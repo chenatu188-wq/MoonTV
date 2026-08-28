@@ -23,8 +23,12 @@ export async function searchFromApi(
 ): Promise<SearchResult[]> {
   try {
     const apiBaseUrl = apiSite.api;
-    const apiUrl =
-      apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
+    const buildApiUrl = (params: Record<string, string>) => {
+      const url = new URL(apiBaseUrl);
+      Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+      return url.toString();
+    };
+    const apiUrl = buildApiUrl({ ac: 'videolist', wd: query });
     const apiName = apiSite.name;
 
     // 添加超时处理
@@ -110,11 +114,7 @@ export async function searchFromApi(
       const additionalPagePromises = [];
 
       for (let page = 2; page <= pagesToFetch + 1; page++) {
-        const pageUrl =
-          apiBaseUrl +
-          API_CONFIG.search.pagePath
-            .replace('{query}', encodeURIComponent(query))
-            .replace('{page}', page.toString());
+        const pageUrl = buildApiUrl({ ac: 'videolist', wd: query, pg: page.toString() });
 
         const pagePromise = (async () => {
           try {
@@ -245,7 +245,10 @@ async function getJsonDetailFromApi(
   apiSite: ApiSite,
   id: string
 ): Promise<SearchResult> {
-  const detailUrl = `${apiSite.api}${API_CONFIG.detail.path}${id}`;
+  const detailApiUrl = new URL(apiSite.api);
+  detailApiUrl.searchParams.set('ac', 'videolist');
+  detailApiUrl.searchParams.set('ids', id);
+  const detailUrl = detailApiUrl.toString();
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
