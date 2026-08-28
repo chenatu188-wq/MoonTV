@@ -7,7 +7,9 @@ import {
 } from '@/lib/ai-manju-sources';
 import { getCacheTime } from '@/lib/config';
 
-export const runtime = 'edge';
+// 自架 Docker 环境下 edge 是模拟的，对外抓取用 Node.js runtime 比较稳
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export interface AiManjuVideo {
   videoId: string;
@@ -76,17 +78,42 @@ function parseFeed(xml: string, source: AiManjuSource): AiManjuVideo[] {
   return out;
 }
 
-async function fetchSource(source: AiManjuSource): Promise<AiManjuVideo[]> {
+interface FetchResult {
+  videos: AiManjuVideo[];
+  /** 失败原因，成功时为 null。会回给前端，方便线上直接看到问题 */
+  error: string | null;
+}
+
+async function fetchSource(source: AiManjuSource): Promise<FetchResult> {
   try {
     const res = await fetch(feedUrl(source), {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      next: { revalidate: 1800 },
+      // YouTube 会挡看起来像脚本的请求，headers 尽量贴近真实浏览器
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        Accept: 'application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+      },
+      cache: 'no-store',
     });
-    if (!res.ok) return [];
-    return parseFeed(await res.text(), source);
-  } catch {
+
+    if (!res.ok) {
+      return { videos: [], error: `HTTP ${res.status}` };
+    }
+
+    const xml = await res.text();
+    const videos = parseFeed(xml, source);
+    if (videos.length === 0) {
+      // 拿到 200 但解析不出东西，多半是被挡后回了同意页/验证页
+      return { videos: [], error: `解析到 0 笔（回应 ${xml.length} 字元）` };
+    }
+    return { videos, error: null };
+  } catch (e) {
     // 单一来源挂掉不影响其他来源
-    return [];
+    return {
+      videos: [],
+      error: `${(e as Error).name}: ${(e as Error).message}`,
+    };
   }
 }
 
@@ -96,7 +123,7 @@ export async function GET() {
   // 跨来源去重（同一支片可能同时在频道和播放列表里）
   const seen = new Set<string>();
   const videos: AiManjuVideo[] = [];
-  for (const v of results.flat()) {
+  for (const v of results.flatMap((r) => r.videos)) {
     if (seen.has(v.videoId)) continue;
     seen.add(v.videoId);
     videos.push(v);
@@ -104,16 +131,16 @@ export async function GET() {
 
   videos.sort((a, b) => b.published.localeCompare(a.published));
 
+  const failed = results
+    .map((r, i) => ({ name: AI_MANJU_SOURCES[i].name, error: r.error }))
+    .filter((f): f is { name: string; error: string } => f.error !== null);
+
   const cacheTime = await getCacheTime();
   return NextResponse.json(
     {
       videos,
       sources: AI_MANJU_SOURCES.map((s) => ({ key: s.key, name: s.name })),
-      failed: results.reduce(
-        (n, list, i) =>
-          list.length === 0 ? [...n, AI_MANJU_SOURCES[i].name] : n,
-        [] as string[]
-      ),
+      failed,
     },
     {
       headers: {
