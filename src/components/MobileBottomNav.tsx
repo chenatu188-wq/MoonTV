@@ -9,6 +9,7 @@ import {
   Search,
   Sparkles,
   Tv,
+  Wand2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -34,6 +35,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     { icon: Clover, label: '综艺', href: '/douban?type=show' },
     { icon: Clapperboard, label: '短剧', href: '/browse?category=duanju' },
     { icon: Sparkles, label: '动漫', href: '/browse?category=anime3d' },
+    { icon: Wand2, label: 'AI 漫剧', href: '/ai-manju' },
     { icon: Flame, label: '彩虹', href: '/adult' },
   ];
 

@@ -11,6 +11,7 @@ import {
   Sparkles,
   Star,
   Tv,
+  Wand2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -163,6 +164,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Sparkles,
       label: '动漫',
       href: '/browse?category=anime3d',
+    },
+    {
+      icon: Wand2,
+      label: 'AI 漫剧',
+      href: '/ai-manju',
     },
     {
       icon: Flame,
