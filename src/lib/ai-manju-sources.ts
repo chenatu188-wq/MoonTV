@@ -53,6 +53,14 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     type: 'channel',
     id: 'UCQ_f1iGR3FE49rnBc9W-JiA',
   },
+  {
+    // 使用者指定加入。注意两点：最后更新停在 2025-06（停更逾一年），
+    // 且内容是真人短剧（男频爽剧/都市）而非 AI 漫剧，调性与其他来源不同
+    key: 'kuangxiao_duanju',
+    name: '狂梟短劇',
+    type: 'channel',
+    id: 'UCTIENIv9maj9KyvNNJTXvaA',
+  },
 ];
 
 export function feedUrl(source: AiManjuSource): string {
