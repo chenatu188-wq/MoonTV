@@ -87,12 +87,15 @@ interface FetchResult {
 async function fetchSource(source: AiManjuSource): Promise<FetchResult> {
   try {
     const res = await fetch(feedUrl(source), {
-      // YouTube 会挡看起来像脚本的请求，headers 尽量贴近真实浏览器
+      // YouTube 会挡看起来像脚本的请求，headers 尽量贴近真实浏览器。
+      // CONSENT cookie 是关键：机房 IP 常被导到「同意页」而拿不到真正内容，
+      // 2026-08-29 本机实测，不带这个 cookie 抓频道页只会回 763 bytes 的同意页。
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         Accept: 'application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+        Cookie: 'CONSENT=YES+cb.20210328-17-p0.en+FX+917',
       },
       cache: 'no-store',
     });
