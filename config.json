@@ -1,11 +1,6 @@
 {
   "cache_time": 7200,
   "api_site": {
-    "pigav": {
-      "api": "https://pigav.ws/api/v1/videos",
-      "name": "🔞朱古力",
-      "group": "🔞"
-    },
     "xgzy": {
       "api": "https://caiji.xgzyapi.com/api.php/provide/vod",
       "name": "芒果资源",
