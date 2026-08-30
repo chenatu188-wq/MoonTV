@@ -269,14 +269,14 @@
       "name": "闪电推荐R",
       "group": "精選推薦"
     },
-    "lbapiby.com": {
-      "api": "http://lbapiby.com/api.php/provide/vod",
-      "name": "🔞--AIvin-",
+    "naixxzy4.com": {
+      "api": "https://naixxzy4.com/api.php/provide/vod",
+      "name": "🔞奶昔资源4",
       "group": "🔞"
     },
-    "lbapiby_korea": {
-      "api": "http://lbapiby.com/api.php/provide/vod",
-      "name": "🔞AIvin韩国",
+    "api155_korea_b": {
+      "api": "https://155api.com/api.php/provide/vod",
+      "name": "🔞155韩国B",
       "group": "🔞韓國"
     },
     "apiyutu.com": {
@@ -303,11 +303,6 @@
       "api": "https://lbapi9.com/api.php/provide/vod",
       "name": "🔞乐播资源",
       "group": "🔞歐美"
-    },
-    "shayuapi.com": {
-      "api": "https://shayuapi.com/api.php/provide/vod",
-      "name": "🔞鲨鱼资源",
-      "group": "🔞"
     },
     "thzy8.me": {
       "api": "https://thzy1.me/api.php/provide/vod",
