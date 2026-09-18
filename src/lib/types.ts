@@ -25,6 +25,13 @@ export interface Favorite {
   search_title: string; // 搜索时使用的标题
 }
 
+// 帳號同步的彩虹頻道推薦設定
+export interface AdultRecommendationPreferences {
+  studioTags: Array<{ code: string; style: string }>;
+  studioFavs: string[];
+  keywords: string[];
+}
+
 // 存储接口
 export interface IStorage {
   // 播放记录相关
@@ -57,6 +64,15 @@ export interface IStorage {
   getSearchHistory(userName: string): Promise<string[]>;
   addSearchHistory(userName: string, keyword: string): Promise<void>;
   deleteSearchHistory(userName: string, keyword?: string): Promise<void>;
+
+  // 彩虹頻道自訂推薦相關
+  getAdultRecommendationPreferences(
+    userName: string
+  ): Promise<AdultRecommendationPreferences | null>;
+  setAdultRecommendationPreferences(
+    userName: string,
+    preferences: AdultRecommendationPreferences
+  ): Promise<void>;
 
   // 用户列表
   getAllUsers(): Promise<string[]>;

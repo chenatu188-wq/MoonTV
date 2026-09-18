@@ -1,7 +1,12 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
 import { AdminConfig } from './admin.types';
-import { Favorite, IStorage, PlayRecord } from './types';
+import {
+  AdultRecommendationPreferences,
+  Favorite,
+  IStorage,
+  PlayRecord,
+} from './types';
 
 // 搜索历史最大条数
 const SEARCH_HISTORY_LIMIT = 20;
@@ -44,12 +49,28 @@ function getD1Database(): D1Database {
 
 export class D1Storage implements IStorage {
   private db: D1Database | null = null;
+  private preferencesTableReady = false;
 
   private async getDatabase(): Promise<D1Database> {
     if (!this.db) {
       this.db = getD1Database();
     }
     return this.db;
+  }
+
+  private async ensurePreferencesTable(): Promise<D1Database> {
+    const db = await this.getDatabase();
+    if (!this.preferencesTableReady) {
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS adult_recommendation_preferences (
+          username TEXT PRIMARY KEY,
+          preferences TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      `);
+      this.preferencesTableReady = true;
+    }
+    return db;
   }
 
   // 播放记录相关
@@ -330,7 +351,7 @@ export class D1Storage implements IStorage {
 
   async deleteUser(userName: string): Promise<void> {
     try {
-      const db = await this.getDatabase();
+      const db = await this.ensurePreferencesTable();
       const statements = [
         db.prepare('DELETE FROM users WHERE username = ?').bind(userName),
         db
@@ -339,6 +360,9 @@ export class D1Storage implements IStorage {
         db.prepare('DELETE FROM favorites WHERE username = ?').bind(userName),
         db
           .prepare('DELETE FROM search_history WHERE username = ?')
+          .bind(userName),
+        db
+          .prepare('DELETE FROM adult_recommendation_preferences WHERE username = ?')
           .bind(userName),
       ];
 
@@ -423,6 +447,45 @@ export class D1Storage implements IStorage {
       }
     } catch (err) {
       console.error('Failed to delete search history:', err);
+      throw err;
+    }
+  }
+
+  async getAdultRecommendationPreferences(
+    userName: string
+  ): Promise<AdultRecommendationPreferences | null> {
+    try {
+      const db = await this.ensurePreferencesTable();
+      const result = await db
+        .prepare(
+          'SELECT preferences FROM adult_recommendation_preferences WHERE username = ?'
+        )
+        .bind(userName)
+        .first<{ preferences: string }>();
+      return result
+        ? (JSON.parse(result.preferences) as AdultRecommendationPreferences)
+        : null;
+    } catch (err) {
+      console.error('Failed to get adult recommendation preferences:', err);
+      throw err;
+    }
+  }
+
+  async setAdultRecommendationPreferences(
+    userName: string,
+    preferences: AdultRecommendationPreferences
+  ): Promise<void> {
+    try {
+      const db = await this.ensurePreferencesTable();
+      await db
+        .prepare(
+          `INSERT OR REPLACE INTO adult_recommendation_preferences
+           (username, preferences, updated_at) VALUES (?, ?, ?)`
+        )
+        .bind(userName, JSON.stringify(preferences), Date.now())
+        .run();
+    } catch (err) {
+      console.error('Failed to save adult recommendation preferences:', err);
       throw err;
     }
   }

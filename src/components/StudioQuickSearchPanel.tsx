@@ -1,9 +1,14 @@
 'use client';
 
 import { Plus, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type StudioTag = { code: string; style: string };
+type AccountPreferences = {
+  studioTags: StudioTag[];
+  studioFavs: string[];
+  keywords: string[];
+};
 
 const STUDIO_TAGS_DEFAULT: StudioTag[] = [
   { code: 'SSIS', style: '大廠' },
@@ -199,6 +204,7 @@ interface StudioQuickSearchPanelProps {
 export default function StudioQuickSearchPanel({
   onSearch,
 }: StudioQuickSearchPanelProps) {
+  const preferencesReady = useRef(false);
   const [studioTags, setStudioTags] = useState<StudioTag[]>(() => {
     if (typeof window === 'undefined') return STUDIO_TAGS_DEFAULT;
     const stored = loadStudioTags();
@@ -238,12 +244,74 @@ export default function StudioQuickSearchPanel({
   const saveActresses = (names: string[]) =>
     ls.set(ACTRESSES_KEY, JSON.stringify(names));
 
+  const syncPreferences = (preferences: AccountPreferences) => {
+    if (!preferencesReady.current) return;
+    void fetch('/api/preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(preferences),
+    }).catch(() => {
+      // 未登入或暫時離線時仍保留本機資料，下一次變更會再同步。
+    });
+  };
+
+  const saveRecommendationPreferences = (
+    tags: StudioTag[],
+    favs: Set<string>,
+    kws: string[]
+  ) => {
+    saveStudioTags(tags);
+    saveStudioFavs(favs);
+    saveKeywords(kws);
+    syncPreferences({
+      studioTags: tags,
+      studioFavs: Array.from(favs),
+      keywords: kws,
+    });
+  };
+
+  useEffect(() => {
+    const localTags = mergeDefaults(loadStudioTags(), STUDIO_TAGS_DEFAULT, (t) =>
+      t.code
+    );
+    const localFavs = loadStudioFavs();
+    const localKeywords = mergeDefaults(loadKeywords(), KEYWORDS_DEFAULT, (k) => k);
+
+    const loadAccountPreferences = async () => {
+      try {
+        const response = await fetch('/api/preferences');
+        if (!response.ok) return;
+        const saved = (await response.json()) as AccountPreferences | null;
+        if (saved) {
+          const tags = mergeDefaults(saved.studioTags, STUDIO_TAGS_DEFAULT, (t) =>
+            t.code
+          );
+          const favs = new Set(saved.studioFavs);
+          const kws = mergeDefaults(saved.keywords, KEYWORDS_DEFAULT, (k) => k);
+          setStudioTags(tags);
+          setStudioFavs(favs);
+          setKeywords(kws);
+          saveRecommendationPreferences(tags, favs, kws);
+        } else {
+          preferencesReady.current = true;
+          saveRecommendationPreferences(localTags, localFavs, localKeywords);
+          return;
+        }
+      } catch {
+        // 維持本機設定，讓無網路時的操作不受影響。
+      }
+      preferencesReady.current = true;
+    };
+
+    void loadAccountPreferences();
+  }, []);
+
   const toggleStudioFav = (code: string) => {
     const next = new Set(studioFavs);
     if (next.has(code)) next.delete(code);
     else next.add(code);
     setStudioFavs(next);
-    saveStudioFavs(next);
+    saveRecommendationPreferences(studioTags, next, keywords);
   };
 
   const handleAddStudioTag = () => {
@@ -265,21 +333,21 @@ export default function StudioQuickSearchPanel({
     const style = (styleInput || '').trim().slice(0, 6) || '自訂';
     const next = [...studioTags, { code, style }];
     setStudioTags(next);
-    saveStudioTags(next);
+    saveRecommendationPreferences(next, studioFavs, keywords);
   };
 
   const handleDeleteStudioTag = (code: string) => {
     if (!window.confirm(`確定要移除「${code}」標籤嗎？`)) return;
     const next = studioTags.filter((t) => t.code !== code);
     setStudioTags(next);
-    saveStudioTags(next);
+    saveRecommendationPreferences(next, studioFavs, keywords);
   };
 
   const handleResetStudioTags = () => {
     if (!window.confirm('確定要還原預設清單嗎？（你目前自訂的代號會被覆蓋）'))
       return;
     setStudioTags(STUDIO_TAGS_DEFAULT);
-    saveStudioTags(STUDIO_TAGS_DEFAULT);
+    saveRecommendationPreferences(STUDIO_TAGS_DEFAULT, studioFavs, keywords);
   };
 
   const handleBulkAddStudioTags = () => {
@@ -309,7 +377,7 @@ export default function StudioQuickSearchPanel({
     if (added.length > 0) {
       const next = [...studioTags, ...added];
       setStudioTags(next);
-      saveStudioTags(next);
+      saveRecommendationPreferences(next, studioFavs, keywords);
     }
     const lines = [`✅ 新增 ${added.length} 個`];
     if (skipped.length > 0)
@@ -495,7 +563,7 @@ export default function StudioQuickSearchPanel({
     if (added.length > 0) {
       const next = [...studioTags, ...added];
       setStudioTags(next);
-      saveStudioTags(next);
+      saveRecommendationPreferences(next, studioFavs, keywords);
     }
     const lines: string[] = [];
     if (added.length > 0) {
@@ -527,21 +595,21 @@ export default function StudioQuickSearchPanel({
     }
     const next = [...keywords, kw];
     setKeywords(next);
-    saveKeywords(next);
+    saveRecommendationPreferences(studioTags, studioFavs, next);
   };
 
   const handleDeleteKeyword = (kw: string) => {
     if (!window.confirm(`確定要移除「${kw}」嗎？`)) return;
     const next = keywords.filter((k) => k !== kw);
     setKeywords(next);
-    saveKeywords(next);
+    saveRecommendationPreferences(studioTags, studioFavs, next);
   };
 
   const handleResetKeywords = () => {
     if (!window.confirm('確定要還原預設關鍵字嗎？（你自訂的關鍵字會被覆蓋）'))
       return;
     setKeywords(KEYWORDS_DEFAULT);
-    saveKeywords(KEYWORDS_DEFAULT);
+    saveRecommendationPreferences(studioTags, studioFavs, KEYWORDS_DEFAULT);
   };
 
   const handleBulkAddKeywords = () => {
@@ -571,7 +639,7 @@ export default function StudioQuickSearchPanel({
     if (added.length > 0) {
       const next = [...keywords, ...added];
       setKeywords(next);
-      saveKeywords(next);
+      saveRecommendationPreferences(studioTags, studioFavs, next);
     }
     const lines = [`✅ 新增 ${added.length} 個`];
     if (skipped.length > 0)

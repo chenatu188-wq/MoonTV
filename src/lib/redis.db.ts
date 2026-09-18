@@ -3,7 +3,12 @@
 import { createClient, RedisClientType } from 'redis';
 
 import { AdminConfig } from './admin.types';
-import { Favorite, IStorage, PlayRecord } from './types';
+import {
+  AdultRecommendationPreferences,
+  Favorite,
+  IStorage,
+  PlayRecord,
+} from './types';
 
 // 搜索历史最大条数
 const SEARCH_HISTORY_LIMIT = 20;
@@ -195,6 +200,7 @@ export class RedisStorage implements IStorage {
 
     // 删除搜索历史
     await withRetry(() => this.client.del(this.shKey(userName)));
+    await withRetry(() => this.client.del(this.preferencesKey(userName)));
 
     // 删除播放记录
     const playRecordPattern = `u:${userName}:pr:*`;
@@ -243,6 +249,33 @@ export class RedisStorage implements IStorage {
     } else {
       await withRetry(() => this.client.del(key));
     }
+  }
+
+  private preferencesKey(user: string) {
+    return `u:${user}:adult-recommendations`;
+  }
+
+  async getAdultRecommendationPreferences(
+    userName: string
+  ): Promise<AdultRecommendationPreferences | null> {
+    const value = await withRetry(() =>
+      this.client.get(this.preferencesKey(userName))
+    );
+    return value
+      ? (JSON.parse(value) as AdultRecommendationPreferences)
+      : null;
+  }
+
+  async setAdultRecommendationPreferences(
+    userName: string,
+    preferences: AdultRecommendationPreferences
+  ): Promise<void> {
+    await withRetry(() =>
+      this.client.set(
+        this.preferencesKey(userName),
+        JSON.stringify(preferences)
+      )
+    );
   }
 
   // ---------- 获取全部用户 ----------

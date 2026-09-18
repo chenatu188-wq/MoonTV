@@ -269,11 +269,6 @@
       "name": "闪电推荐R",
       "group": "精選推薦"
     },
-    "naixxzy4.com": {
-      "api": "https://naixxzy4.com/api.php/provide/vod",
-      "name": "🔞奶昔资源4",
-      "group": "🔞"
-    },
     "api155_korea_b": {
       "api": "https://155api.com/api.php/provide/vod",
       "name": "🔞155韩国B",
@@ -539,19 +534,9 @@
       "name": "🔞爱坤资源2",
       "group": "🔞"
     },
-    "naixxzy.com": {
-      "api": "https://naixxzy.com/api.php/provide/vod",
-      "name": "🔞奶昔资源",
-      "group": "🔞"
-    },
-    "naixxzy1.com": {
-      "api": "https://naixxzy1.com/api.php/provide/vod",
-      "name": "🔞奶昔资源1",
-      "group": "🔞"
-    },
-    "naixxzy2.com": {
-      "api": "https://naixxzy2.com/api.php/provide/vod",
-      "name": "🔞奶昔资源2",
+    "hlzy.store": {
+      "api": "https://www.hlzy.store/api.php/provide/vod",
+      "name": "🔞华流资源",
       "group": "🔞"
     },
     "madouse.la": {

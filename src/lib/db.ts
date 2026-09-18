@@ -3,7 +3,12 @@
 import { AdminConfig } from './admin.types';
 import { D1Storage } from './d1.db';
 import { RedisStorage } from './redis.db';
-import { Favorite, IStorage, PlayRecord } from './types';
+import {
+  AdultRecommendationPreferences,
+  Favorite,
+  IStorage,
+  PlayRecord,
+} from './types';
 
 // storage type 常量: 'localstorage' | 'redis' | 'd1'，默认 'localstorage'
 const STORAGE_TYPE =
@@ -154,6 +159,19 @@ export class DbManager {
 
   async deleteSearchHistory(userName: string, keyword?: string): Promise<void> {
     await this.storage.deleteSearchHistory(userName, keyword);
+  }
+
+  async getAdultRecommendationPreferences(
+    userName: string
+  ): Promise<AdultRecommendationPreferences | null> {
+    return this.storage.getAdultRecommendationPreferences(userName);
+  }
+
+  async saveAdultRecommendationPreferences(
+    userName: string,
+    preferences: AdultRecommendationPreferences
+  ): Promise<void> {
+    await this.storage.setAdultRecommendationPreferences(userName, preferences);
   }
 
   // 获取全部用户名
