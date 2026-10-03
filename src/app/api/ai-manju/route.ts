@@ -81,8 +81,11 @@ export async function GET(request: NextRequest) {
     },
     {
       headers: {
-        // 带 extra 的回应因人而异，不给共享缓存存
-        'Cache-Control': extra.length
+        // 有来源失败就不缓存：否则一次全挂的结果会被浏览器留两小时，
+        // 重新整理也救不回来。带 extra 的回应因人而异，不给共享缓存存
+        'Cache-Control': failed.length
+          ? 'no-store'
+          : extra.length
           ? `private, max-age=${Math.min(cacheTime, 600)}`
           : `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
       },
