@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import type { AiManjuVideo } from '@/lib/ai-manju-feed';
-import { fetchSource } from '@/lib/ai-manju-feed';
+import { fetchSources } from '@/lib/ai-manju-feed';
 import {
   AI_MANJU_SOURCES,
   AiManjuSource,
@@ -44,7 +44,7 @@ function parseExtra(raw: string | null): AiManjuSource[] {
 export async function GET(request: NextRequest) {
   const extra = parseExtra(request.nextUrl.searchParams.get('extra'));
   const allSources = [...AI_MANJU_SOURCES, ...extra];
-  const results = await Promise.all(allSources.map(fetchSource));
+  const results = await fetchSources(allSources);
 
   // 跨来源去重（同一支片可能同时在频道和播放列表里）
   const seen = new Set<string>();
