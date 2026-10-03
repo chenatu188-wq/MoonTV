@@ -96,7 +96,10 @@ function AiManjuClient() {
       .map((f) => `${f.type === 'channel' ? 'c' : 'p'}:${f.id}`)
       .join(',');
     setRefreshing(true);
-    fetch(`/api/ai-manju${extra ? `?extra=${encodeURIComponent(extra)}` : ''}`)
+    // v=2：换网址，避开浏览器里旧版 API 留下的两小时缓存
+    fetch(
+      `/api/ai-manju?v=2${extra ? `&extra=${encodeURIComponent(extra)}` : ''}`
+    )
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
