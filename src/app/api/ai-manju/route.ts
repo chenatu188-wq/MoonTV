@@ -1,127 +1,50 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
+import type { AiManjuVideo } from '@/lib/ai-manju-feed';
+import { fetchSource } from '@/lib/ai-manju-feed';
 import {
   AI_MANJU_SOURCES,
   AiManjuSource,
-  feedUrl,
+  isValidSourceId,
+  MAX_CUSTOM_SOURCES,
 } from '@/lib/ai-manju-sources';
 import { getCacheTime } from '@/lib/config';
+
+export type { AiManjuVideo } from '@/lib/ai-manju-feed';
 
 // 自架 Docker 环境下 edge 是模拟的，对外抓取用 Node.js runtime 比较稳
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export interface AiManjuVideo {
-  videoId: string;
-  title: string;
-  channel: string;
-  channelUrl: string;
-  published: string;
-  thumbnail: string;
-  description: string;
-  views: number | null;
-  sourceKey: string;
-  sourceName: string;
-}
-
-/** 取第一个匹配分组，取不到回空字符串 */
-function pick(block: string, re: RegExp): string {
-  return re.exec(block)?.[1] ?? '';
-}
-
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, '&');
-}
-
 /**
- * 解析 YouTube 的 Atom feed。
- * 结构固定（yt:videoId / media:thumbnail / media:statistics），
- * edge runtime 没有可靠的 DOMParser，所以用正则拆。
+ * 解析使用者自订来源。格式：?extra=c:UCxxxx,p:PLxxxx
+ * 清单存在浏览器 localStorage，每次请求带上来；这里只收合法的 id，
+ * 且只会拿去拼 youtube.com 的 RSS 网址，不会抓任意网址。
  */
-function parseFeed(xml: string, source: AiManjuSource): AiManjuVideo[] {
-  const out: AiManjuVideo[] = [];
-  const entries = xml.split('<entry>').slice(1);
+function parseExtra(raw: string | null): AiManjuSource[] {
+  if (!raw) return [];
+  const builtin = new Set(AI_MANJU_SOURCES.map((s) => s.id));
+  const seen = new Set<string>();
+  const out: AiManjuSource[] = [];
 
-  for (const raw of entries) {
-    const block = raw.split('</entry>')[0];
-    const videoId = pick(block, /<yt:videoId>([^<]+)<\/yt:videoId>/);
-    if (!videoId) continue;
-
-    const viewsRaw = pick(block, /<media:statistics views="(\d+)"/);
-
-    out.push({
-      videoId,
-      title: decodeEntities(
-        pick(block, /<media:title>([^<]*)<\/media:title>/) ||
-          pick(block, /<title>([^<]*)<\/title>/)
-      ),
-      channel: decodeEntities(pick(block, /<name>([^<]*)<\/name>/)),
-      channelUrl: pick(block, /<uri>([^<]*)<\/uri>/),
-      published: pick(block, /<published>([^<]+)<\/published>/),
-      thumbnail:
-        pick(block, /<media:thumbnail url="([^"]+)"/) ||
-        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      description: decodeEntities(
-        pick(block, /<media:description>([\s\S]*?)<\/media:description>/)
-      ).slice(0, 200),
-      views: viewsRaw ? Number(viewsRaw) : null,
-      sourceKey: source.key,
-      sourceName: source.name,
-    });
+  for (const token of raw.split(',')) {
+    const [prefix, id] = token.split(':');
+    const type =
+      prefix === 'c' ? 'channel' : prefix === 'p' ? 'playlist' : null;
+    if (!type || !id || !isValidSourceId(type, id)) continue;
+    if (builtin.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    // key 直接用 id，前端用它对回自己存的名称
+    out.push({ key: id, name: id, type, id });
+    if (out.length >= MAX_CUSTOM_SOURCES) break;
   }
-
   return out;
 }
 
-interface FetchResult {
-  videos: AiManjuVideo[];
-  /** 失败原因，成功时为 null。会回给前端，方便线上直接看到问题 */
-  error: string | null;
-}
-
-async function fetchSource(source: AiManjuSource): Promise<FetchResult> {
-  try {
-    const res = await fetch(feedUrl(source), {
-      // YouTube 会挡看起来像脚本的请求，headers 尽量贴近真实浏览器。
-      // CONSENT cookie 是关键：机房 IP 常被导到「同意页」而拿不到真正内容，
-      // 2026-08-29 本机实测，不带这个 cookie 抓频道页只会回 763 bytes 的同意页。
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        Accept: 'application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
-        Cookie: 'CONSENT=YES+cb.20210328-17-p0.en+FX+917',
-      },
-      cache: 'no-store',
-    });
-
-    if (!res.ok) {
-      return { videos: [], error: `HTTP ${res.status}` };
-    }
-
-    const xml = await res.text();
-    const videos = parseFeed(xml, source);
-    if (videos.length === 0) {
-      // 拿到 200 但解析不出东西，多半是被挡后回了同意页/验证页
-      return { videos: [], error: `解析到 0 笔（回应 ${xml.length} 字元）` };
-    }
-    return { videos, error: null };
-  } catch (e) {
-    // 单一来源挂掉不影响其他来源
-    return {
-      videos: [],
-      error: `${(e as Error).name}: ${(e as Error).message}`,
-    };
-  }
-}
-
-export async function GET() {
-  const results = await Promise.all(AI_MANJU_SOURCES.map(fetchSource));
+export async function GET(request: NextRequest) {
+  const extra = parseExtra(request.nextUrl.searchParams.get('extra'));
+  const allSources = [...AI_MANJU_SOURCES, ...extra];
+  const results = await Promise.all(allSources.map(fetchSource));
 
   // 跨来源去重（同一支片可能同时在频道和播放列表里）
   const seen = new Set<string>();
@@ -135,19 +58,33 @@ export async function GET() {
   videos.sort((a, b) => b.published.localeCompare(a.published));
 
   const failed = results
-    .map((r, i) => ({ name: AI_MANJU_SOURCES[i].name, error: r.error }))
-    .filter((f): f is { name: string; error: string } => f.error !== null);
+    .map((r, i) => ({
+      key: allSources[i].key,
+      name: allSources[i].name,
+      error: r.error,
+    }))
+    .filter(
+      (f): f is { key: string; name: string; error: string } => f.error !== null
+    );
 
   const cacheTime = await getCacheTime();
   return NextResponse.json(
     {
       videos,
-      sources: AI_MANJU_SOURCES.map((s) => ({ key: s.key, name: s.name })),
+      // 只回内建来源；自订来源的名称由前端自己保管
+      sources: AI_MANJU_SOURCES.map((s) => ({
+        key: s.key,
+        name: s.name,
+        id: s.id,
+      })),
       failed,
     },
     {
       headers: {
-        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
+        // 带 extra 的回应因人而异，不给共享缓存存
+        'Cache-Control': extra.length
+          ? `private, max-age=${Math.min(cacheTime, 600)}`
+          : `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
       },
     }
   );
