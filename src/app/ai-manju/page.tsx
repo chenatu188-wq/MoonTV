@@ -121,6 +121,15 @@ function AiManjuClient() {
     saveFollows(next);
   }, []);
 
+  // 自己追的频道后来变成内建来源时，从自己的清单拿掉，免得筛选列出现两个
+  useEffect(() => {
+    if (!follows || !data) return;
+    const builtin = new Set(data.sources.map((s) => s.id));
+    if (follows.some((f) => builtin.has(f.id))) {
+      updateFollows(follows.filter((f) => !builtin.has(f.id)));
+    }
+  }, [follows, data, updateFollows]);
+
   const isTracked = useCallback(
     (id: string) =>
       (follows ?? []).some((f) => f.id === id) ||
@@ -225,7 +234,7 @@ function AiManjuClient() {
 
         {/* 来源筛选 */}
         {data && (
-          <div className='mb-6 flex flex-wrap items-center gap-2'>
+          <div className='mb-6 flex max-h-40 flex-wrap items-center gap-2 overflow-y-auto'>
             {chips.map((s) => (
               <button
                 key={s.key}

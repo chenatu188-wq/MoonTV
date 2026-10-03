@@ -95,11 +95,16 @@ export interface FetchResult {
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MS = 400;
 
+/** 这段时间内抓过的来源直接用缓存，不再打 YouTube */
+const FRESH_MS = 30 * 60 * 1000;
+
 /** 上次成功的结果（存在伺服器记忆体，重启就清空） */
 const lastGood = new Map<
   string,
-  { videos: AiManjuVideo[]; feedTitle: string }
+  { videos: AiManjuVideo[]; feedTitle: string; at: number }
 >();
+/** 正在抓的来源，避免同一个来源同时被抓好几次 */
+const inflight = new Map<string, Promise<FetchResult>>();
 
 async function fetchOnce(source: AiManjuSource): Promise<FetchResult> {
   const res = await fetch(feedUrl(source), {
@@ -132,7 +137,7 @@ async function fetchOnce(source: AiManjuSource): Promise<FetchResult> {
   return { videos, feedTitle, error: null };
 }
 
-export async function fetchSource(source: AiManjuSource): Promise<FetchResult> {
+async function fetchWithRetry(source: AiManjuSource): Promise<FetchResult> {
   let last: FetchResult = { videos: [], feedTitle: '', error: '未知错误' };
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -152,13 +157,63 @@ export async function fetchSource(source: AiManjuSource): Promise<FetchResult> {
       lastGood.set(source.id, {
         videos: last.videos,
         feedTitle: last.feedTitle,
+        at: Date.now(),
       });
       return last;
     }
   }
-
-  // 单一来源挂掉不影响其他来源；有旧结果就先顶着用
-  const stale = lastGood.get(source.id);
-  if (stale) return { ...stale, error: null };
   return { ...last, error: `${last.error}（已重试 ${MAX_ATTEMPTS} 次）` };
+}
+
+function refresh(source: AiManjuSource): Promise<FetchResult> {
+  let p = inflight.get(source.id);
+  if (!p) {
+    p = fetchWithRetry(source).finally(() => inflight.delete(source.id));
+    inflight.set(source.id, p);
+  }
+  return p;
+}
+
+/**
+ * 抓一个来源。来源多了以后（内建就有几十个）不能每次开页都全部重抓：
+ * - 30 分钟内抓过：直接回缓存
+ * - 缓存过期：先回旧的，背景更新，下次开页就是新的
+ * - 完全没缓存：等它抓完；失败就回报错误，不影响其他来源
+ */
+export async function fetchSource(source: AiManjuSource): Promise<FetchResult> {
+  const cached = lastGood.get(source.id);
+  if (cached) {
+    if (Date.now() - cached.at > FRESH_MS) {
+      refresh(source).catch(() => undefined);
+    }
+    // 缓存里的 sourceKey/sourceName 以这次请求的来源为准
+    return {
+      videos: cached.videos.map((v) => ({
+        ...v,
+        sourceKey: source.key,
+        sourceName: source.name,
+      })),
+      feedTitle: cached.feedTitle,
+      error: null,
+    };
+  }
+  return refresh(source);
+}
+
+/** 限制同时抓几个，免得一次对 YouTube 发出几十个请求 */
+export async function fetchSources(
+  sources: AiManjuSource[],
+  concurrency = 10
+): Promise<FetchResult[]> {
+  const results: FetchResult[] = new Array(sources.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, sources.length) }, async () => {
+      while (next < sources.length) {
+        const i = next++;
+        results[i] = await fetchSource(sources[i]);
+      }
+    })
+  );
+  return results;
 }
