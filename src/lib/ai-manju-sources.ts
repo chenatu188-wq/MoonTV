@@ -328,6 +328,179 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     type: 'channel',
     id: 'UC9XWDhiyyUDaP2xW96YJMZQ',
   },
+
+  // ---- 2026-10-03 使用者原本自己追踪的频道 ----
+  // 原本只存在使用者浏览器的 localStorage，清站台资料或换装置就没了，
+  // 所以收进内建清单。只拿到频道名称，ID 是用名称上 YouTube 反查的；
+  // 同名频道有多个的（極光劇場、霓虹劇場、動漫醬）取 RSS 标题吻合且仍在更新的那个。
+  {
+    key: 'UCqQmTciheKggwyEiU1ghMbg',
+    name: '呦呦声漫',
+    type: 'channel',
+    id: 'UCqQmTciheKggwyEiU1ghMbg',
+  },
+  {
+    key: 'UCKmBUCoUHofkq_njiTacDKg',
+    name: 'John 咩咩劇場',
+    type: 'channel',
+    id: 'UCKmBUCoUHofkq_njiTacDKg',
+  },
+  {
+    key: 'UCIXjvnAhFma9fn8dJk6dMKg',
+    name: '劇翻天 Drama Go',
+    type: 'channel',
+    id: 'UCIXjvnAhFma9fn8dJk6dMKg',
+  },
+  {
+    key: 'UCmnPFtxclbD8Iq7V7jxRTvg',
+    name: '书旗男频',
+    type: 'channel',
+    id: 'UCmnPFtxclbD8Iq7V7jxRTvg',
+  },
+  {
+    key: 'UCgFXqimhiymRQoE5ahWmOTA',
+    name: '洪宇漫剧社',
+    type: 'channel',
+    id: 'UCgFXqimhiymRQoE5ahWmOTA',
+  },
+  {
+    key: 'UCThwesS-uRQGp4JWBII_X5g',
+    name: '毛豆劇場',
+    type: 'channel',
+    id: 'UCThwesS-uRQGp4JWBII_X5g',
+  },
+  {
+    key: 'UCjoqlK59VsCKFlD8gTyOMxQ',
+    name: '麻梨酥',
+    type: 'channel',
+    id: 'UCjoqlK59VsCKFlD8gTyOMxQ',
+  },
+  {
+    key: 'UCzdd87Kpcv99k1BMEHRerTg',
+    name: 'AI諸天漫域',
+    type: 'channel',
+    id: 'UCzdd87Kpcv99k1BMEHRerTg',
+  },
+  {
+    key: 'UCeQep0WVfyYeOh9k97D03ag',
+    name: '極光劇場',
+    type: 'channel',
+    id: 'UCeQep0WVfyYeOh9k97D03ag',
+  },
+  {
+    key: 'UCG-yIm61pfdXhREgNItZeGw',
+    name: '神域劇場',
+    type: 'channel',
+    id: 'UCG-yIm61pfdXhREgNItZeGw',
+  },
+  {
+    key: 'UC-NROqvtnns-ZCghOnpEx7Q',
+    name: '小天说漫',
+    type: 'channel',
+    id: 'UC-NROqvtnns-ZCghOnpEx7Q',
+  },
+  {
+    key: 'UCNIKva6iDURgVxf44pMZlKA',
+    name: '動漫醬',
+    type: 'channel',
+    id: 'UCNIKva6iDURgVxf44pMZlKA',
+  },
+  {
+    key: 'UCEB4wtsZYmScjDlMPU5rK7Q',
+    name: '零号玩家',
+    type: 'channel',
+    id: 'UCEB4wtsZYmScjDlMPU5rK7Q',
+  },
+  {
+    key: 'UC6z8_JzVkOxaHvHTpEKqhWA',
+    name: 'DramaTakdir',
+    type: 'channel',
+    id: 'UC6z8_JzVkOxaHvHTpEKqhWA',
+  },
+  {
+    key: 'UCThqrNqzKngrnnfJaqhHGnQ',
+    name: 'Shortflix Indonesia',
+    type: 'channel',
+    id: 'UCThqrNqzKngrnnfJaqhHGnQ',
+  },
+  {
+    key: 'UC6ahY73L_9DKxe97N7LjIeg',
+    name: 'K迪剧场',
+    type: 'channel',
+    id: 'UC6ahY73L_9DKxe97N7LjIeg',
+  },
+  {
+    key: 'UC4_o9k05i3siOFqFpKMXgOA',
+    name: '反轉研究所',
+    type: 'channel',
+    id: 'UC4_o9k05i3siOFqFpKMXgOA',
+  },
+  {
+    key: 'UC4nze-u8IFyKP_IoySr7eyA',
+    name: '天龍短劇',
+    type: 'channel',
+    id: 'UC4nze-u8IFyKP_IoySr7eyA',
+  },
+  {
+    key: 'UC80ztI40QAXzWL94eoRzWow',
+    name: '破晓动漫社 Dawn Anime Club',
+    type: 'channel',
+    id: 'UC80ztI40QAXzWL94eoRzWow',
+  },
+  {
+    key: 'UCR4pgG2iWLVjG3_COblHuxw',
+    name: '劇好看短剧社',
+    type: 'channel',
+    id: 'UCR4pgG2iWLVjG3_COblHuxw',
+  },
+  {
+    key: 'UCUpppsP5x1KHIAwfIujFMIg',
+    name: '世界短劇',
+    type: 'channel',
+    id: 'UCUpppsP5x1KHIAwfIujFMIg',
+  },
+  {
+    key: 'UCvDPu4fdYcjhNPPZwx6HP_A',
+    name: 'スカッとコミックTV',
+    type: 'channel',
+    id: 'UCvDPu4fdYcjhNPPZwx6HP_A',
+  },
+  {
+    key: 'UC0SQ3_05y-M5u9D7__01UCA',
+    name: '霓虹劇場',
+    type: 'channel',
+    id: 'UC0SQ3_05y-M5u9D7__01UCA',
+  },
+  {
+    key: 'UCNlnDUN5cnbrD89CDMjdpKg',
+    name: '奧巴牛劇場',
+    type: 'channel',
+    id: 'UCNlnDUN5cnbrD89CDMjdpKg',
+  },
+  {
+    key: 'UCE9_C2Abv6Btu2OTS4kHzJg',
+    name: '平庸群俠傳',
+    type: 'channel',
+    id: 'UCE9_C2Abv6Btu2OTS4kHzJg',
+  },
+  {
+    key: 'UCLozNYtPze8KdchwQ0Pseew',
+    name: 'AAAAAIGC',
+    type: 'channel',
+    id: 'UCLozNYtPze8KdchwQ0Pseew',
+  },
+  {
+    key: 'UCD83uFljm89w9AvlRYlcSWQ',
+    name: '油油爆劇 Drama Hub',
+    type: 'channel',
+    id: 'UCD83uFljm89w9AvlRYlcSWQ',
+  },
+  {
+    key: 'UCKRjxZ12mnnd6o3IuYvxSZA',
+    name: '月笙短劇社Drama',
+    type: 'channel',
+    id: 'UCKRjxZ12mnnd6o3IuYvxSZA',
+  },
 ];
 
 export function feedUrl(source: AiManjuSource): string {
