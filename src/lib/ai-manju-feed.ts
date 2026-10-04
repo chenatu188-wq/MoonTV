@@ -203,7 +203,7 @@ export async function fetchSource(source: AiManjuSource): Promise<FetchResult> {
 /** 限制同时抓几个，免得一次对 YouTube 发出几十个请求 */
 export async function fetchSources(
   sources: AiManjuSource[],
-  concurrency = 10
+  concurrency = 16
 ): Promise<FetchResult[]> {
   const results: FetchResult[] = new Array(sources.length);
   let next = 0;

@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
   for (const v of results.flatMap((r) => r.videos)) {
     if (seen.has(v.videoId)) continue;
     seen.add(v.videoId);
-    videos.push(v);
+    // 页面没用到简介；上千支影片时拿掉它，回应可以小一半
+    videos.push({ ...v, description: '' });
   }
 
   videos.sort((a, b) => b.published.localeCompare(a.published));
