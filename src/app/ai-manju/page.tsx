@@ -25,6 +25,7 @@ const PAGE_SIZE = 120;
 
 const FOLLOWS_KEY = 'moontv_ai_manju_follows';
 const MAX_FOLLOWS = 30;
+const CHIPS_KEY = 'moontv_ai_manju_chips_open';
 
 function loadFollows(): Follow[] {
   try {
@@ -78,6 +79,27 @@ function AiManjuClient() {
   const [active, setActive] = useState<string>('all');
   const [playing, setPlaying] = useState<AiManjuVideo | null>(null);
   const [limit, setLimit] = useState(PAGE_SIZE);
+  // 频道筛选列是否展开。预设展开，让所有追踪的频道都看得到
+  const [chipsOpen, setChipsOpen] = useState(true);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CHIPS_KEY) === '0') setChipsOpen(false);
+    } catch {
+      // 读不到就维持预设
+    }
+  }, []);
+
+  const toggleChips = useCallback(() => {
+    setChipsOpen((open) => {
+      try {
+        localStorage.setItem(CHIPS_KEY, open ? '0' : '1');
+      } catch {
+        // 存不了就只在这次画面生效
+      }
+      return !open;
+    });
+  }, []);
 
   // null = 还没从 localStorage 读出来，读完才发第一次请求，避免抓两次
   const [follows, setFollows] = useState<Follow[] | null>(null);
@@ -239,39 +261,63 @@ function AiManjuClient() {
           </p>
         </div>
 
-        {/* 来源筛选 */}
+        {/* 来源筛选：预设全部展开；嫌占版面可以收起，选择会记住 */}
         {data && (
-          <div className='mb-6 flex max-h-40 flex-wrap items-center gap-2 overflow-y-auto'>
-            {chips.map((s) => (
+          <div className='mb-6'>
+            <div className='mb-2 flex flex-wrap items-center gap-2'>
               <button
-                key={s.key}
                 onClick={() => {
-                  setActive(s.key);
-                  setLimit(PAGE_SIZE);
+                  setAddMsg(null);
+                  setManageOpen(true);
                 }}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                  active === s.key
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
+                className='px-3 py-1.5 rounded-full text-sm border border-dashed border-green-600 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20'
               >
-                {s.name}
+                ＋ 管理追踪
               </button>
-            ))}
-            <button
-              onClick={() => {
-                setAddMsg(null);
-                setManageOpen(true);
-              }}
-              className='px-3 py-1.5 rounded-full text-sm border border-dashed border-green-600 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20'
+              <button
+                onClick={toggleChips}
+                className='px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+              >
+                {chipsOpen
+                  ? '收起频道 ▴'
+                  : `展开全部 ${chips.length - 1} 个频道 ▾`}
+              </button>
+              {refreshing && (
+                <span className='text-xs text-gray-500 dark:text-gray-400'>
+                  更新中…
+                </span>
+              )}
+            </div>
+            <div
+              className={`flex flex-wrap items-center gap-2 ${
+                chipsOpen ? '' : 'max-h-[5.25rem] overflow-hidden'
+              }`}
             >
-              ＋ 管理追踪
-            </button>
-            {refreshing && (
-              <span className='text-xs text-gray-500 dark:text-gray-400'>
-                更新中…
-              </span>
-            )}
+              {/* 收起时把选中的频道排到最前面，才不会被藏起来 */}
+              {(chipsOpen
+                ? chips
+                : [...chips].sort(
+                    (x, y) =>
+                      Number(y.key === 'all' || y.key === active) -
+                      Number(x.key === 'all' || x.key === active)
+                  )
+              ).map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => {
+                    setActive(s.key);
+                    setLimit(PAGE_SIZE);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    active === s.key
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
