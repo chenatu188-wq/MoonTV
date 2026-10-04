@@ -5,11 +5,17 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 
 import PageLayout from '@/components/PageLayout';
 
+import type { HongguoRankList } from '@/app/api/ai-manju/hongguo/route';
 import type { AiManjuVideo } from '@/app/api/ai-manju/route';
 
 interface ApiResponse {
   videos: AiManjuVideo[];
-  sources: { key: string; name: string; id: string }[];
+  sources: {
+    key: string;
+    name: string;
+    id: string;
+    group?: 'base' | 'mine' | 'hongguo';
+  }[];
   failed: { key: string; name: string; error: string }[];
 }
 
@@ -79,6 +85,61 @@ function AiManjuClient() {
   const [active, setActive] = useState<string>('all');
   const [playing, setPlaying] = useState<AiManjuVideo | null>(null);
   const [limit, setLimit] = useState(PAGE_SIZE);
+  // 红果热播榜：只当「找哪部剧」的依据，点片名就去 YouTube 搜那部剧
+  const [ranks, setRanks] = useState<HongguoRankList[] | null>(null);
+  const [rankTab, setRankTab] = useState('ai');
+  const [search, setSearch] = useState<{
+    q: string;
+    loading: boolean;
+    videos: AiManjuVideo[];
+    matched: number;
+    error: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/ai-manju/hongguo')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.lists && setRanks(d.lists))
+      .catch(() => undefined); // 榜单抓不到就不显示这一块，不影响其他功能
+  }, []);
+
+  const searchTitle = useCallback((q: string) => {
+    setSearch({ q, loading: true, videos: [], matched: 0, error: null });
+    setLimit(PAGE_SIZE);
+    fetch(`/api/ai-manju/search?q=${encodeURIComponent(q)}`)
+      .then(async (r) => {
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+        return body;
+      })
+      .then((d) =>
+        setSearch((cur) =>
+          cur?.q === q
+            ? {
+                q,
+                loading: false,
+                videos: d.videos,
+                matched: d.matched,
+                error: null,
+              }
+            : cur
+        )
+      )
+      .catch((e) =>
+        setSearch((cur) =>
+          cur?.q === q
+            ? {
+                q,
+                loading: false,
+                videos: [],
+                matched: 0,
+                error: (e as Error).message,
+              }
+            : cur
+        )
+      );
+  }, []);
+
   // 频道筛选列是否展开。预设展开，让所有追踪的频道都看得到
   const [chipsOpen, setChipsOpen] = useState(true);
 
@@ -122,9 +183,9 @@ function AiManjuClient() {
       .map((f) => `${f.type === 'channel' ? 'c' : 'p'}:${f.id}`)
       .join(',');
     setRefreshing(true);
-    // v=2：换网址，避开浏览器里旧版 API 留下的两小时缓存
+    // v=3：换网址（回应格式有变就加一号），避开浏览器里旧版 API 留下的两小时缓存
     fetch(
-      `/api/ai-manju?v=2${extra ? `&extra=${encodeURIComponent(extra)}` : ''}`
+      `/api/ai-manju?v=3${extra ? `&extra=${encodeURIComponent(extra)}` : ''}`
     )
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -232,9 +293,10 @@ function AiManjuClient() {
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
 
-  const videos =
-    data?.videos.filter((v) => active === 'all' || v.sourceKey === active) ??
-    [];
+  const videos = search
+    ? search.videos
+    : data?.videos.filter((v) => active === 'all' || v.sourceKey === active) ??
+      [];
 
   // 来源多了以后一次有上千支影片，分批显示，免得页面卡
   const shown = videos.slice(0, limit);
@@ -242,11 +304,40 @@ function AiManjuClient() {
   const followList = follows ?? [];
   const followName = (key: string) =>
     followList.find((f) => f.id === key)?.name;
+  const builtinSources = data?.sources ?? [];
+  const chipGroups = [
+    {
+      title: '原有来源',
+      items: builtinSources.filter((s) => (s.group ?? 'base') === 'base'),
+    },
+    {
+      title: '你追踪的',
+      items: [
+        ...builtinSources.filter((s) => s.group === 'mine'),
+        ...followList.map((f) => ({ key: f.id, name: f.name })),
+      ],
+    },
+    {
+      title: '红果片单',
+      items: builtinSources.filter((s) => s.group === 'hongguo'),
+    },
+  ].filter((g) => g.items.length > 0);
   const chips = [
     { key: 'all', name: '全部' },
-    ...(data?.sources ?? []),
-    ...followList.map((f) => ({ key: f.id, name: f.name })),
+    ...chipGroups.flatMap((g) => g.items),
   ];
+  const pickChip = (key: string) => {
+    setActive(key);
+    setLimit(PAGE_SIZE);
+    setSearch(null);
+  };
+  const chipClass = (key: string) =>
+    `px-3 py-1.5 rounded-full text-sm transition-colors ${
+      !search && active === key
+        ? 'bg-green-600 text-white'
+        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+    }`;
+  const rankList = ranks?.find((l) => l.key === rankTab) ?? ranks?.[0];
   const playingChannelId = playing ? channelIdOf(playing.channelUrl) : null;
 
   return (
@@ -260,6 +351,70 @@ function AiManjuClient() {
             聚合 YouTube 上的 AI 漫剧频道，用官方播放器播放
           </p>
         </div>
+
+        {/* 红果热播榜：横向卷动，点片名去 YouTube 找那部剧 */}
+        {rankList && ranks && (
+          <div className='mb-6'>
+            <div className='mb-2 flex flex-wrap items-center gap-2'>
+              <h2 className='text-base font-bold text-gray-900 dark:text-gray-100'>
+                红果热播榜
+              </h2>
+              {ranks.map((l) => (
+                <button
+                  key={l.key}
+                  onClick={() => setRankTab(l.key)}
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    rankList.key === l.key
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {l.name}
+                </button>
+              ))}
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                点片名在 YouTube 找这部剧
+              </span>
+            </div>
+            <div className='flex gap-3 overflow-x-auto pb-2'>
+              {rankList.items.map((it) => (
+                <button
+                  key={it.seriesId}
+                  onClick={() => searchTitle(it.title)}
+                  className='group w-28 shrink-0 text-left'
+                  data-rank
+                >
+                  <div
+                    className={`relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
+                      search?.q === it.title ? 'ring-2 ring-red-500' : ''
+                    }`}
+                  >
+                    {it.cover && (
+                      <img
+                        src={it.cover}
+                        alt={it.title}
+                        loading='lazy'
+                        referrerPolicy='no-referrer'
+                        className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                      />
+                    )}
+                    <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                      {it.rank}
+                    </span>
+                  </div>
+                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                    {it.title}
+                  </div>
+                  {it.heat && (
+                    <div className='text-xs text-gray-500 dark:text-gray-400'>
+                      {it.heat}热度
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 来源筛选：预设全部展开；嫌占版面可以收起，选择会记住 */}
         {data && (
@@ -288,36 +443,80 @@ function AiManjuClient() {
                 </span>
               )}
             </div>
-            <div
-              className={`flex flex-wrap items-center gap-2 ${
-                chipsOpen ? '' : 'max-h-[5.25rem] overflow-hidden'
-              }`}
-            >
-              {/* 收起时把选中的频道排到最前面，才不会被藏起来 */}
-              {(chipsOpen
-                ? chips
-                : [...chips].sort(
+            {chipsOpen ? (
+              <div className='space-y-3'>
+                <button
+                  onClick={() => pickChip('all')}
+                  className={chipClass('all')}
+                >
+                  全部
+                </button>
+                {chipGroups.map((g) => (
+                  <div key={g.title}>
+                    <div className='mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400'>
+                      {g.title}（{g.items.length}）
+                    </div>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      {g.items.map((s) => (
+                        <button
+                          key={s.key}
+                          onClick={() => pickChip(s.key)}
+                          className={chipClass(s.key)}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className='flex max-h-[5.25rem] flex-wrap items-center gap-2 overflow-hidden'>
+                {/* 收起时把选中的频道排到最前面，才不会被藏起来 */}
+                {[...chips]
+                  .sort(
                     (x, y) =>
                       Number(y.key === 'all' || y.key === active) -
                       Number(x.key === 'all' || x.key === active)
                   )
-              ).map((s) => (
-                <button
-                  key={s.key}
-                  onClick={() => {
-                    setActive(s.key);
-                    setLimit(PAGE_SIZE);
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                    active === s.key
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
+                  .map((s) => (
+                    <button
+                      key={s.key}
+                      onClick={() => pickChip(s.key)}
+                      className={chipClass(s.key)}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 搜寻某部剧时的标题列 */}
+        {search && (
+          <div className='mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-green-50 p-3 text-sm dark:bg-green-900/20'>
+            <span className='text-gray-900 dark:text-gray-100'>
+              《{search.q}》在 YouTube 的结果
+              {search.loading
+                ? '：搜寻中…'
+                : search.error
+                ? ''
+                : search.matched > 0
+                ? `：${search.matched} 支片名吻合，排在最前面`
+                : '：没有片名完全吻合的，以下是相近结果'}
+            </span>
+            <button
+              onClick={() => setSearch(null)}
+              className='rounded-full bg-white px-3 py-1 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+            >
+              ← 回到追踪列表
+            </button>
+            {search.error && (
+              <span className='text-red-600 dark:text-red-400'>
+                {search.error}
+              </span>
+            )}
           </div>
         )}
 
@@ -352,7 +551,7 @@ function AiManjuClient() {
           </div>
         )}
 
-        {data && videos.length === 0 && (
+        {data && videos.length === 0 && !search?.loading && (
           <div className='text-gray-500 dark:text-gray-400'>暂无内容</div>
         )}
 
@@ -387,8 +586,11 @@ function AiManjuClient() {
               </h3>
               <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
                 {v.channel}
-                {v.views != null && ` · ${formatViews(v.views)}`}
-                {v.published && ` · ${timeAgo(v.published)}`}
+                {v.meta
+                  ? ` · ${v.meta}`
+                  : `${v.views != null ? ` · ${formatViews(v.views)}` : ''}${
+                      v.published ? ` · ${timeAgo(v.published)}` : ''
+                    }`}
               </p>
             </button>
           ))}
