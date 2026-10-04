@@ -6,6 +6,7 @@ import {
   Film,
   Home,
   Menu,
+  Music2,
   Search,
   Sparkles,
   Star,
@@ -173,6 +174,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Wand2,
       label: 'AI 漫剧',
       href: '/ai-manju',
+    },
+    {
+      icon: Music2,
+      label: 'TikTok 漫剧',
+      href: '/tiktok-manju',
     },
   ];
 

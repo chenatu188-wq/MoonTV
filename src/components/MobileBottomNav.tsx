@@ -6,6 +6,7 @@ import {
   Film,
   Flame,
   Home,
+  Music2,
   Search,
   Sparkles,
   Tv,
@@ -36,6 +37,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     { icon: Clapperboard, label: '短剧', href: '/browse?category=duanju' },
     { icon: Sparkles, label: '动漫', href: '/browse?category=anime3d' },
     { icon: Wand2, label: 'AI 漫剧', href: '/ai-manju' },
+    { icon: Music2, label: 'TikTok', href: '/tiktok-manju' },
     { icon: Flame, label: '彩虹', href: '/adult' },
   ];
 
