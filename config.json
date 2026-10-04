@@ -383,12 +383,6 @@
       "detail": "https://apilsbzy9.com",
       "group": "🔞"
     },
-    "subocaiji.com": {
-      "api": "https://subocaiji.com/api.php/provide/vod",
-      "name": "🔞素播采集",
-      "detail": "https://subocaiji.com",
-      "group": "🔞"
-    },
     "xiaojizy.live": {
       "api": "https://api.xiaojizy.live/provide/vod",
       "name": "🔞小鸡资源",
@@ -422,11 +416,6 @@
     "wujinapi.me": {
       "api": "https://api.wujinapi.me/api.php/provide/vod",
       "name": "🔞无尽资源",
-      "group": "🔞"
-    },
-    "subozy.com": {
-      "api": "https://subozy.com/api.php/provide/vod",
-      "name": "🔞素播资源2",
       "group": "🔞"
     },
     "ffzyapi.com": {
