@@ -1,18 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-import type { AiManjuVideo } from '@/lib/ai-manju-feed';
-import { YT_HEADERS } from '@/lib/ai-manju-feed';
-import { AI_MANJU_SOURCES } from '@/lib/ai-manju-sources';
+import { seasonOf } from '@/lib/ai-manju-series';
+import { AI_MANJU_SOURCES, CHANNEL_ID_RE } from '@/lib/ai-manju-sources';
+import { searchAll, searchChannel, YtVideo } from '@/lib/ai-manju-youtube';
 import { toSimplified } from '@/lib/cn-converter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export interface AiManjuSearchVideo extends AiManjuVideo {
-  channelId: string;
+export interface AiManjuSearchVideo extends YtVideo {
   /** 标题里确实含有这部剧的名字（否则只是 YouTube 觉得相关） */
   match: boolean;
+  /** 标题写的季数；没写是 null */
+  season: number | null;
 }
 
 /** 同一部剧的搜寻结果短时间内不会变，缓存一小时 */
@@ -35,66 +35,35 @@ function coreOf(title: string): string {
   );
 }
 
-/** 把巢状 JSON 里所有 videoRenderer 捞出来 */
-function collect(o: any, out: any[] = []): any[] {
-  if (Array.isArray(o)) {
-    o.forEach((v) => collect(v, out));
-  } else if (o && typeof o === 'object') {
-    if (o.videoRenderer) out.push(o.videoRenderer);
-    Object.values(o).forEach((v) => collect(v, out));
-  }
-  return out;
-}
-
-const text = (o: any): string =>
-  o?.simpleText ?? (o?.runs ?? []).map((r: any) => r.text).join('') ?? '';
-
-async function searchYoutube(q: string): Promise<AiManjuSearchVideo[]> {
-  const res = await fetch(
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
-    {
-      headers: { ...YT_HEADERS, Accept: 'text/html,*/*;q=0.8' },
-      cache: 'no-store',
-    }
-  );
-  if (!res.ok) throw new Error(`YouTube 回应 HTTP ${res.status}`);
-  const html = await res.text();
-  const m = /var ytInitialData = (\{[\s\S]*?\});<\/script>/.exec(html);
-  if (!m) throw new Error('YouTube 没有回传搜寻结果（可能被挡）');
-
+/**
+ * 搜一部剧。带 channel 时会同时在那个频道内搜，
+ * 这样同一个频道发的各季会被找齐（全站搜寻常常只回最热门的几季）。
+ */
+async function search(q: string, channel: string | null) {
   const core = coreOf(q);
+  // 搜寻用不含季数的剧名，才找得到所有季
+  const query =
+    q.replace(/[:：]?第[一二三四五六七八九十\d]+季.*$/, '').trim() || q;
+
+  const [inChannel, all] = await Promise.all([
+    channel
+      ? searchChannel(channel, query).catch(() => [])
+      : Promise.resolve([]),
+    searchAll(query).catch((e) => {
+      if (!channel) throw e;
+      return [];
+    }),
+  ]);
+
   const seen = new Set<string>();
   const out: AiManjuSearchVideo[] = [];
-  for (const v of collect(JSON.parse(m[1]))) {
-    const videoId: string | undefined = v.videoId;
-    const owner = v.ownerText?.runs?.[0];
-    const channelId: string | undefined =
-      owner?.navigationEndpoint?.browseEndpoint?.browseId;
-    if (!videoId || !channelId || seen.has(videoId)) continue;
-    seen.add(videoId);
-
-    const title = text(v.title);
-    const meta = [
-      text(v.lengthText),
-      text(v.publishedTimeText),
-      text(v.viewCountText),
-    ]
-      .filter(Boolean)
-      .join(' · ');
+  for (const v of [...inChannel, ...all]) {
+    if (seen.has(v.videoId)) continue;
+    seen.add(v.videoId);
     out.push({
-      videoId,
-      title,
-      channel: owner.text ?? '',
-      channelUrl: `https://www.youtube.com/channel/${channelId}`,
-      channelId,
-      published: '',
-      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      description: '',
-      views: null,
-      sourceKey: channelId,
-      sourceName: owner.text ?? '',
-      meta,
-      match: core.length >= 3 && norm(title).includes(core),
+      ...v,
+      match: core.length >= 3 && norm(v.title).includes(core),
+      season: seasonOf(v.title),
     });
   }
   return out;
@@ -102,26 +71,47 @@ async function searchYoutube(q: string): Promise<AiManjuSearchVideo[]> {
 
 export async function GET(request: NextRequest) {
   const q = (request.nextUrl.searchParams.get('q') ?? '').trim();
+  const channelRaw = request.nextUrl.searchParams.get('channel');
+  const channel =
+    channelRaw && CHANNEL_ID_RE.test(channelRaw) ? channelRaw : null;
   if (!q || q.length > 80) {
     return NextResponse.json({ error: '缺少片名' }, { status: 400 });
   }
 
+  const key = `${q}|${channel ?? ''}`;
   try {
-    let hit = cache.get(q);
+    let hit = cache.get(key);
     if (!hit || Date.now() - hit.at > FRESH_MS) {
-      hit = { videos: await searchYoutube(q), at: Date.now() };
-      cache.set(q, hit);
+      hit = { videos: await search(q, channel), at: Date.now() };
+      cache.set(key, hit);
       if (cache.size > 300) cache.delete(cache.keys().next().value as string);
     }
 
-    // 排序：片名命中的在前；同样命中时，内建追踪清单里的频道在前
+    // 排序（由先到后）：片名吻合 → 正片（10 分钟以上，把预告和片段压到后面）
+    // → 有写季数的照季数由小到大 → 指定频道 > 内建追踪清单里的频道 > 其他
     const builtin = new Set(AI_MANJU_SOURCES.map((s) => s.id));
-    const score = (v: AiManjuSearchVideo) =>
-      (v.match ? 2 : 0) + (builtin.has(v.channelId) ? 1 : 0);
-    const videos = [...hit.videos].sort((a, b) => score(b) - score(a));
+    const rank = (v: AiManjuSearchVideo) =>
+      v.channelId === channel ? 0 : builtin.has(v.channelId) ? 1 : 2;
+    const isFull = (v: AiManjuSearchVideo) => Number(v.seconds >= 600);
+    const videos = [...hit.videos].sort(
+      (a, b) =>
+        Number(b.match) - Number(a.match) ||
+        isFull(b) - isFull(a) ||
+        Number(b.season !== null) - Number(a.season !== null) ||
+        (a.season ?? 0) - (b.season ?? 0) ||
+        rank(a) - rank(b)
+    );
+
+    const seasons = Array.from(
+      new Set(
+        videos
+          .filter((v) => v.match && v.season !== null)
+          .map((v) => v.season as number)
+      )
+    ).sort((a, b) => a - b);
 
     return NextResponse.json(
-      { q, videos, matched: videos.filter((v) => v.match).length },
+      { q, videos, matched: videos.filter((v) => v.match).length, seasons },
       { headers: { 'Cache-Control': 'private, max-age=600' } }
     );
   } catch (e) {
