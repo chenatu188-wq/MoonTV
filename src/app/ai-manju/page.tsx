@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 
@@ -117,6 +117,33 @@ function AiManjuClient() {
   }, []);
 
   // channel：同时在这个频道内搜，才能把同一个频道发的各季找齐
+  // 热播榜横向卷动：记录两端还有没有内容，决定要不要显示左右箭头
+  const rankRef = useRef<HTMLDivElement>(null);
+  const [rankEdge, setRankEdge] = useState({ left: false, right: false });
+
+  const updateRankEdge = useCallback(() => {
+    const el = rankRef.current;
+    if (!el) return;
+    setRankEdge({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+    });
+  }, []);
+
+  const scrollRank = useCallback((dir: 1 | -1) => {
+    const el = rankRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  }, []);
+
+  // 换榜单时卷回最前面；榜单载入或视窗大小改变时重算箭头
+  useEffect(() => {
+    rankRef.current?.scrollTo({ left: 0 });
+    updateRankEdge();
+    window.addEventListener('resize', updateRankEdge);
+    return () => window.removeEventListener('resize', updateRankEdge);
+  }, [ranks, rankTab, updateRankEdge]);
+
   const searchTitle = useCallback((q: string, channel?: string | null) => {
     setSearch({
       q,
@@ -477,42 +504,67 @@ function AiManjuClient() {
                 点片名在 YouTube 找这部剧
               </span>
             </div>
-            <div className='flex gap-3 overflow-x-auto pb-2'>
-              {rankList.items.map((it) => (
+            <div className='relative'>
+              {/* 左右箭头：桌机没有触控滑动，卷轴又不明显，要靠这个翻到后面的名次 */}
+              {rankEdge.left && (
                 <button
-                  key={it.seriesId}
-                  onClick={() => searchTitle(it.title)}
-                  className='group w-28 shrink-0 text-left'
-                  data-rank
+                  aria-label='往前'
+                  onClick={() => scrollRank(-1)}
+                  className='absolute left-0 top-[4.5rem] z-10 flex h-10 w-10 -translate-x-1/3 items-center justify-center rounded-full bg-white text-xl text-gray-800 shadow-lg hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'
                 >
-                  <div
-                    className={`relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
-                      search?.q === it.title ? 'ring-2 ring-red-500' : ''
-                    }`}
-                  >
-                    {it.cover && (
-                      <img
-                        src={it.cover}
-                        alt={it.title}
-                        loading='lazy'
-                        referrerPolicy='no-referrer'
-                        className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                      />
-                    )}
-                    <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
-                      {it.rank}
-                    </span>
-                  </div>
-                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-                    {it.title}
-                  </div>
-                  {it.heat && (
-                    <div className='text-xs text-gray-500 dark:text-gray-400'>
-                      {it.heat}热度
-                    </div>
-                  )}
+                  ‹
                 </button>
-              ))}
+              )}
+              {rankEdge.right && (
+                <button
+                  aria-label='往后'
+                  onClick={() => scrollRank(1)}
+                  className='absolute right-0 top-[4.5rem] z-10 flex h-10 w-10 translate-x-1/3 items-center justify-center rounded-full bg-white text-xl text-gray-800 shadow-lg hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'
+                >
+                  ›
+                </button>
+              )}
+              <div
+                ref={rankRef}
+                onScroll={updateRankEdge}
+                className='flex gap-3 overflow-x-auto pb-2'
+              >
+                {rankList.items.map((it) => (
+                  <button
+                    key={it.seriesId}
+                    onClick={() => searchTitle(it.title)}
+                    className='group w-28 shrink-0 text-left'
+                    data-rank
+                  >
+                    <div
+                      className={`relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
+                        search?.q === it.title ? 'ring-2 ring-red-500' : ''
+                      }`}
+                    >
+                      {it.cover && (
+                        <img
+                          src={it.cover}
+                          alt={it.title}
+                          loading='lazy'
+                          referrerPolicy='no-referrer'
+                          className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                        />
+                      )}
+                      <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                        {it.rank}
+                      </span>
+                    </div>
+                    <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                      {it.title}
+                    </div>
+                    {it.heat && (
+                      <div className='text-xs text-gray-500 dark:text-gray-400'>
+                        {it.heat}热度
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
