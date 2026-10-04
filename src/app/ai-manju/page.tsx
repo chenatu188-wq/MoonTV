@@ -20,6 +20,9 @@ interface Follow {
   name: string;
 }
 
+/** 一次显示几支影片 */
+const PAGE_SIZE = 120;
+
 const FOLLOWS_KEY = 'moontv_ai_manju_follows';
 const MAX_FOLLOWS = 30;
 
@@ -74,6 +77,7 @@ function AiManjuClient() {
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<string>('all');
   const [playing, setPlaying] = useState<AiManjuVideo | null>(null);
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
   // null = 还没从 localStorage 读出来，读完才发第一次请求，避免抓两次
   const [follows, setFollows] = useState<Follow[] | null>(null);
@@ -210,6 +214,9 @@ function AiManjuClient() {
     data?.videos.filter((v) => active === 'all' || v.sourceKey === active) ??
     [];
 
+  // 来源多了以后一次有上千支影片，分批显示，免得页面卡
+  const shown = videos.slice(0, limit);
+
   const followList = follows ?? [];
   const followName = (key: string) =>
     followList.find((f) => f.id === key)?.name;
@@ -238,7 +245,10 @@ function AiManjuClient() {
             {chips.map((s) => (
               <button
                 key={s.key}
-                onClick={() => setActive(s.key)}
+                onClick={() => {
+                  setActive(s.key);
+                  setLimit(PAGE_SIZE);
+                }}
                 className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                   active === s.key
                     ? 'bg-green-600 text-white'
@@ -301,7 +311,7 @@ function AiManjuClient() {
         )}
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-          {videos.map((v) => (
+          {shown.map((v) => (
             <button
               key={v.videoId}
               onClick={() => setPlaying(v)}
@@ -337,6 +347,17 @@ function AiManjuClient() {
             </button>
           ))}
         </div>
+
+        {videos.length > shown.length && (
+          <div className='mt-6 flex justify-center'>
+            <button
+              onClick={() => setLimit((n) => n + PAGE_SIZE)}
+              className='rounded-full bg-gray-100 px-6 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+            >
+              显示更多（还有 {videos.length - shown.length} 支）
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 播放器：YouTube 官方 iframe，播放数与收益仍归原作者 */}
