@@ -3,6 +3,8 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 
+import { seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
+
 import PageLayout from '@/components/PageLayout';
 
 import type { HongguoRankList } from '@/app/api/ai-manju/hongguo/route';
@@ -15,6 +17,7 @@ interface ApiResponse {
     name: string;
     id: string;
     group?: 'base' | 'mine' | 'hongguo';
+    type?: 'channel' | 'playlist';
   }[];
   failed: { key: string; name: string; error: string }[];
 }
@@ -93,6 +96,16 @@ function AiManjuClient() {
     loading: boolean;
     videos: AiManjuVideo[];
     matched: number;
+    seasons: number[];
+    error: string | null;
+  } | null>(null);
+
+  // 点进单一频道时的完整影片清单（RSS 只有最新 15 支，这里可以一直往下翻）
+  const [chan, setChan] = useState<{
+    key: string;
+    videos: AiManjuVideo[];
+    next: string | null;
+    loading: boolean;
     error: string | null;
   } | null>(null);
 
@@ -103,10 +116,23 @@ function AiManjuClient() {
       .catch(() => undefined); // 榜单抓不到就不显示这一块，不影响其他功能
   }, []);
 
-  const searchTitle = useCallback((q: string) => {
-    setSearch({ q, loading: true, videos: [], matched: 0, error: null });
+  // channel：同时在这个频道内搜，才能把同一个频道发的各季找齐
+  const searchTitle = useCallback((q: string, channel?: string | null) => {
+    setSearch({
+      q,
+      loading: true,
+      videos: [],
+      matched: 0,
+      seasons: [],
+      error: null,
+    });
     setLimit(PAGE_SIZE);
-    fetch(`/api/ai-manju/search?q=${encodeURIComponent(q)}`)
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    fetch(
+      `/api/ai-manju/search?q=${encodeURIComponent(q)}${
+        channel ? `&channel=${channel}` : ''
+      }`
+    )
       .then(async (r) => {
         const body = await r.json();
         if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
@@ -120,6 +146,7 @@ function AiManjuClient() {
                 loading: false,
                 videos: d.videos,
                 matched: d.matched,
+                seasons: d.seasons ?? [],
                 error: null,
               }
             : cur
@@ -133,6 +160,7 @@ function AiManjuClient() {
                 loading: false,
                 videos: [],
                 matched: 0,
+                seasons: [],
                 error: (e as Error).message,
               }
             : cur
@@ -293,10 +321,82 @@ function AiManjuClient() {
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
 
-  const videos = search
-    ? search.videos
-    : data?.videos.filter((v) => active === 'all' || v.sourceKey === active) ??
-      [];
+  const loadChannel = useCallback(
+    (key: string, cont?: string) => {
+      const builtin = data?.sources.find((x) => x.key === key);
+      const mine = (follows ?? []).find((f) => f.id === key);
+      const src = builtin
+        ? {
+            type: builtin.type ?? 'channel',
+            id: builtin.id,
+            name: builtin.name,
+          }
+        : mine;
+      if (!src) return;
+      setChan((cur) =>
+        cont && cur?.key === key
+          ? { ...cur, loading: true, error: null }
+          : { key, videos: [], next: null, loading: true, error: null }
+      );
+      fetch(
+        `/api/ai-manju/channel?type=${src.type}&id=${
+          src.id
+        }&name=${encodeURIComponent(src.name)}${
+          cont ? `&cont=${encodeURIComponent(cont)}` : ''
+        }`
+      )
+        .then(async (r) => {
+          const body = await r.json();
+          if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+          return body;
+        })
+        .then((d) =>
+          setChan((cur) => {
+            if (cur?.key !== key) return cur;
+            const seen = new Set(cur.videos.map((v) => v.videoId));
+            return {
+              key,
+              videos: [
+                ...cur.videos,
+                ...(d.videos as AiManjuVideo[]).filter(
+                  (v) => !seen.has(v.videoId)
+                ),
+              ],
+              next: d.next,
+              loading: false,
+              error: null,
+            };
+          })
+        )
+        .catch((e) =>
+          setChan((cur) =>
+            cur?.key === key
+              ? { ...cur, loading: false, error: (e as Error).message }
+              : cur
+          )
+        );
+    },
+    [data, follows]
+  );
+
+  // 选了单一频道就去载它的完整清单
+  const hasData = data !== null;
+  useEffect(() => {
+    if (!hasData || active === 'all') {
+      setChan(null);
+      return;
+    }
+    loadChannel(active);
+    // 只在切换频道时触发；loadChannel 会跟着 data 变，不能放进依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, hasData]);
+
+  const rssVideos =
+    data?.videos.filter((v) => active === 'all' || v.sourceKey === active) ??
+    [];
+  // 单一频道：完整清单载到了就用它，还没载到（或载失败）先用 RSS 那 15 支顶着
+  const chanReady = chan && chan.key === active && chan.videos.length > 0;
+  const videos = search ? search.videos : chanReady ? chan.videos : rssVideos;
 
   // 来源多了以后一次有上千支影片，分批显示，免得页面卡
   const shown = videos.slice(0, limit);
@@ -339,6 +439,7 @@ function AiManjuClient() {
     }`;
   const rankList = ranks?.find((l) => l.key === rankTab) ?? ranks?.[0];
   const playingChannelId = playing ? channelIdOf(playing.channelUrl) : null;
+  const playingSeries = playing ? seriesNameOf(playing.title) : null;
 
   return (
     <PageLayout activePath='/ai-manju'>
@@ -503,7 +604,11 @@ function AiManjuClient() {
                 : search.error
                 ? ''
                 : search.matched > 0
-                ? `：${search.matched} 支片名吻合，排在最前面`
+                ? `：${search.matched} 支片名吻合${
+                    search.seasons.length > 1
+                      ? `，找到第 ${search.seasons.join('、')} 季，已照季数排好`
+                      : '，排在最前面'
+                  }`
                 : '：没有片名完全吻合的，以下是相近结果'}
             </span>
             <button
@@ -569,6 +674,11 @@ function AiManjuClient() {
                   loading='lazy'
                   className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                 />
+                {seasonOf(v.title) !== null && (
+                  <span className='absolute left-1.5 top-1.5 rounded bg-green-600 px-1.5 py-0.5 text-xs font-medium text-white'>
+                    第 {seasonOf(v.title)} 季
+                  </span>
+                )}
                 <div className='absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30'>
                   <div className='opacity-0 transition-opacity group-hover:opacity-100 rounded-full bg-white/90 p-3'>
                     <svg
@@ -596,7 +706,7 @@ function AiManjuClient() {
           ))}
         </div>
 
-        {videos.length > shown.length && (
+        {videos.length > shown.length ? (
           <div className='mt-6 flex justify-center'>
             <button
               onClick={() => setLimit((n) => n + PAGE_SIZE)}
@@ -605,6 +715,34 @@ function AiManjuClient() {
               显示更多（还有 {videos.length - shown.length} 支）
             </button>
           </div>
+        ) : (
+          // 单一频道：已载入的都显示完了，再跟 YouTube 要下一页
+          !search &&
+          chan &&
+          chan.key === active &&
+          (chan.next || chan.loading || chan.error) && (
+            <div className='mt-6 flex flex-col items-center gap-2'>
+              {chan.error && (
+                <span className='text-sm text-amber-600 dark:text-amber-400'>
+                  完整清单载入失败（{chan.error}），目前只显示最新的几支
+                </span>
+              )}
+              {(chan.next || chan.loading) && (
+                <button
+                  disabled={chan.loading}
+                  onClick={() => {
+                    setLimit((n) => n + PAGE_SIZE);
+                    if (chan.next) loadChannel(active, chan.next);
+                  }}
+                  className='rounded-full bg-gray-100 px-6 py-2 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                >
+                  {chan.loading
+                    ? '载入中…'
+                    : `载入更早的影片（已显示 ${videos.length} 支）`}
+                </button>
+              )}
+            </div>
+          )
         )}
       </div>
 
@@ -641,7 +779,18 @@ function AiManjuClient() {
                   {playing.channel} ↗
                 </a>
               </div>
-              <div className='flex shrink-0 items-center gap-2'>
+              <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
+                {playingSeries && (
+                  <button
+                    onClick={() => {
+                      setPlaying(null);
+                      searchTitle(playingSeries, playingChannelId);
+                    }}
+                    className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                  >
+                    找全季
+                  </button>
+                )}
                 {playingChannelId &&
                   (isTracked(playingChannelId) ? (
                     <span className='rounded-full bg-white/10 px-4 py-2 text-sm text-gray-300'>
