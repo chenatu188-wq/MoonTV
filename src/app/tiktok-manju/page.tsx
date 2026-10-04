@@ -87,7 +87,7 @@ function TiktokManjuClient() {
 
         {/* 帐号筛选 */}
         {data && (
-          <div className='mb-6 flex max-h-40 flex-wrap items-center gap-2 overflow-y-auto'>
+          <div className='mb-6 flex flex-wrap items-center gap-2'>
             {[{ handle: 'all', name: '全部' }, ...data.accounts].map((a) => (
               <button
                 key={a.handle}
