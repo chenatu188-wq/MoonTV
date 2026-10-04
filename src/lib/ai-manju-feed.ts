@@ -11,6 +11,8 @@ export interface AiManjuVideo {
   views: number | null;
   sourceKey: string;
   sourceName: string;
+  /** 搜寻结果没有精确的时间与观看数，改用 YouTube 给的文字（例：「3 天前 · 观看次数：1.2万次」） */
+  meta?: string;
 }
 
 /**

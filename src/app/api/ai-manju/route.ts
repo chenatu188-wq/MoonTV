@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
         key: s.key,
         name: s.name,
         id: s.id,
+        group: s.group ?? 'base',
       })),
       failed,
     },
