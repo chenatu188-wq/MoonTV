@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { seasonOf } from '@/lib/ai-manju-series';
+import { episodeOf, seasonOf } from '@/lib/ai-manju-series';
 import { AI_MANJU_SOURCES, CHANNEL_ID_RE } from '@/lib/ai-manju-sources';
 import { searchAll, searchChannel, YtVideo } from '@/lib/ai-manju-youtube';
 import { toSimplified } from '@/lib/cn-converter';
@@ -13,6 +13,8 @@ export interface AiManjuSearchVideo extends YtVideo {
   match: boolean;
   /** 标题写的季数；没写是 null */
   season: number | null;
+  /** 标题写的集数（一支影片一集的连载）；没写是 null */
+  episode: number | null;
 }
 
 /** 同一部剧的搜寻结果短时间内不会变，缓存一小时 */
@@ -26,11 +28,32 @@ function norm(s: string): string {
     .toLowerCase();
 }
 
+/**
+ * hay 里有没有一段跟 needle 几乎一样。
+ * 站内的繁简对照表只有常用字（例如没有「島」），繁体标题转不干净，
+ * 所以允许每 4 个字错 1 个，免得同一部剧因为一个字没转到就对不上。
+ */
+function fuzzyIncludes(hay: string, needle: string): boolean {
+  if (hay.includes(needle)) return true;
+  const a = Array.from(hay);
+  const b = Array.from(needle);
+  const allow = Math.floor(b.length / 4);
+  if (allow === 0) return false;
+  for (let i = 0; i + b.length <= a.length; i++) {
+    let miss = 0;
+    for (let j = 0; j < b.length && miss <= allow; j++) {
+      if (a[i + j] !== b[j]) miss++;
+    }
+    if (miss <= allow) return true;
+  }
+  return false;
+}
+
 /** 片名去掉「第三季」「2」这类季数尾巴，同一部剧的各季都算命中 */
 function coreOf(title: string): string {
   return norm(
     title
-      .replace(/[:：]?第[一二三四五六七八九十\d]+季.*$/, '')
+      .replace(/[:：]?第[一二三四五六七八九十百\d]+[季集话話].*$/, '')
       .replace(/\d+$/, '')
   );
 }
@@ -62,8 +85,9 @@ async function search(q: string, channel: string | null) {
     seen.add(v.videoId);
     out.push({
       ...v,
-      match: core.length >= 3 && norm(v.title).includes(core),
+      match: core.length >= 3 && fuzzyIncludes(norm(v.title), core),
       season: seasonOf(v.title),
+      episode: episodeOf(v.title),
     });
   }
   return out;
@@ -87,20 +111,38 @@ export async function GET(request: NextRequest) {
       if (cache.size > 300) cache.delete(cache.keys().next().value as string);
     }
 
-    // 排序（由先到后）：片名吻合 → 正片（10 分钟以上，把预告和片段压到后面）
-    // → 有写季数的照季数由小到大 → 指定频道 > 内建追踪清单里的频道 > 其他
     const builtin = new Set(AI_MANJU_SOURCES.map((s) => s.id));
     const rank = (v: AiManjuSearchVideo) =>
       v.channelId === channel ? 0 : builtin.has(v.channelId) ? 1 : 2;
     const isFull = (v: AiManjuSearchVideo) => Number(v.seconds >= 600);
-    const videos = [...hit.videos].sort(
-      (a, b) =>
-        Number(b.match) - Number(a.match) ||
+    const matchedEpisodes = hit.videos.filter(
+      (v) => v.match && v.episode !== null
+    );
+    // 一支影片一集的连载（《云上双花第8集》）：每集只有几分钟，不能再用片长分正片
+    const episodic = matchedEpisodes.length >= 3;
+
+    // 排序（由先到后）：片名吻合 →
+    //   连载：有写集数的在前，照季数、集数由小到大
+    //   其他：正片（10 分钟以上，把预告和片段压到后面）→ 照季数由小到大
+    // → 指定频道 > 内建追踪清单里的频道 > 其他
+    const videos = [...hit.videos].sort((a, b) => {
+      const byMatch = Number(b.match) - Number(a.match);
+      if (byMatch || !a.match) return byMatch || rank(a) - rank(b);
+      if (episodic) {
+        return (
+          Number(b.episode !== null) - Number(a.episode !== null) ||
+          (a.season ?? 1) - (b.season ?? 1) ||
+          (a.episode ?? 0) - (b.episode ?? 0) ||
+          rank(a) - rank(b)
+        );
+      }
+      return (
         isFull(b) - isFull(a) ||
         Number(b.season !== null) - Number(a.season !== null) ||
         (a.season ?? 0) - (b.season ?? 0) ||
         rank(a) - rank(b)
-    );
+      );
+    });
 
     const seasons = Array.from(
       new Set(
@@ -111,7 +153,17 @@ export async function GET(request: NextRequest) {
     ).sort((a, b) => a - b);
 
     return NextResponse.json(
-      { q, videos, matched: videos.filter((v) => v.match).length, seasons },
+      {
+        q,
+        videos,
+        matched: videos.filter((v) => v.match).length,
+        seasons,
+        episodes: episodic
+          ? Array.from(
+              new Set(matchedEpisodes.map((v) => v.episode as number))
+            ).sort((a, b) => a - b)
+          : [],
+      },
       { headers: { 'Cache-Control': 'private, max-age=600' } }
     );
   } catch (e) {

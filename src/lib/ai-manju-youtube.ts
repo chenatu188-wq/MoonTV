@@ -183,22 +183,36 @@ export async function listSource(
   return { videos: parseVideos(data, fallback), next: nextToken(data) };
 }
 
-/** 在单一频道内搜寻 */
+/**
+ * 在单一频道内搜寻。一页约 30 支，连载剧动辄上百集，
+ * 所以往下多翻几页（最多 4 页），集数才凑得齐。
+ */
 export async function searchChannel(
   channelId: string,
   query: string
 ): Promise<YtVideo[]> {
-  const data = await browse({
+  let data = await browse({
     browseId: channelId,
     params: PARAMS_SEARCH,
     query,
   });
-  const name = text(
-    collect(data, 'channelMetadataRenderer')[0]?.title
-      ? { simpleText: collect(data, 'channelMetadataRenderer')[0].title }
-      : undefined
-  );
-  return parseVideos(data, { channel: name, channelId });
+  const name: string = collect(data, 'channelMetadataRenderer')[0]?.title ?? '';
+  const fallback = { channel: name, channelId };
+
+  const out = parseVideos(data, fallback);
+  const seen = new Set(out.map((v) => v.videoId));
+  for (let page = 1; page < 4; page++) {
+    const token = nextToken(data);
+    if (!token) break;
+    data = await browse({ continuation: token });
+    const more = parseVideos(data, fallback).filter(
+      (v) => !seen.has(v.videoId)
+    );
+    if (more.length === 0) break;
+    more.forEach((v) => seen.add(v.videoId));
+    out.push(...more);
+  }
+  return out;
 }
 
 /** 全 YouTube 搜寻 */

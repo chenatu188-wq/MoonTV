@@ -3,7 +3,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
-import { seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
+import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 
 import PageLayout from '@/components/PageLayout';
 
@@ -60,6 +60,18 @@ function saveFollows(list: Follow[]) {
   }
 }
 
+/** 缩图左上角的「第 2 季」「第 8 集」标签；标题没写就不显示 */
+function badgeOf(title: string): string {
+  const season = seasonOf(title);
+  const episode = episodeOf(title);
+  return [
+    season !== null ? `第 ${season} 季` : '',
+    episode !== null ? `第 ${episode} 集` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 /** 从 feed 给的频道网址取出 UCxxxx */
 function channelIdOf(url: string): string | null {
   return /\/channel\/(UC[\w-]{22})/.exec(url)?.[1] ?? null;
@@ -97,6 +109,7 @@ function AiManjuClient() {
     videos: AiManjuVideo[];
     matched: number;
     seasons: number[];
+    episodes: number[];
     error: string | null;
   } | null>(null);
 
@@ -151,6 +164,7 @@ function AiManjuClient() {
       videos: [],
       matched: 0,
       seasons: [],
+      episodes: [],
       error: null,
     });
     setLimit(PAGE_SIZE);
@@ -174,6 +188,7 @@ function AiManjuClient() {
                 videos: d.videos,
                 matched: d.matched,
                 seasons: d.seasons ?? [],
+                episodes: d.episodes ?? [],
                 error: null,
               }
             : cur
@@ -188,6 +203,7 @@ function AiManjuClient() {
                 videos: [],
                 matched: 0,
                 seasons: [],
+                episodes: [],
                 error: (e as Error).message,
               }
             : cur
@@ -657,7 +673,11 @@ function AiManjuClient() {
                 ? ''
                 : search.matched > 0
                 ? `：${search.matched} 支片名吻合${
-                    search.seasons.length > 1
+                    search.episodes.length > 1
+                      ? `，找到第 ${search.episodes[0]}～${
+                          search.episodes[search.episodes.length - 1]
+                        } 集中的 ${search.episodes.length} 集，已照集数排好`
+                      : search.seasons.length > 1
                       ? `，找到第 ${search.seasons.join('、')} 季，已照季数排好`
                       : '，排在最前面'
                   }`
@@ -726,9 +746,9 @@ function AiManjuClient() {
                   loading='lazy'
                   className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                 />
-                {seasonOf(v.title) !== null && (
+                {badgeOf(v.title) && (
                   <span className='absolute left-1.5 top-1.5 rounded bg-green-600 px-1.5 py-0.5 text-xs font-medium text-white'>
-                    第 {seasonOf(v.title)} 季
+                    {badgeOf(v.title)}
                   </span>
                 )}
                 <div className='absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30'>
@@ -840,7 +860,7 @@ function AiManjuClient() {
                     }}
                     className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
                   >
-                    找全季
+                    找全季／全集
                   </button>
                 )}
                 {playingChannelId &&
