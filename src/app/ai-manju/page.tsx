@@ -103,6 +103,8 @@ function AiManjuClient() {
   // 红果热播榜：只当「找哪部剧」的依据，点片名就去 YouTube 搜那部剧
   const [ranks, setRanks] = useState<HongguoRankList[] | null>(null);
   const [rankTab, setRankTab] = useState('ai');
+  // 手动输入片名搜 YouTube（在抖音看到片段、想找完整版时用）
+  const [query, setQuery] = useState('');
   const [search, setSearch] = useState<{
     q: string;
     loading: boolean;
@@ -496,6 +498,45 @@ function AiManjuClient() {
           </p>
         </div>
 
+        {/* 搜寻：直接搜整个 YouTube，不限于已追踪的频道 */}
+        <form
+          className='mb-6 flex max-w-xl gap-2'
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = query.trim();
+            if (q) searchTitle(q.slice(0, 80));
+          }}
+        >
+          <div className='relative min-w-0 flex-1'>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder='输入剧名，在 YouTube 找完整版（繁简皆可）'
+              className='w-full rounded-full border border-gray-300 bg-white py-2 pl-4 pr-10 text-sm text-gray-900 outline-none focus:border-green-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
+            />
+            {query && (
+              <button
+                type='button'
+                aria-label='清除搜寻'
+                onClick={() => {
+                  setQuery('');
+                  setSearch(null);
+                }}
+                className='absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 text-lg leading-none text-gray-500 hover:text-gray-900 dark:hover:text-white'
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <button
+            type='submit'
+            disabled={!query.trim()}
+            className='shrink-0 rounded-full bg-green-600 px-5 py-2 text-sm text-white hover:bg-green-500 disabled:opacity-50'
+          >
+            搜寻
+          </button>
+        </form>
+
         {/* 红果热播榜：横向卷动，点片名去 YouTube 找那部剧 */}
         {rankList && ranks && (
           <div className='mb-6'>
@@ -681,10 +722,13 @@ function AiManjuClient() {
                       ? `，找到第 ${search.seasons.join('、')} 季，已照季数排好`
                       : '，排在最前面'
                   }`
-                : '：没有片名完全吻合的，以下是相近结果'}
+                : '：没有片名完全吻合的，可能 YouTube 上还没有人上传；以下是相近结果'}
             </span>
             <button
-              onClick={() => setSearch(null)}
+              onClick={() => {
+                setSearch(null);
+                setQuery('');
+              }}
               className='rounded-full bg-white px-3 py-1 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             >
               ← 回到追踪列表

@@ -215,8 +215,7 @@ export async function searchChannel(
   return out;
 }
 
-/** 全 YouTube 搜寻 */
-export async function searchAll(query: string): Promise<YtVideo[]> {
+async function searchAllOnce(query: string): Promise<YtVideo[]> {
   const res = await fetch(
     `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
     {
@@ -230,4 +229,14 @@ export async function searchAll(query: string): Promise<YtVideo[]> {
   );
   if (!m) throw new Error('YouTube 没有回传搜寻结果（可能被挡）');
   return parseVideos(JSON.parse(m[1]));
+}
+
+/** 全 YouTube 搜寻。YouTube 偶尔会回空页或被挡一下，失败就隔半秒再试一次 */
+export async function searchAll(query: string): Promise<YtVideo[]> {
+  try {
+    return await searchAllOnce(query);
+  } catch {
+    await new Promise((r) => setTimeout(r, 500));
+    return searchAllOnce(query);
+  }
 }
