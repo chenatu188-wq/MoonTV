@@ -26,6 +26,8 @@ const LISTS = [
   { key: 'ai', name: 'AI剧热播榜', path: '/rank/hot-ai-drama' },
   { key: 'comic', name: '漫剧热播榜', path: '/rank/hot-comic-drama' },
   { key: 'real', name: '真人剧热播榜', path: '/rank/hot-real-drama' },
+  // 官网叫「红果热播榜」，不分类型的总榜；页面标题已经叫红果热播榜，这里改称综合
+  { key: 'all', name: '综合热播榜', path: '/rank/hot-drama' },
 ];
 
 const UA =
