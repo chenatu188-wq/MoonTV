@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { episodeOf, seasonOf } from '@/lib/ai-manju-series';
 import { AI_MANJU_SOURCES, CHANNEL_ID_RE } from '@/lib/ai-manju-sources';
 import { searchAll, searchChannel, YtVideo } from '@/lib/ai-manju-youtube';
-import { toSimplified } from '@/lib/cn-converter';
+import { toSimplifiedFull } from '@/lib/t2s-table';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,30 +23,9 @@ const cache = new Map<string, { videos: AiManjuSearchVideo[]; at: number }>();
 
 /** 比对用：转简体、去掉标点空白。YouTube 标题繁简都有，红果片名是简体 */
 function norm(s: string): string {
-  return toSimplified(s)
+  return toSimplifiedFull(s)
     .replace(/[^\p{L}\p{N}]+/gu, '')
     .toLowerCase();
-}
-
-/**
- * hay 里有没有一段跟 needle 几乎一样。
- * 站内的繁简对照表只有常用字（例如没有「島」），繁体标题转不干净，
- * 所以允许每 4 个字错 1 个，免得同一部剧因为一个字没转到就对不上。
- */
-function fuzzyIncludes(hay: string, needle: string): boolean {
-  if (hay.includes(needle)) return true;
-  const a = Array.from(hay);
-  const b = Array.from(needle);
-  const allow = Math.floor(b.length / 4);
-  if (allow === 0) return false;
-  for (let i = 0; i + b.length <= a.length; i++) {
-    let miss = 0;
-    for (let j = 0; j < b.length && miss <= allow; j++) {
-      if (a[i + j] !== b[j]) miss++;
-    }
-    if (miss <= allow) return true;
-  }
-  return false;
 }
 
 /** 片名去掉「第三季」「2」这类季数尾巴，同一部剧的各季都算命中 */
@@ -85,7 +64,7 @@ async function search(q: string, channel: string | null) {
     seen.add(v.videoId);
     out.push({
       ...v,
-      match: core.length >= 3 && fuzzyIncludes(norm(v.title), core),
+      match: core.length >= 3 && norm(v.title).includes(core),
       season: seasonOf(v.title),
       episode: episodeOf(v.title),
     });

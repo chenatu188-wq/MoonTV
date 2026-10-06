@@ -25,6 +25,7 @@ export interface HongguoRankList {
 const LISTS = [
   { key: 'ai', name: 'AI剧热播榜', path: '/rank/hot-ai-drama' },
   { key: 'comic', name: '漫剧热播榜', path: '/rank/hot-comic-drama' },
+  { key: 'real', name: '真人剧热播榜', path: '/rank/hot-real-drama' },
 ];
 
 const UA =
@@ -49,7 +50,9 @@ function parseRank(html: string): HongguoRankItem[] {
     items.push({
       rank: items.length + 1,
       seriesId: m[1],
-      title: m[2].trim(),
+      // 红果的页面偶尔在片名里夹不可见的控制字元
+      // eslint-disable-next-line no-control-regex
+      title: m[2].replace(/[\u0000-\u001f]/g, '').trim(),
       cover: cover.replace(/&amp;/g, '&'),
       heat,
     });
@@ -58,18 +61,25 @@ function parseRank(html: string): HongguoRankItem[] {
 }
 
 async function load(): Promise<HongguoRankList[]> {
-  return Promise.all(
+  // 各榜分开抓：其中一个抓不到不影响其他榜
+  const results = await Promise.all(
     LISTS.map(async (l) => {
-      const res = await fetch(`https://hongguoduanju.com${l.path}`, {
-        headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
-        cache: 'no-store',
-      });
-      if (!res.ok) throw new Error(`${l.name} HTTP ${res.status}`);
-      const items = parseRank(await res.text());
-      if (items.length === 0) throw new Error(`${l.name} 解析到 0 笔`);
-      return { key: l.key, name: l.name, items };
+      try {
+        const res = await fetch(`https://hongguoduanju.com${l.path}`, {
+          headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
+          cache: 'no-store',
+        });
+        if (!res.ok) return null;
+        const items = parseRank(await res.text());
+        return items.length ? { key: l.key, name: l.name, items } : null;
+      } catch {
+        return null;
+      }
     })
   );
+  const lists = results.filter((l): l is HongguoRankList => l !== null);
+  if (lists.length === 0) throw new Error('所有榜单都抓不到');
+  return lists;
 }
 
 export async function GET() {
