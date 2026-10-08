@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+import { type CatalogItem, newestFirst, parseCatalog } from '@/lib/hongguo-new';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +12,8 @@ export interface HongguoRankItem {
   cover: string;
   /** 例：「7047万」 */
   heat: string;
+  /** 取代热度显示的说明（新上线榜用：「10/05 上线 · 全197集」） */
+  note?: string;
 }
 
 export interface HongguoRankList {
@@ -62,6 +66,79 @@ function parseRank(html: string): HongguoRankItem[] {
   return items;
 }
 
+/**
+ * 新上线：官网没有这个榜，也不能按时间排序。但剧的 series_id 是字节的雪花 ID，
+ * 高 32 位就是建立时间（秒），所以把分类页整个翻一遍、按 ID 由大到小排就是新上线。
+ * 只翻 AI 剧和漫剧两类（各约 34 页）；真人剧量太大会把榜单洗掉。
+ */
+const NEW_CATEGORIES = ['ai-drama', 'comic-drama'];
+const NEW_MAX_PAGES = 40;
+const NEW_CONCURRENCY = 8;
+
+let newCache: { list: HongguoRankList; at: number } | null = null;
+let newInflight: Promise<void> | null = null;
+
+async function fetchCatalogPage(category: string, page: number) {
+  try {
+    const res = await fetch(
+      `https://hongguoduanju.com/category/${category}?page=${page}`,
+      {
+        headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
+        cache: 'no-store',
+      }
+    );
+    if (!res.ok) return null;
+    return parseCatalog(await res.text());
+  } catch {
+    return null;
+  }
+}
+
+async function loadNew(): Promise<HongguoRankList | null> {
+  // 先抓各分类第一页，知道总共几页
+  const firsts = await Promise.all(
+    NEW_CATEGORIES.map((c) => fetchCatalogPage(c, 1))
+  );
+  const all: CatalogItem[] = [];
+  const jobs: { category: string; page: number }[] = [];
+  firsts.forEach((first, i) => {
+    if (!first) return;
+    all.push(...first.items);
+    const pages = Math.min(first.pages, NEW_MAX_PAGES);
+    for (let p = 2; p <= pages; p++)
+      jobs.push({ category: NEW_CATEGORIES[i], page: p });
+  });
+
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: NEW_CONCURRENCY }, async () => {
+      while (next < jobs.length) {
+        const job = jobs[next++];
+        const got = await fetchCatalogPage(job.category, job.page);
+        if (got) all.push(...got.items);
+      }
+    })
+  );
+
+  const items = newestFirst(all, 40);
+  return items.length ? { key: 'new', name: '新上线', items } : null;
+}
+
+/** 翻完全部分类页要十几秒，放背景跑，不挡热播榜 */
+function refreshNew(): Promise<void> {
+  if (!newInflight) {
+    newInflight = loadNew()
+      .then((list) => {
+        if (list) newCache = { list, at: Date.now() };
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        newInflight = null;
+      });
+  }
+  return newInflight;
+}
+
 async function load(): Promise<HongguoRankList[]> {
   // 各榜分开抓：其中一个抓不到不影响其他榜
   const results = await Promise.all(
@@ -98,8 +175,25 @@ export async function GET() {
       }
     }
   }
+  if (!newCache || Date.now() - newCache.at > FRESH_MS) {
+    const pending = refreshNew();
+    // 第一次还没有资料时最多等 4 秒；等不到就先回热播榜，前端稍后会再问一次
+    if (!newCache) {
+      await Promise.race([pending, new Promise((r) => setTimeout(r, 4000))]);
+    }
+  }
+  const lists = newCache ? [...cache.lists, newCache.list] : cache.lists;
   return NextResponse.json(
-    { lists: cache.lists, updated: Math.floor(cache.at / 1000) },
-    { headers: { 'Cache-Control': 'private, max-age=1800' } }
+    {
+      lists,
+      updated: Math.floor(cache.at / 1000),
+      // 新上线榜还在背景整理
+      pending: !newCache,
+    },
+    {
+      headers: {
+        'Cache-Control': newCache ? 'private, max-age=1800' : 'no-store',
+      },
+    }
   );
 }
