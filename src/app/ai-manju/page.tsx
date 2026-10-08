@@ -220,12 +220,12 @@ function AiManjuClient() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let tries = 0;
     const load = () =>
-      fetch('/api/ai-manju/hongguo?v=2')
+      fetch('/api/ai-manju/hongguo?v=3')
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (d?.lists) setRanks(d.lists);
           // 「新上线」要翻完整个片库，伺服器第一次整理要十几秒，晚点再问
-          if (d?.pending && tries++ < 4) timer = setTimeout(load, 15000);
+          if (d?.pending && tries++ < 6) timer = setTimeout(load, 15000);
         })
         .catch(() => undefined); // 榜单抓不到就不显示这一块，不影响其他功能
     load();
