@@ -217,10 +217,19 @@ function AiManjuClient() {
   } | null>(null);
 
   useEffect(() => {
-    fetch('/api/ai-manju/hongguo')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d?.lists && setRanks(d.lists))
-      .catch(() => undefined); // 榜单抓不到就不显示这一块，不影响其他功能
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let tries = 0;
+    const load = () =>
+      fetch('/api/ai-manju/hongguo?v=2')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.lists) setRanks(d.lists);
+          // 「新上线」要翻完整个片库，伺服器第一次整理要十几秒，晚点再问
+          if (d?.pending && tries++ < 4) timer = setTimeout(load, 15000);
+        })
+        .catch(() => undefined); // 榜单抓不到就不显示这一块，不影响其他功能
+    load();
+    return () => clearTimeout(timer);
   }, []);
 
   // channel：同时在这个频道内搜，才能把同一个频道发的各季找齐
@@ -676,9 +685,9 @@ function AiManjuClient() {
                   <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
                     {it.title}
                   </div>
-                  {it.heat && (
+                  {(it.note || it.heat) && (
                     <div className='text-xs text-gray-500 dark:text-gray-400'>
-                      {it.heat}热度
+                      {it.note ?? `${it.heat}热度`}
                     </div>
                   )}
                 </button>
