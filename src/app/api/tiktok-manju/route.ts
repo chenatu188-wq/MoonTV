@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+import { type PendingFollow, listPending, settle } from '@/lib/tiktok-follows';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -21,23 +23,28 @@ export interface TiktokManjuData {
   accounts: { handle: string; name: string }[];
   videos: TiktokManjuVideo[];
   failed: { handle: string; error: string; stale: boolean }[];
+  /** 还在等 Mac 处理的追踪变更 */
+  pending?: PendingFollow[];
 }
 
 /**
  * TikTok 没有 RSS，帐号的影片清单只能用 yt-dlp 抓，而 yt-dlp 没办法跑在这个容器里。
  * 所以改由站长的 Mac 定时抓（~/projects/tiktok-manju，launchd 每 6 小时），
  * 结果推到这个 repo 的 tiktok-data 分支，这里只负责读那份 JSON。
- * 追踪名单也在 Mac 上（tiktok-follow add @帐号），不在这个 repo 里。
+ * 追踪名单也在 Mac 上，不在这个 repo 里；网页上的追踪／移除见 lib/tiktok-follows.ts。
  */
 const DATA_URL =
   'https://raw.githubusercontent.com/chenatu188-wq/MoonTV/tiktok-data/tiktok.json';
 
 /** 伺服器记忆体缓存，免得每次开页都去打 GitHub */
 const FRESH_MS = 5 * 60 * 1000;
+/** 有追踪变更在等的时候勤一点去看，新资料一出来就显示 */
+const FRESH_PENDING_MS = 45 * 1000;
 let cache: { data: TiktokManjuData; at: number } | null = null;
 
 export async function GET() {
-  if (!cache || Date.now() - cache.at > FRESH_MS) {
+  const fresh = listPending().length > 0 ? FRESH_PENDING_MS : FRESH_MS;
+  if (!cache || Date.now() - cache.at > fresh) {
     try {
       const res = await fetch(DATA_URL, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -53,7 +60,19 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json(cache.data, {
-    headers: { 'Cache-Control': 'private, max-age=300' },
-  });
+  // 新资料里已经看得到结果的追踪变更，从待办划掉
+  settle([
+    ...cache.data.accounts.map((a) => a.handle),
+    ...cache.data.failed.map((f) => f.handle),
+  ]);
+  const pending = listPending();
+
+  return NextResponse.json(
+    { ...cache.data, pending },
+    {
+      headers: {
+        'Cache-Control': pending.length ? 'no-store' : 'private, max-age=300',
+      },
+    }
+  );
 }
