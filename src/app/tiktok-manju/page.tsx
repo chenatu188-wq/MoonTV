@@ -1,9 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { toSimplifiedFull } from '@/lib/t2s-table';
+import {
+  type PendingFollow,
+  MAX_ACCOUNTS,
+  PENDING_TTL_MS,
+} from '@/lib/tiktok-follows';
 
 import PageLayout from '@/components/PageLayout';
 
@@ -43,6 +48,46 @@ const PAGE_SIZE = 120;
 const norm = (s: string) =>
   toSimplifiedFull(s).replace(/\s+/g, '').toLowerCase();
 
+/** 浏览器自己也留一份待办：伺服器重新部署会忘记，下次开页由这里补送 */
+const PENDING_KEY = 'moontv_tiktok_pending';
+
+function readLocalPending(): PendingFollow[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(PENDING_KEY) ?? '[]');
+    return Array.isArray(list)
+      ? list.filter(
+          (p) =>
+            p &&
+            typeof p.handle === 'string' &&
+            (p.op === 'add' || p.op === 'rm') &&
+            Date.now() - Number(p.at) < PENDING_TTL_MS
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalPending(list: PendingFollow[]) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+  } catch {
+    // 无痕模式等写不进去就算了，只是少了重新部署后的补送
+  }
+}
+
+function postFollow(op: 'add' | 'rm', handle: string, total: number) {
+  return fetch('/api/tiktok-manju/follows', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op, handle, total }),
+  }).then(async (r) => {
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+    return body as { handle: string; pending: PendingFollow[] };
+  });
+}
+
 function TiktokManjuClient() {
   const [data, setData] = useState<TiktokManjuData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,27 +95,117 @@ function TiktokManjuClient() {
   const [playing, setPlaying] = useState<TiktokManjuVideo | null>(null);
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(PAGE_SIZE);
+  // 追踪管理
+  const [manageOpen, setManageOpen] = useState(false);
+  const [addInput, setAddInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, setPending] = useState<PendingFollow[]>([]);
+  const resent = useRef(false);
 
-  useEffect(() => {
-    fetch('/api/tiktok-manju')
+  const load = useCallback(() => {
+    return fetch('/api/tiktok-manju?v=2')
       .then(async (r) => {
         const body = await r.json();
         if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
-        return body;
+        return body as TiktokManjuData;
       })
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        setError(null);
+
+        // 资料里已经看得到结果的待办划掉；其余的跟伺服器的合并
+        const known = new Set(
+          [...d.accounts, ...d.failed].map((x) => x.handle.toLowerCase())
+        );
+        const alive = (p: PendingFollow) =>
+          p.op === 'add' ? !known.has(p.handle) : known.has(p.handle);
+        const server = (d.pending ?? []).filter(alive);
+        const local = readLocalPending().filter(alive);
+        const merged = [...server];
+        const lost: PendingFollow[] = [];
+        for (const p of local) {
+          if (!server.some((s) => s.handle === p.handle)) {
+            merged.push(p);
+            lost.push(p);
+          }
+        }
+        writeLocalPending(merged);
+        setPending(merged);
+
+        // 伺服器不记得的（重新部署过）补送一次
+        if (lost.length && !resent.current) {
+          resent.current = true;
+          lost.forEach((p) =>
+            postFollow(p.op, p.handle, 0).catch(() => undefined)
+          );
+        }
+      })
       .catch((e) => setError((e as Error).message));
   }, []);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // 有变更在等的时候，每 30 秒看一次处理好了没
+  useEffect(() => {
+    if (pending.length === 0) return;
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [pending.length, load]);
+
+  const submitFollow = useCallback(
+    async (op: 'add' | 'rm', raw: string) => {
+      setBusy(true);
+      setMsg(null);
+      try {
+        const total = data?.accounts.length ?? 0;
+        const res = await postFollow(op, raw, total);
+        const known = new Set(
+          [...(data?.accounts ?? []), ...(data?.failed ?? [])].map((x) =>
+            x.handle.toLowerCase()
+          )
+        );
+        if (op === 'add' && known.has(res.handle)) {
+          setMsg({ ok: true, text: `@${res.handle} 已经在追踪了` });
+          return;
+        }
+        const next = [
+          ...pending.filter((p) => p.handle !== res.handle),
+          { op, handle: res.handle, at: Date.now() },
+        ];
+        writeLocalPending(next);
+        setPending(next);
+        setAddInput('');
+        setMsg({
+          ok: true,
+          text:
+            op === 'add'
+              ? `已送出 @${res.handle}，大约 5 到 10 分钟后会出现影片`
+              : `已送出，@${res.handle} 大约 5 到 10 分钟后移除`,
+        });
+      } catch (e) {
+        setMsg({ ok: false, text: (e as Error).message });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [data, pending]
+  );
+
   // 打开播放器时锁背景滚动
   useEffect(() => {
-    document.body.style.overflow = playing ? 'hidden' : '';
+    document.body.style.overflow = playing || manageOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
-  }, [playing]);
+  }, [playing, manageOpen]);
 
-  const close = useCallback(() => setPlaying(null), []);
+  const close = useCallback(() => {
+    setPlaying(null);
+    setManageOpen(false);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
@@ -139,6 +274,16 @@ function TiktokManjuClient() {
         {/* 帐号筛选 */}
         {data && (
           <div className='mb-6 flex flex-wrap items-center gap-2'>
+            <button
+              onClick={() => {
+                setMsg(null);
+                setManageOpen(true);
+              }}
+              className='px-3 py-1.5 rounded-full text-sm border border-dashed border-green-600 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20'
+            >
+              ＋ 管理追踪
+              {pending.length > 0 && `（${pending.length} 笔处理中）`}
+            </button>
             {[{ handle: 'all', name: '全部' }, ...data.accounts].map((a) => (
               <button
                 key={a.handle}
@@ -234,6 +379,145 @@ function TiktokManjuClient() {
           </div>
         )}
       </div>
+
+      {/* 管理追踪 */}
+      {manageOpen && data && (
+        <div
+          className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4'
+          onClick={close}
+        >
+          <div
+            className='flex max-h-full w-full max-w-lg flex-col rounded-xl bg-white p-5 dark:bg-gray-900'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className='mb-3 flex items-center justify-between'>
+              <h2 className='text-lg font-bold text-gray-900 dark:text-gray-100'>
+                管理追踪（{data.accounts.length}／{MAX_ACCOUNTS}）
+              </h2>
+              <button
+                onClick={close}
+                aria-label='关闭'
+                className='rounded-full px-2 text-2xl leading-none text-gray-500 hover:text-gray-900 dark:hover:text-white'
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              className='flex gap-2'
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (addInput.trim()) submitFollow('add', addInput);
+              }}
+            >
+              <input
+                value={addInput}
+                onChange={(e) => setAddInput(e.target.value)}
+                placeholder='@帐号 或 https://www.tiktok.com/@帐号'
+                className='min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-green-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
+              />
+              <button
+                type='submit'
+                disabled={busy || !addInput.trim()}
+                className='shrink-0 rounded-lg bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-500 disabled:opacity-50'
+              >
+                追踪
+              </button>
+            </form>
+            <p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
+              追踪名单是全站共用的，所有人、所有装置看到的都一样。送出后要等 5
+              到 10
+              分钟才会生效。帐号若关闭了「允许嵌入」或限定地区，会抓不到影片。
+            </p>
+            {msg && (
+              <p
+                className={`mt-2 text-sm ${
+                  msg.ok
+                    ? 'text-green-700 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                {msg.text}
+              </p>
+            )}
+
+            <div className='mt-4 min-h-0 flex-1 overflow-y-auto'>
+              {pending.length > 0 && (
+                <ul className='mb-3 divide-y divide-gray-200 rounded-lg bg-amber-50 px-3 dark:divide-gray-700 dark:bg-amber-900/20'>
+                  {pending.map((p) => (
+                    <li
+                      key={p.handle}
+                      className='flex items-center justify-between gap-3 py-2 text-sm'
+                    >
+                      <span className='min-w-0 truncate text-amber-800 dark:text-amber-300'>
+                        {p.op === 'add' ? '加入中' : '移除中'} @{p.handle}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <ul className='divide-y divide-gray-200 dark:divide-gray-800'>
+                {[
+                  ...data.accounts.map((a) => ({ ...a, bad: false })),
+                  ...data.failed
+                    .filter(
+                      (f) => !data.accounts.some((a) => a.handle === f.handle)
+                    )
+                    .map((f) => ({
+                      handle: f.handle,
+                      name: '抓不到影片',
+                      bad: true,
+                    })),
+                ].map((a) => {
+                  const removing = pending.some(
+                    (p) => p.op === 'rm' && p.handle === a.handle.toLowerCase()
+                  );
+                  return (
+                    <li
+                      key={a.handle}
+                      className='flex items-center justify-between gap-3 py-2'
+                    >
+                      <a
+                        href={`https://www.tiktok.com/@${a.handle}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='min-w-0'
+                      >
+                        <div
+                          className={`truncate text-sm ${
+                            a.bad
+                              ? 'text-amber-700 dark:text-amber-400'
+                              : 'text-gray-900 dark:text-gray-100'
+                          }`}
+                        >
+                          {a.name}
+                        </div>
+                        <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                          @{a.handle}
+                        </div>
+                      </a>
+                      <button
+                        disabled={busy || removing}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `确定不再追踪「${a.name}」@${a.handle}？全站都会看不到这个帐号。`
+                            )
+                          )
+                            submitFollow('rm', a.handle);
+                        }}
+                        className='shrink-0 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:border-red-500 hover:text-red-600 disabled:opacity-50 dark:border-gray-700 dark:text-gray-400'
+                      >
+                        {removing ? '移除中' : '移除'}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 播放器：TikTok 官方嵌入播放器，直式影片 */}
       {playing && (
