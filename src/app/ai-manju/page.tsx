@@ -1,8 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
+import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 
 import PageLayout from '@/components/PageLayout';
@@ -31,6 +39,13 @@ interface Follow {
 
 /** 一次显示几支影片 */
 const PAGE_SIZE = 120;
+
+type TrackTab = 'latest' | 'week' | 'month';
+const TRACK_TABS: { key: TrackTab; name: string }[] = [
+  { key: 'latest', name: '最新上架' },
+  { key: 'week', name: '本周热门' },
+  { key: 'month', name: '本月热门' },
+];
 
 const FOLLOWS_KEY = 'moontv_ai_manju_follows';
 const MAX_FOLLOWS = 30;
@@ -94,6 +109,81 @@ function formatViews(n: number | null): string {
   return `${n} 次观看`;
 }
 
+/**
+ * 横向卷动的一排卡片，两端还有内容时显示左右箭头。
+ * 桌机没有触控滑动，卷轴又不明显，要靠箭头翻到后面。
+ * resetKey 变了（换分页）就卷回最前面。
+ */
+function HScroll({
+  resetKey,
+  arrowTop,
+  children,
+}: {
+  resetKey: string;
+  arrowTop: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setEdge({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+    });
+  }, []);
+
+  const scroll = (dir: 1 | -1) => {
+    const el = ref.current;
+    if (el)
+      el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    ref.current?.scrollTo({ left: 0 });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [resetKey, update]);
+
+  const arrow =
+    'absolute z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl text-gray-800 shadow-lg hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600';
+
+  return (
+    <div className='relative'>
+      {edge.left && (
+        <button
+          aria-label='往前'
+          onClick={() => scroll(-1)}
+          className={`${arrow} left-0 -translate-x-1/3`}
+          style={{ top: arrowTop }}
+        >
+          ‹
+        </button>
+      )}
+      {edge.right && (
+        <button
+          aria-label='往后'
+          onClick={() => scroll(1)}
+          className={`${arrow} right-0 translate-x-1/3`}
+          style={{ top: arrowTop }}
+        >
+          ›
+        </button>
+      )}
+      <div
+        ref={ref}
+        onScroll={update}
+        className='flex gap-3 overflow-x-auto pb-2'
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function AiManjuClient() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +193,8 @@ function AiManjuClient() {
   // 红果热播榜：只当「找哪部剧」的依据，点片名就去 YouTube 搜那部剧
   const [ranks, setRanks] = useState<HongguoRankList[] | null>(null);
   const [rankTab, setRankTab] = useState('ai');
+  // 追踪频道榜：各频道最新一支／近期最多人看
+  const [trackTab, setTrackTab] = useState<TrackTab>('latest');
   // 手动输入片名搜 YouTube（在抖音看到片段、想找完整版时用）
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState<{
@@ -132,33 +224,6 @@ function AiManjuClient() {
   }, []);
 
   // channel：同时在这个频道内搜，才能把同一个频道发的各季找齐
-  // 热播榜横向卷动：记录两端还有没有内容，决定要不要显示左右箭头
-  const rankRef = useRef<HTMLDivElement>(null);
-  const [rankEdge, setRankEdge] = useState({ left: false, right: false });
-
-  const updateRankEdge = useCallback(() => {
-    const el = rankRef.current;
-    if (!el) return;
-    setRankEdge({
-      left: el.scrollLeft > 4,
-      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
-    });
-  }, []);
-
-  const scrollRank = useCallback((dir: 1 | -1) => {
-    const el = rankRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
-  }, []);
-
-  // 换榜单时卷回最前面；榜单载入或视窗大小改变时重算箭头
-  useEffect(() => {
-    rankRef.current?.scrollTo({ left: 0 });
-    updateRankEdge();
-    window.addEventListener('resize', updateRankEdge);
-    return () => window.removeEventListener('resize', updateRankEdge);
-  }, [ranks, rankTab, updateRankEdge]);
-
   const searchTitle = useCallback((q: string, channel?: string | null) => {
     setSearch({
       q,
@@ -483,6 +548,24 @@ function AiManjuClient() {
         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
     }`;
   const rankList = ranks?.find((l) => l.key === rankTab) ?? ranks?.[0];
+  const allVideos = data?.videos;
+  const trackItems = useMemo(() => {
+    if (!allVideos) return [];
+    if (trackTab === 'latest') {
+      return latestPerSource(allVideos).map((video) => ({
+        video,
+        title: video.title,
+        views: video.views ?? 0,
+        count: 1,
+      }));
+    }
+    return hotRank(allVideos, trackTab === 'week' ? 7 : 30).map((h) => ({
+      video: h.video,
+      title: h.series ?? h.video.title,
+      views: h.views,
+      count: h.count,
+    }));
+  }, [allVideos, trackTab]);
   const playingChannelId = playing ? channelIdOf(playing.channelUrl) : null;
   const playingSeries = playing ? seriesNameOf(playing.title) : null;
 
@@ -561,68 +644,115 @@ function AiManjuClient() {
                 点片名在 YouTube 找这部剧
               </span>
             </div>
-            <div className='relative'>
-              {/* 左右箭头：桌机没有触控滑动，卷轴又不明显，要靠这个翻到后面的名次 */}
-              {rankEdge.left && (
+            <HScroll
+              resetKey={`${rankList.key}:${rankList.items.length}`}
+              arrowTop='4.5rem'
+            >
+              {rankList.items.map((it) => (
                 <button
-                  aria-label='往前'
-                  onClick={() => scrollRank(-1)}
-                  className='absolute left-0 top-[4.5rem] z-10 flex h-10 w-10 -translate-x-1/3 items-center justify-center rounded-full bg-white text-xl text-gray-800 shadow-lg hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'
+                  key={it.seriesId}
+                  onClick={() => searchTitle(it.title)}
+                  className='group w-28 shrink-0 text-left'
+                  data-rank
                 >
-                  ‹
-                </button>
-              )}
-              {rankEdge.right && (
-                <button
-                  aria-label='往后'
-                  onClick={() => scrollRank(1)}
-                  className='absolute right-0 top-[4.5rem] z-10 flex h-10 w-10 translate-x-1/3 items-center justify-center rounded-full bg-white text-xl text-gray-800 shadow-lg hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'
-                >
-                  ›
-                </button>
-              )}
-              <div
-                ref={rankRef}
-                onScroll={updateRankEdge}
-                className='flex gap-3 overflow-x-auto pb-2'
-              >
-                {rankList.items.map((it) => (
-                  <button
-                    key={it.seriesId}
-                    onClick={() => searchTitle(it.title)}
-                    className='group w-28 shrink-0 text-left'
-                    data-rank
+                  <div
+                    className={`relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
+                      search?.q === it.title ? 'ring-2 ring-red-500' : ''
+                    }`}
                   >
-                    <div
-                      className={`relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
-                        search?.q === it.title ? 'ring-2 ring-red-500' : ''
-                      }`}
-                    >
-                      {it.cover && (
-                        <img
-                          src={it.cover}
-                          alt={it.title}
-                          loading='lazy'
-                          referrerPolicy='no-referrer'
-                          className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                        />
-                      )}
-                      <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
-                        {it.rank}
-                      </span>
-                    </div>
-                    <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-                      {it.title}
-                    </div>
-                    {it.heat && (
-                      <div className='text-xs text-gray-500 dark:text-gray-400'>
-                        {it.heat}热度
-                      </div>
+                    {it.cover && (
+                      <img
+                        src={it.cover}
+                        alt={it.title}
+                        loading='lazy'
+                        referrerPolicy='no-referrer'
+                        className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                      />
                     )}
-                  </button>
-                ))}
-              </div>
+                    <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                      {it.rank}
+                    </span>
+                  </div>
+                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                    {it.title}
+                  </div>
+                  {it.heat && (
+                    <div className='text-xs text-gray-500 dark:text-gray-400'>
+                      {it.heat}热度
+                    </div>
+                  )}
+                </button>
+              ))}
+            </HScroll>
+          </div>
+        )}
+
+        {/* 追踪频道榜：跟红果榜同一种排法，内容换成我们追踪的频道 */}
+        {trackItems.length > 0 && (
+          <div className='mb-6'>
+            <div className='mb-2 flex flex-wrap items-center gap-2'>
+              <h2 className='text-base font-bold text-gray-900 dark:text-gray-100'>
+                追踪频道
+              </h2>
+              {TRACK_TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTrackTab(t.key)}
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    trackTab === t.key
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                {trackTab === 'latest'
+                  ? '每个频道最新的一支，点了直接播'
+                  : '依观看数排名，点了直接播'}
+              </span>
             </div>
+            <HScroll
+              resetKey={`${trackTab}:${trackItems.length}`}
+              arrowTop='2.75rem'
+            >
+              {trackItems.map((it, i) => (
+                <button
+                  key={it.video.videoId}
+                  onClick={() => setPlaying(it.video)}
+                  className='group w-44 shrink-0 text-left'
+                  data-track
+                >
+                  <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+                    <img
+                      src={it.video.thumbnail}
+                      alt={it.title}
+                      loading='lazy'
+                      className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                    />
+                    <span className='absolute left-0 top-0 rounded-br-lg bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white'>
+                      {trackTab === 'latest'
+                        ? timeAgo(it.video.published)
+                        : i + 1}
+                    </span>
+                    {it.count > 1 && (
+                      <span className='absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[10px] text-white'>
+                        {it.count} 支
+                      </span>
+                    )}
+                  </div>
+                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                    {it.title}
+                  </div>
+                  <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                    {trackTab === 'latest'
+                      ? it.video.sourceName
+                      : `${formatViews(it.views)} · ${it.video.sourceName}`}
+                  </div>
+                </button>
+              ))}
+            </HScroll>
           </div>
         )}
 
