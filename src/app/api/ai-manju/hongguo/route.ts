@@ -69,13 +69,17 @@ function parseRank(html: string): HongguoRankItem[] {
 /**
  * 新上线：官网没有这个榜，也不能按时间排序。但剧的 series_id 是字节的雪花 ID，
  * 高 32 位就是建立时间（秒），所以把分类页整个翻一遍、按 ID 由大到小排就是新上线。
- * 只翻 AI 剧和漫剧两类（各约 34 页）；真人剧量太大会把榜单洗掉。
+ * 每个分类约 34 页，三个分类共一百页左右。
  */
-const NEW_CATEGORIES = ['ai-drama', 'comic-drama'];
+// 真人剧另开一个榜：量太大，混在一起会把 AI 剧、漫剧洗掉
+const NEW_LISTS = [
+  { key: 'new', name: '新上线', categories: ['ai-drama', 'comic-drama'] },
+  { key: 'new-real', name: '真人新上线', categories: ['real-drama'] },
+];
 const NEW_MAX_PAGES = 40;
 const NEW_CONCURRENCY = 8;
 
-let newCache: { list: HongguoRankList; at: number } | null = null;
+let newCache: { lists: HongguoRankList[]; at: number } | null = null;
 let newInflight: Promise<void> | null = null;
 
 async function fetchCatalogPage(category: string, page: number) {
@@ -94,19 +98,22 @@ async function fetchCatalogPage(category: string, page: number) {
   }
 }
 
-async function loadNew(): Promise<HongguoRankList | null> {
+async function loadNew(): Promise<HongguoRankList[]> {
   // 先抓各分类第一页，知道总共几页
+  const categories = NEW_LISTS.flatMap((l) => l.categories);
   const firsts = await Promise.all(
-    NEW_CATEGORIES.map((c) => fetchCatalogPage(c, 1))
+    categories.map((c) => fetchCatalogPage(c, 1))
   );
-  const all: CatalogItem[] = [];
+  const byCategory = new Map<string, CatalogItem[]>(
+    categories.map((c) => [c, []])
+  );
   const jobs: { category: string; page: number }[] = [];
   firsts.forEach((first, i) => {
     if (!first) return;
-    all.push(...first.items);
+    byCategory.get(categories[i])?.push(...first.items);
     const pages = Math.min(first.pages, NEW_MAX_PAGES);
     for (let p = 2; p <= pages; p++)
-      jobs.push({ category: NEW_CATEGORIES[i], page: p });
+      jobs.push({ category: categories[i], page: p });
   });
 
   let next = 0;
@@ -115,21 +122,27 @@ async function loadNew(): Promise<HongguoRankList | null> {
       while (next < jobs.length) {
         const job = jobs[next++];
         const got = await fetchCatalogPage(job.category, job.page);
-        if (got) all.push(...got.items);
+        if (got) byCategory.get(job.category)?.push(...got.items);
       }
     })
   );
 
-  const items = newestFirst(all, 40);
-  return items.length ? { key: 'new', name: '新上线', items } : null;
+  return NEW_LISTS.map((l) => ({
+    key: l.key,
+    name: l.name,
+    items: newestFirst(
+      l.categories.flatMap((c) => byCategory.get(c) ?? []),
+      40
+    ),
+  })).filter((l) => l.items.length > 0);
 }
 
-/** 翻完全部分类页要十几秒，放背景跑，不挡热播榜 */
+/** 翻完全部分类页要二三十秒，放背景跑，不挡热播榜 */
 function refreshNew(): Promise<void> {
   if (!newInflight) {
     newInflight = loadNew()
-      .then((list) => {
-        if (list) newCache = { list, at: Date.now() };
+      .then((lists) => {
+        if (lists.length) newCache = { lists, at: Date.now() };
       })
       .catch(() => undefined)
       .finally(() => {
@@ -182,7 +195,7 @@ export async function GET() {
       await Promise.race([pending, new Promise((r) => setTimeout(r, 4000))]);
     }
   }
-  const lists = newCache ? [...cache.lists, newCache.list] : cache.lists;
+  const lists = newCache ? [...cache.lists, ...newCache.lists] : cache.lists;
   return NextResponse.json(
     {
       lists,
