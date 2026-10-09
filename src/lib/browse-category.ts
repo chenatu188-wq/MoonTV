@@ -38,3 +38,37 @@ export async function firstNonEmpty<TCandidate, TResult>(
 
   return { candidate: null, result: lastResult };
 }
+
+export const ANIME_3D_KEYWORDS = ['3D动漫', '3D動畫', '动漫', '動畫', '动画'];
+export const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
+  '3D動漫-中國': [
+    '3D动漫',
+    '3D動畫',
+    '中国动漫',
+    '国产动漫',
+    '國產動漫',
+    '动漫',
+    '動畫',
+    '动画',
+  ],
+  '3D動漫-日本': [
+    '3D动漫',
+    '3D動畫',
+    '日本动漫',
+    '日韩动漫',
+    '日韓動漫',
+    '动漫',
+    '動畫',
+    '动画',
+  ],
+  '3D動漫-歐美': [
+    '3D动漫',
+    '3D動畫',
+    '欧美动漫',
+    '歐美動漫',
+    '海外动漫',
+    '动漫',
+    '動畫',
+    '动画',
+  ],
+};

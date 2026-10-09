@@ -1,9 +1,12 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 
+import type { LatestItem } from '@/lib/browse-latest';
 import { SearchResult } from '@/lib/types';
 
+import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
@@ -45,6 +48,26 @@ interface ApiSiteInfo {
   group?: string;
 }
 
+type RankTab = 'latest' | 'hot';
+interface RankCard {
+  key: string;
+  title: string;
+  poster: string;
+  /** 卡片左上角的字：上架日期或名次 */
+  badge: string;
+  /** 片名下面那一行 */
+  note: string;
+  href: string;
+}
+
+/** Unix 秒 → 台北时间的「10/09」 */
+function shortDate(sec: number): string {
+  const d = new Date((sec + 8 * 3600) * 1000);
+  return `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(
+    d.getUTCDate()
+  ).padStart(2, '0')}`;
+}
+
 function BrowseClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -61,6 +84,73 @@ function BrowseClient() {
   const [pagecount, setPagecount] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  // 動漫分區上方的榜單：最新上架（各來源合併）／熱門（豆瓣近期熱門動畫）
+  const [rankTab, setRankTab] = useState<RankTab>('latest');
+  const [latestRank, setLatestRank] = useState<RankCard[]>([]);
+  const [hotRank, setHotRank] = useState<RankCard[]>([]);
+
+  useEffect(() => {
+    if (category !== 'anime3d' || latestRank.length > 0) return;
+    fetch('/api/browse/latest')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { items?: LatestItem[] } | null) => {
+        if (!d?.items) return;
+        setLatestRank(
+          d.items.map((it) => ({
+            key: `${it.source}-${it.id}`,
+            title: it.title,
+            poster: it.poster,
+            badge: shortDate(it.added),
+            note: it.remarks || it.source_name,
+            href: `/play?source=${encodeURIComponent(
+              it.source
+            )}&id=${encodeURIComponent(it.id)}&title=${encodeURIComponent(
+              it.title
+            )}${it.year ? `&year=${it.year}` : ''}`,
+          }))
+        );
+      })
+      .catch(() => undefined); // 榜單抓不到就不顯示，不影響下面的瀏覽
+    fetch(
+      '/api/douban/categories?kind=tv&category=tv&type=tv_animation&limit=30&start=0'
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then(
+        (
+          d: {
+            list?: {
+              id: string;
+              title: string;
+              poster: string;
+              rate: string;
+              year: string;
+            }[];
+          } | null
+        ) => {
+          if (!d?.list) return;
+          setHotRank(
+            d.list.map((it, i) => ({
+              key: `douban-${it.id}`,
+              title: it.title,
+              // 豆瓣圖床擋外站直接載入（回 418），走站內的圖片代理
+              poster: it.poster
+                ? `/api/image-proxy?url=${encodeURIComponent(it.poster)}`
+                : '',
+              badge: String(i + 1),
+              note: it.rate ? `豆瓣 ${it.rate}` : '暫無評分',
+              // 跟首頁的豆瓣卡片一樣：帶片名去播放頁，自動找有這部片的來源
+              href: `/play?title=${encodeURIComponent(it.title.trim())}${
+                it.year ? `&year=${it.year}` : ''
+              }&stype=tv`,
+            }))
+          );
+        }
+      )
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category]);
+
+  const rankCards = rankTab === 'latest' ? latestRank : hotRank;
 
   // Derived: sources filtered by current category
   const sources = allSources.filter((s) =>
@@ -196,6 +286,77 @@ function BrowseClient() {
             </button>
           ))}
         </div>
+
+        {/* 動漫榜：最新上架／熱門 */}
+        {category === 'anime3d' &&
+          (latestRank.length > 0 || hotRank.length > 0) && (
+            <div>
+              <div className='mb-2 flex flex-wrap items-center gap-2'>
+                <h2 className='text-base font-bold text-gray-800 dark:text-white'>
+                  動漫榜
+                </h2>
+                {(
+                  [
+                    { key: 'latest', name: '最新上架榜', n: latestRank.length },
+                    { key: 'hot', name: '熱門榜', n: hotRank.length },
+                  ] as { key: RankTab; name: string; n: number }[]
+                )
+                  .filter((t) => t.n > 0)
+                  .map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setRankTab(t.key)}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        (rankCards.length > 0 ? rankTab : '') === t.key
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                <span className='text-xs text-gray-500 dark:text-gray-400'>
+                  {rankTab === 'latest'
+                    ? '各來源最近上架的動漫，點了直接播'
+                    : '豆瓣近期熱門動畫，點了自動找片源'}
+                </span>
+              </div>
+              <HScroll
+                resetKey={`${rankTab}:${rankCards.length}`}
+                arrowTop='4.5rem'
+              >
+                {rankCards.map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={() => router.push(c.href)}
+                    className='group w-28 shrink-0 text-left'
+                    data-rank
+                  >
+                    <div className='relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+                      {c.poster && (
+                        <img
+                          src={c.poster}
+                          alt={c.title}
+                          loading='lazy'
+                          referrerPolicy='no-referrer'
+                          className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                        />
+                      )}
+                      <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                        {c.badge}
+                      </span>
+                    </div>
+                    <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                      {c.title}
+                    </div>
+                    <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                      {c.note}
+                    </div>
+                  </button>
+                ))}
+              </HScroll>
+            </div>
+          )}
 
         {/* Source tabs */}
         {sources.length > 0 && (
