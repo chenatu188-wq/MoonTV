@@ -395,8 +395,8 @@
     },
     "lzcaiji.com": {
       "api": "https://cj.lzcaiji.com/api.php/provide/vod",
-      "name": "🔞量子采集",
-      "group": "🔞"
+      "name": "量子采集",
+      "group": "電視劇"
     },
     "lzcaiji_korea": {
       "api": "https://cj.lzcaiji.com/api.php/provide/vod",
@@ -415,13 +415,13 @@
     },
     "wujinapi.me": {
       "api": "https://api.wujinapi.me/api.php/provide/vod",
-      "name": "🔞无尽资源",
-      "group": "🔞"
+      "name": "无尽资源2",
+      "group": "電視劇"
     },
     "ffzyapi.com": {
       "api": "https://cj.ffzyapi.com/api.php/provide/vod",
-      "name": "🔞飞飞资源",
-      "group": "🔞"
+      "name": "飞飞资源",
+      "group": "電視劇"
     },
     "thzy1.me": {
       "api": "https://thzy1.me/api.php/provide/vod",
