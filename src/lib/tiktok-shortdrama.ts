@@ -59,3 +59,42 @@ export function parseDramaList(data: any): ShortDrama[] {
   }
   return out;
 }
+
+const UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+
+/** 抓片单的一页（20 部）。回的是 TikTok 的原始 JSON，交给 parseDramaList 整理 */
+export async function fetchDramaPage(
+  theme: number,
+  cursor: string
+): Promise<any> {
+  const q = new URLSearchParams({
+    aid: '1988',
+    app_name: 'tiktok_web',
+    device_platform: 'web_pc',
+    app_language: 'zh-Hant-TW',
+    language: 'zh-Hant-TW',
+    region: 'TW',
+    priority_region: 'TW',
+    storeRegion: 'TW',
+    coverFormat: '2',
+    count: '20',
+    cursor,
+    themeType: String(theme),
+  });
+  const res = await fetch(
+    `https://www.tiktok.com/api/drama/theme/drama_list/?${q}`,
+    {
+      headers: {
+        'User-Agent': UA,
+        Referer: 'https://www.tiktok.com/shortdrama',
+      },
+      cache: 'no-store',
+    }
+  );
+  if (!res.ok) throw new Error(`TikTok 回应 HTTP ${res.status}`);
+  // 被挡的时候会回 200 但内容是空的
+  const text = await res.text();
+  if (!text) throw new Error('TikTok 回了空内容（可能被挡）');
+  return JSON.parse(text);
+}
