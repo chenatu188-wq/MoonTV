@@ -347,6 +347,34 @@ function TiktokManjuClient() {
           </div>
         )}
 
+        {/* 推荐：TikTok 不开放搜寻，没办法在站内列出没追踪的帐号，改连到 TikTok 自己的推荐页 */}
+        <div className='mb-6 flex flex-wrap items-center gap-2'>
+          <h2 className='text-base font-bold text-gray-900 dark:text-gray-100'>
+            推荐榜
+          </h2>
+          <a
+            href='https://www.tiktok.com/foryou'
+            target='_blank'
+            rel='noopener noreferrer'
+            className='rounded-full bg-gray-900 px-4 py-1.5 text-sm text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200'
+          >
+            TikTok 为您推荐 ↗
+          </a>
+          <a
+            href={`https://www.tiktok.com/search?q=${encodeURIComponent(
+              'AI漫剧'
+            )}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            className='rounded-full bg-gray-100 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+          >
+            在 TikTok 搜「AI漫剧」 ↗
+          </a>
+          <span className='text-xs text-gray-500 dark:text-gray-400'>
+            看到喜欢的帐号，把 @帐号 贴到下面的「＋ 管理追踪」
+          </span>
+        </div>
+
         {/* 搜寻 */}
         {data && (
           <div className='mb-4 flex flex-wrap items-center gap-3'>
