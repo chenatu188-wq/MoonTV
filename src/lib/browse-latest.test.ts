@@ -1,4 +1,10 @@
-import { addedAt, isAdultCategoryName, mergeLatest } from '@/lib/browse-latest';
+import {
+  addedAt,
+  hitsLookReal,
+  isAdultCategoryName,
+  mergeHot,
+  mergeLatest,
+} from '@/lib/browse-latest';
 
 const NOW = 1_791_500_000;
 const raw = (id: number, name: string, daysAgo: number, extra = {}) => ({
@@ -99,5 +105,80 @@ describe('mergeLatest', () => {
     expect(
       mergeLatest([{ source: 'a', source_name: 'A', list }], 40, NOW)
     ).toHaveLength(40);
+  });
+});
+
+const hit = (
+  id: number,
+  name: string,
+  total: number,
+  month: number,
+  week: number,
+  day = 0
+) => ({
+  vod_id: id,
+  vod_name: name,
+  vod_hits: total,
+  vod_hits_month: month,
+  vod_hits_week: week,
+  vod_hits_day: day,
+});
+// 真的计数器：日 ≤ 周 ≤ 月 ≤ 总
+const REAL = [
+  hit(1, '甲', 4521, 4426, 1318, 20),
+  hit(2, '乙', 300, 300, 300, 5),
+  hit(3, '丙', 9000, 2000, 500, 80),
+  hit(4, '丁', 50, 50, 10),
+  hit(5, '戊', 700, 100, 40, 3),
+];
+// 乱数填的：周比总还多
+const FAKE = [
+  hit(11, '假一', 520, 895, 340, 913),
+  hit(12, '假二', 243, 941, 245, 500),
+  hit(13, '假三', 987, 104, 409, 55),
+  hit(14, '假四', 518, 936, 799, 179),
+  hit(15, '假五', 976, 148, 28, 887),
+];
+
+describe('hitsLookReal', () => {
+  it('日 ≤ 周 ≤ 月 ≤ 总 的才算真的', () => {
+    expect(hitsLookReal(REAL)).toBe(true);
+    expect(hitsLookReal(FAKE)).toBe(false);
+  });
+  it('全是 0 或样本太少不算', () => {
+    expect(hitsLookReal([hit(1, 'a', 0, 0, 0)])).toBe(false);
+    expect(hitsLookReal(REAL.slice(0, 3))).toBe(false);
+    expect(hitsLookReal([])).toBe(false);
+  });
+});
+
+describe('mergeHot', () => {
+  it('只用点击数可信的来源，按本月点击排', () => {
+    const r = mergeHot([
+      { source: 'real', source_name: '真', list: REAL },
+      { source: 'fake', source_name: '假', list: FAKE },
+    ]);
+    expect(r.map((x) => x.title)).toEqual(['甲', '丙', '乙', '戊', '丁']);
+    expect(r[0]).toMatchObject({ source: 'real', hits: 4426 });
+  });
+  it('没有可信来源就回空阵列', () => {
+    expect(
+      mergeHot([{ source: 'fake', source_name: '假', list: FAKE }])
+    ).toEqual([]);
+  });
+  it('同一部片留点击多的那个来源', () => {
+    const other = REAL.map((x) => ({
+      ...x,
+      vod_hits: 99999,
+      vod_hits_month: x.vod_name === '丁' ? 8888 : 1,
+      vod_hits_week: 1,
+      vod_hits_day: 0,
+    }));
+    const r = mergeHot([
+      { source: 'a', source_name: 'A', list: REAL },
+      { source: 'b', source_name: 'B', list: other },
+    ]);
+    expect(r[0]).toMatchObject({ title: '丁', source: 'b', hits: 8888 });
+    expect(r).toHaveLength(5);
   });
 });
