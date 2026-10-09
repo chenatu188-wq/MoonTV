@@ -4,7 +4,6 @@ import {
   Clapperboard,
   Clover,
   Film,
-  Flame,
   Home,
   Music2,
   Search,
@@ -38,7 +37,6 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     { icon: Sparkles, label: '动漫', href: '/browse?category=anime3d' },
     { icon: Wand2, label: 'AI 漫剧', href: '/ai-manju' },
     { icon: Music2, label: 'TikTok', href: '/tiktok-manju' },
-    { icon: Flame, label: '彩虹', href: '/adult' },
   ];
 
   const isActive = (href: string) => {
