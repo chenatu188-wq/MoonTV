@@ -19,6 +19,8 @@ const CONTEXT = {
 /** 频道「影片」分页 / 频道内搜寻 的固定参数 */
 const PARAMS_VIDEOS = 'EgZ2aWRlb3PyBgQKAjoA';
 const PARAMS_SEARCH = 'EgZzZWFyY2jyBgQKAloA';
+/** YouTube 搜寻的筛选条件：只要影片、本周上传 */
+export const SP_VIDEO_THIS_WEEK = 'EgQIAxAB';
 
 export interface YtVideo extends AiManjuVideo {
   channelId: string;
@@ -215,9 +217,11 @@ export async function searchChannel(
   return out;
 }
 
-async function searchAllOnce(query: string): Promise<YtVideo[]> {
+async function searchAllOnce(query: string, sp?: string): Promise<YtVideo[]> {
   const res = await fetch(
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}${
+      sp ? `&sp=${encodeURIComponent(sp)}` : ''
+    }`,
     {
       headers: { ...YT_HEADERS, Accept: 'text/html,*/*;q=0.8' },
       cache: 'no-store',
@@ -232,11 +236,14 @@ async function searchAllOnce(query: string): Promise<YtVideo[]> {
 }
 
 /** 全 YouTube 搜寻。YouTube 偶尔会回空页或被挡一下，失败就隔半秒再试一次 */
-export async function searchAll(query: string): Promise<YtVideo[]> {
+export async function searchAll(
+  query: string,
+  sp?: string
+): Promise<YtVideo[]> {
   try {
-    return await searchAllOnce(query);
+    return await searchAllOnce(query, sp);
   } catch {
     await new Promise((r) => setTimeout(r, 500));
-    return searchAllOnce(query);
+    return searchAllOnce(query, sp);
   }
 }
