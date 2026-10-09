@@ -186,6 +186,33 @@ export async function listSource(
 }
 
 /**
+ * 频道「影片」分页上方那排「最新／热门／最早」的第二颗（热门）的翻页 token。
+ * 用位置而不是文字找：文字会跟着语系变。拿不到回 null。
+ */
+export function popularToken(data: any): string | null {
+  const chip = collect(data, 'chipViewModel')[1];
+  return chip?.tapCommand?.innertubeCommand?.continuationCommand?.token ?? null;
+}
+
+/**
+ * 频道里观看数最高的影片（YouTube 自己的「热门」排序，算的是全部影片，不只最近）。
+ * 要打两次：先开影片分页拿到「热门」的 token，再用它换排序。
+ * 影片太少的频道没有排序列，直接回它仅有的那几支。
+ */
+export async function listPopular(
+  channelId: string,
+  limit = 20
+): Promise<YtVideo[]> {
+  const first = await browse({ browseId: channelId, params: PARAMS_VIDEOS });
+  const name: string =
+    collect(first, 'channelMetadataRenderer')[0]?.title ?? '';
+  const fallback = { channel: name, channelId };
+  const token = popularToken(first);
+  const data = token ? await browse({ continuation: token }) : first;
+  return parseVideos(data, fallback).slice(0, limit);
+}
+
+/**
  * 在单一频道内搜寻。一页约 30 支，连载剧动辄上百集，
  * 所以往下多翻几页（最多 4 页），集数才凑得齐。
  */
