@@ -1,13 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
@@ -120,6 +114,17 @@ function AiManjuClient() {
   const [rankTab, setRankTab] = useState('ai');
   // 追踪频道榜：各频道最新一支／近期最多人看
   const [trackTab, setTrackTab] = useState<TrackTab>('latest');
+  // 推荐榜：还没追踪的频道本周发的漫剧，用来发现新频道
+  const [recommend, setRecommend] = useState<
+    (AiManjuVideo & { channelId: string })[] | null
+  >(null);
+
+  useEffect(() => {
+    fetch('/api/ai-manju/recommend')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.videos && setRecommend(d.videos))
+      .catch(() => undefined); // 推荐抓不到就不显示这一块
+  }, []);
   // 手动输入片名搜 YouTube（在抖音看到片段、想找完整版时用）
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState<{
@@ -482,6 +487,10 @@ function AiManjuClient() {
         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
     }`;
   const rankList = ranks?.find((l) => l.key === rankTab) ?? ranks?.[0];
+  // 伺服器只知道内建清单；使用者自己追踪的存在浏览器，这里再滤一次，追踪后也会马上消失
+  const recommendItems = (recommend ?? []).filter(
+    (v) => !isTracked(v.channelId)
+  );
   const allVideos = data?.videos;
   const trackItems = useMemo(() => {
     if (!allVideos) return [];
@@ -684,6 +693,56 @@ function AiManjuClient() {
                       ? it.video.sourceName
                       : `${formatViews(it.views)} · ${it.video.sourceName}`}
                   </div>
+                </button>
+              ))}
+            </HScroll>
+          </div>
+        )}
+
+        {/* 推荐榜：没追踪的频道。看到喜欢的，在播放器按「＋ 追踪此频道」 */}
+        {recommendItems.length > 0 && (
+          <div className='mb-6'>
+            <div className='mb-2 flex flex-wrap items-center gap-2'>
+              <h2 className='text-base font-bold text-gray-900 dark:text-gray-100'>
+                推荐榜
+              </h2>
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                还没追踪的频道本周发的漫剧 · 喜欢就在播放器按「＋ 追踪此频道」
+              </span>
+            </div>
+            <HScroll
+              resetKey={`rec:${recommendItems.length}`}
+              arrowTop='2.75rem'
+            >
+              {recommendItems.map((v) => (
+                <button
+                  key={v.videoId}
+                  onClick={() => setPlaying(v)}
+                  className='group w-44 shrink-0 text-left'
+                  data-recommend
+                >
+                  <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+                    <img
+                      src={v.thumbnail}
+                      alt={v.title}
+                      loading='lazy'
+                      className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                    />
+                    <span className='absolute left-0 top-0 rounded-br-lg bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                      新频道
+                    </span>
+                  </div>
+                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                    {v.title}
+                  </div>
+                  <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                    {v.channel}
+                  </div>
+                  {v.meta && (
+                    <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                      {v.meta}
+                    </div>
+                  )}
                 </button>
               ))}
             </HScroll>
