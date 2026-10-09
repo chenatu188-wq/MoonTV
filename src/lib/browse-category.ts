@@ -72,3 +72,74 @@ export const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
     '动画',
   ],
 };
+
+/**
+ * 分区榜单（最新上架榜／热门榜）用的设定。
+ * 关键字跟 api/browse/route.ts 里各分区的是同一套；那边两个分支写法不同所以没有共用，
+ * 改关键字时两边要一起改。
+ */
+export interface BrowseRankConfig {
+  /** 这个分区的来源属于哪个群组 */
+  matchGroup: (group: string) => boolean;
+  /** 挑上游分类用的关键字 */
+  keywords: (group: string) => string[];
+}
+
+export const BROWSE_RANK_CONFIG: Record<string, BrowseRankConfig> = {
+  movie: {
+    matchGroup: (g) => g === '電影',
+    keywords: () => [
+      '电影片',
+      '电影',
+      '電影',
+      '动作片',
+      '剧情片',
+      '劇情片',
+      '科幻片',
+      '喜剧片',
+    ],
+  },
+  hollywood: {
+    matchGroup: (g) => g === '好萊塢',
+    keywords: () => [
+      '欧美电影',
+      '科幻片',
+      '动作片',
+      '战争片',
+      '喜剧片',
+      '剧情片',
+      '电影',
+      '電影',
+    ],
+  },
+  duanju: {
+    matchGroup: (g) => g === '短劇',
+    keywords: () => ['短剧', '短劇'],
+  },
+  tv: {
+    matchGroup: (g) => g === '電視劇',
+    keywords: () => [
+      '国产剧',
+      '大陆剧',
+      '电视剧',
+      '連續劇',
+      '连续剧',
+      '欧美剧',
+      '美国剧',
+      '香港剧',
+      '台湾剧',
+      '韩剧',
+      '韩国剧',
+      '日剧',
+      '日本剧',
+    ],
+  },
+  tv_korean: {
+    matchGroup: (g) => g === '電視劇',
+    keywords: () => ['韩剧', '韩国剧', '韓劇', '韓國劇'],
+  },
+  anime3d: {
+    matchGroup: (g) => g.startsWith('3D動漫'),
+    keywords: (g) => ANIME_3D_REGION_KEYWORDS[g] || ANIME_3D_KEYWORDS,
+  },
+};

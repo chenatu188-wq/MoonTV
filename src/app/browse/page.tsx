@@ -68,6 +68,49 @@ function shortDate(sec: number): string {
   ).padStart(2, '0')}`;
 }
 
+/** 各分區熱門榜的資料來源 */
+const HOT_SOURCES: Record<
+  string,
+  | { kind: 'douban'; query: string; stype: string; label: string }
+  | { kind: 'hongguo'; label: string }
+> = {
+  movie: {
+    kind: 'douban',
+    query: `kind=movie&category=${encodeURIComponent(
+      '热门'
+    )}&type=${encodeURIComponent('全部')}`,
+    stype: 'movie',
+    label: '豆瓣近期熱門電影',
+  },
+  hollywood: {
+    kind: 'douban',
+    query: `kind=movie&category=${encodeURIComponent(
+      '热门'
+    )}&type=${encodeURIComponent('欧美')}`,
+    stype: 'movie',
+    label: '豆瓣近期熱門歐美電影',
+  },
+  tv: {
+    kind: 'douban',
+    query: 'kind=tv&category=tv&type=tv',
+    stype: 'tv',
+    label: '豆瓣近期熱門電視劇',
+  },
+  tv_korean: {
+    kind: 'douban',
+    query: 'kind=tv&category=tv&type=tv_korean',
+    stype: 'tv',
+    label: '豆瓣近期熱門韓劇',
+  },
+  anime3d: {
+    kind: 'douban',
+    query: 'kind=tv&category=tv&type=tv_animation',
+    stype: 'tv',
+    label: '豆瓣近期熱門動畫',
+  },
+  duanju: { kind: 'hongguo', label: '紅果短劇真人劇熱播榜' },
+};
+
 function BrowseClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,17 +127,21 @@ function BrowseClient() {
   const [pagecount, setPagecount] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  // 動漫分區上方的榜單：最新上架（各來源合併）／熱門（豆瓣近期熱門動畫）
+  // 每個分區上方的榜單：最新上架（各來源合併）／熱門（豆瓣或紅果）
   const [rankTab, setRankTab] = useState<RankTab>('latest');
   const [latestRank, setLatestRank] = useState<RankCard[]>([]);
   const [hotRank, setHotRank] = useState<RankCard[]>([]);
 
   useEffect(() => {
-    if (category !== 'anime3d' || latestRank.length > 0) return;
-    fetch('/api/browse/latest')
+    let stale = false; // 切到別的分區後，舊分區晚到的結果不要蓋上來
+    setLatestRank([]);
+    setHotRank([]);
+    setRankTab('latest');
+
+    fetch(`/api/browse/latest?category=${category}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { items?: LatestItem[] } | null) => {
-        if (!d?.items) return;
+        if (stale || !d?.items) return;
         setLatestRank(
           d.items.map((it) => ({
             key: `${it.source}-${it.id}`,
@@ -111,46 +158,95 @@ function BrowseClient() {
         );
       })
       .catch(() => undefined); // 榜單抓不到就不顯示，不影響下面的瀏覽
-    fetch(
-      '/api/douban/categories?kind=tv&category=tv&type=tv_animation&limit=30&start=0'
-    )
-      .then((r) => (r.ok ? r.json() : null))
-      .then(
-        (
-          d: {
-            list?: {
-              id: string;
-              title: string;
-              poster: string;
-              rate: string;
-              year: string;
-            }[];
-          } | null
-        ) => {
-          if (!d?.list) return;
-          setHotRank(
-            d.list.map((it, i) => ({
-              key: `douban-${it.id}`,
-              title: it.title,
-              // 豆瓣圖床擋外站直接載入（回 418），走站內的圖片代理
-              poster: it.poster
-                ? `/api/image-proxy?url=${encodeURIComponent(it.poster)}`
-                : '',
-              badge: String(i + 1),
-              note: it.rate ? `豆瓣 ${it.rate}` : '暫無評分',
-              // 跟首頁的豆瓣卡片一樣：帶片名去播放頁，自動找有這部片的來源
-              href: `/play?title=${encodeURIComponent(it.title.trim())}${
-                it.year ? `&year=${it.year}` : ''
-              }&stype=tv`,
-            }))
-          );
-        }
-      )
-      .catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // 帶片名去播放頁，自動找有這部片的來源（跟首頁的豆瓣卡片一樣）
+    const playByTitle = (title: string, year: string, stype: string) =>
+      `/play?title=${encodeURIComponent(title.trim())}${
+        year ? `&year=${year}` : ''
+      }&stype=${stype}`;
+
+    const hot = HOT_SOURCES[category];
+    if (hot?.kind === 'douban') {
+      fetch(`/api/douban/categories?${hot.query}&limit=30&start=0`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then(
+          (
+            d: {
+              list?: {
+                id: string;
+                title: string;
+                poster: string;
+                rate: string;
+                year: string;
+              }[];
+            } | null
+          ) => {
+            if (stale || !d?.list) return;
+            setHotRank(
+              d.list.map((it, i) => ({
+                key: `douban-${it.id}`,
+                title: it.title,
+                // 豆瓣圖床擋外站直接載入（回 418），走站內的圖片代理
+                poster: it.poster
+                  ? `/api/image-proxy?url=${encodeURIComponent(it.poster)}`
+                  : '',
+                badge: String(i + 1),
+                note: it.rate ? `豆瓣 ${it.rate}` : '暫無評分',
+                href: playByTitle(it.title, it.year, hot.stype),
+              }))
+            );
+          }
+        )
+        .catch(() => undefined);
+    } else if (hot?.kind === 'hongguo') {
+      // 豆瓣沒有短劇榜，改用紅果短劇的真人劇熱播榜
+      fetch('/api/ai-manju/hongguo?v=3')
+        .then((r) => (r.ok ? r.json() : null))
+        .then(
+          (
+            d: {
+              lists?: {
+                key: string;
+                items: {
+                  seriesId: string;
+                  title: string;
+                  cover: string;
+                  heat: string;
+                }[];
+              }[];
+            } | null
+          ) => {
+            const list = d?.lists?.find((l) => l.key === 'real');
+            if (stale || !list) return;
+            setHotRank(
+              list.items.map((it, i) => ({
+                key: `hongguo-${it.seriesId}`,
+                title: it.title,
+                poster: it.cover,
+                badge: String(i + 1),
+                note: it.heat ? `${it.heat}熱度` : '',
+                href: playByTitle(it.title, '', 'tv'),
+              }))
+            );
+          }
+        )
+        .catch(() => undefined);
+    }
+    return () => {
+      stale = true;
+    };
   }, [category]);
 
-  const rankCards = rankTab === 'latest' ? latestRank : hotRank;
+  // 其中一個榜還沒載到（或抓不到）時，先顯示有資料的那個
+  const shownTab: RankTab =
+    rankTab === 'latest'
+      ? latestRank.length > 0
+        ? 'latest'
+        : 'hot'
+      : hotRank.length > 0
+      ? 'hot'
+      : 'latest';
+  const rankCards = shownTab === 'latest' ? latestRank : hotRank;
 
   // Derived: sources filtered by current category
   const sources = allSources.filter((s) =>
@@ -287,76 +383,75 @@ function BrowseClient() {
           ))}
         </div>
 
-        {/* 動漫榜：最新上架／熱門 */}
-        {category === 'anime3d' &&
-          (latestRank.length > 0 || hotRank.length > 0) && (
-            <div>
-              <div className='mb-2 flex flex-wrap items-center gap-2'>
-                <h2 className='text-base font-bold text-gray-800 dark:text-white'>
-                  動漫榜
-                </h2>
-                {(
-                  [
-                    { key: 'latest', name: '最新上架榜', n: latestRank.length },
-                    { key: 'hot', name: '熱門榜', n: hotRank.length },
-                  ] as { key: RankTab; name: string; n: number }[]
-                )
-                  .filter((t) => t.n > 0)
-                  .map((t) => (
-                    <button
-                      key={t.key}
-                      onClick={() => setRankTab(t.key)}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        (rankCards.length > 0 ? rankTab : '') === t.key
-                          ? 'bg-red-500 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {t.name}
-                    </button>
-                  ))}
-                <span className='text-xs text-gray-500 dark:text-gray-400'>
-                  {rankTab === 'latest'
-                    ? '各來源最近上架的動漫，點了直接播'
-                    : '豆瓣近期熱門動畫，點了自動找片源'}
-                </span>
-              </div>
-              <HScroll
-                resetKey={`${rankTab}:${rankCards.length}`}
-                arrowTop='4.5rem'
-              >
-                {rankCards.map((c) => (
+        {/* 分區榜：最新上架／熱門 */}
+        {(latestRank.length > 0 || hotRank.length > 0) && (
+          <div>
+            <div className='mb-2 flex flex-wrap items-center gap-2'>
+              <h2 className='text-base font-bold text-gray-800 dark:text-white'>
+                排行榜
+              </h2>
+              {(
+                [
+                  { key: 'latest', name: '最新上架榜', n: latestRank.length },
+                  { key: 'hot', name: '熱門榜', n: hotRank.length },
+                ] as { key: RankTab; name: string; n: number }[]
+              )
+                .filter((t) => t.n > 0)
+                .map((t) => (
                   <button
-                    key={c.key}
-                    onClick={() => router.push(c.href)}
-                    className='group w-28 shrink-0 text-left'
-                    data-rank
+                    key={t.key}
+                    onClick={() => setRankTab(t.key)}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      shownTab === t.key
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
                   >
-                    <div className='relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
-                      {c.poster && (
-                        <img
-                          src={c.poster}
-                          alt={c.title}
-                          loading='lazy'
-                          referrerPolicy='no-referrer'
-                          className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                        />
-                      )}
-                      <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
-                        {c.badge}
-                      </span>
-                    </div>
-                    <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-                      {c.title}
-                    </div>
-                    <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
-                      {c.note}
-                    </div>
+                    {t.name}
                   </button>
                 ))}
-              </HScroll>
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                {shownTab === 'latest'
+                  ? '各來源最近上架的，點了直接播'
+                  : `${HOT_SOURCES[category]?.label ?? '熱門'}，點了自動找片源`}
+              </span>
             </div>
-          )}
+            <HScroll
+              resetKey={`${category}:${shownTab}:${rankCards.length}`}
+              arrowTop='4.5rem'
+            >
+              {rankCards.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => router.push(c.href)}
+                  className='group w-28 shrink-0 text-left'
+                  data-rank
+                >
+                  <div className='relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+                    {c.poster && (
+                      <img
+                        src={c.poster}
+                        alt={c.title}
+                        loading='lazy'
+                        referrerPolicy='no-referrer'
+                        className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                      />
+                    )}
+                    <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                      {c.badge}
+                    </span>
+                  </div>
+                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                    {c.title}
+                  </div>
+                  <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                    {c.note}
+                  </div>
+                </button>
+              ))}
+            </HScroll>
+          </div>
+        )}
 
         {/* Source tabs */}
         {sources.length > 0 && (
