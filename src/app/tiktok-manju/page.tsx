@@ -1,7 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { toSimplifiedFull } from '@/lib/t2s-table';
 import {
@@ -9,7 +16,9 @@ import {
   MAX_ACCOUNTS,
   PENDING_TTL_MS,
 } from '@/lib/tiktok-follows';
+import { hotTiktok, latestPerAccount } from '@/lib/tiktok-hot';
 
+import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 
 import type {
@@ -40,6 +49,13 @@ function formatDuration(sec: number | null): string {
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
 }
+
+type TopTab = 'latest' | 'week' | 'month';
+const TOP_TABS: { key: TopTab; name: string }[] = [
+  { key: 'latest', name: '最新上架' },
+  { key: 'week', name: '本周热门' },
+  { key: 'month', name: '本月热门' },
+];
 
 /** 一次显示几支影片 */
 const PAGE_SIZE = 120;
@@ -95,6 +111,8 @@ function TiktokManjuClient() {
   const [playing, setPlaying] = useState<TiktokManjuVideo | null>(null);
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(PAGE_SIZE);
+  // 上方的新片榜：各帐号最新一支／近期最多人看
+  const [topTab, setTopTab] = useState<TopTab>('latest');
   // 追踪管理
   const [manageOpen, setManageOpen] = useState(false);
   const [addInput, setAddInput] = useState('');
@@ -223,6 +241,24 @@ function TiktokManjuClient() {
       return words.every((w) => hay.includes(w));
     }) ?? [];
   const shown = videos.slice(0, limit);
+  const allVideos = data?.videos;
+  const topItems = useMemo(() => {
+    if (!allVideos) return [];
+    if (topTab === 'latest') {
+      return latestPerAccount(allVideos).map((video) => ({
+        video,
+        title: video.title,
+        views: video.views ?? 0,
+        count: 1,
+      }));
+    }
+    return hotTiktok(allVideos, topTab === 'week' ? 7 : 30).map((h) => ({
+      video: h.video,
+      title: h.series ?? h.video.title,
+      views: h.views,
+      count: h.count,
+    }));
+  }, [allVideos, topTab]);
   // 完全没有旧资料可顶的帐号才提示；有旧资料的照常显示，不打扰
   const missing = data?.failed.filter((f) => !f.stale) ?? [];
 
@@ -238,6 +274,78 @@ function TiktokManjuClient() {
             {data && ` · 资料更新于 ${timeAgo(data.updated)}`}
           </p>
         </div>
+
+        {/* 新片榜：跟 AI 漫剧页的红果榜同一种排法，内容是追踪帐号的影片 */}
+        {topItems.length > 0 && (
+          <div className='mb-6'>
+            <div className='mb-2 flex flex-wrap items-center gap-2'>
+              <h2 className='text-base font-bold text-gray-900 dark:text-gray-100'>
+                新片榜
+              </h2>
+              {TOP_TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTopTab(t.key)}
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    topTab === t.key
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                {topTab === 'latest'
+                  ? '每个帐号最新的一支，点了直接播'
+                  : '依观看数排名，点了直接播'}
+              </span>
+            </div>
+            <HScroll
+              resetKey={`${topTab}:${topItems.length}`}
+              arrowTop='4.5rem'
+            >
+              {topItems.map((it, i) => (
+                <button
+                  key={it.video.id}
+                  onClick={() => setPlaying(it.video)}
+                  className='group w-28 shrink-0 text-left'
+                  data-top
+                >
+                  <div className='relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+                    {it.video.thumbnail && (
+                      <img
+                        src={it.video.thumbnail}
+                        alt={it.title}
+                        loading='lazy'
+                        referrerPolicy='no-referrer'
+                        className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                      />
+                    )}
+                    <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                      {topTab === 'latest'
+                        ? timeAgo(it.video.published)
+                        : i + 1}
+                    </span>
+                    {it.count > 1 && (
+                      <span className='absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[10px] text-white'>
+                        {it.count} 支
+                      </span>
+                    )}
+                  </div>
+                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                    {it.title || '（无标题）'}
+                  </div>
+                  <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                    {topTab === 'latest'
+                      ? it.video.name
+                      : formatViews(it.views)}
+                  </div>
+                </button>
+              ))}
+            </HScroll>
+          </div>
+        )}
 
         {/* 搜寻 */}
         {data && (
@@ -553,6 +661,30 @@ function TiktokManjuClient() {
               >
                 {playing.name} ↗
               </a>
+              {/* 这里的影片都来自已追踪的帐号，所以按钮是「取消追踪」 */}
+              {pending.some(
+                (p) =>
+                  p.op === 'rm' && p.handle === playing.handle.toLowerCase()
+              ) ? (
+                <span className='shrink-0 rounded-full bg-white/10 px-4 py-2 text-sm text-gray-300'>
+                  移除中
+                </span>
+              ) : (
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `确定不再追踪「${playing.name}」？全站都会看不到这个帐号。`
+                      )
+                    )
+                      submitFollow('rm', playing.handle);
+                  }}
+                  className='shrink-0 rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-red-600 disabled:opacity-50'
+                >
+                  已追踪 · 取消
+                </button>
+              )}
               <button
                 onClick={close}
                 className='shrink-0 rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
