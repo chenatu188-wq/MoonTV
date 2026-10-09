@@ -20,6 +20,7 @@ import { hotTiktok, latestPerAccount } from '@/lib/tiktok-hot';
 
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
+import TiktokShortDrama from '@/components/TiktokShortDrama';
 
 import type {
   TiktokManjuData,
@@ -346,6 +347,9 @@ function TiktokManjuClient() {
             </HScroll>
           </div>
         )}
+
+        {/* TikTok 短剧专区的片单：站内播不了，点了另开 TikTok */}
+        <TiktokShortDrama />
 
         {/* 推荐：TikTok 不开放搜寻，没办法在站内列出没追踪的帐号，改连到 TikTok 自己的推荐页 */}
         <div className='mb-6 flex flex-wrap items-center gap-2'>
