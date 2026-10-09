@@ -6,6 +6,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 
+import AiManjuChannelTop from '@/components/AiManjuChannelTop';
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 
@@ -492,6 +493,25 @@ function AiManjuClient() {
     (v) => !isTracked(v.channelId)
   );
   const allVideos = data?.videos;
+  // 各频道热门 20：只有频道有「热门」排序，播放清单不算。最近有更新的频道排前面
+  const topChannels = useMemo(() => {
+    const newest = new Map<string, number>();
+    for (const v of allVideos ?? []) {
+      const t = new Date(v.published).getTime() || 0;
+      if (t > (newest.get(v.sourceKey) ?? 0)) newest.set(v.sourceKey, t);
+    }
+    const seen = new Set<string>();
+    return [
+      ...(data?.sources ?? [])
+        .filter((s) => s.type === 'channel')
+        .map((s) => ({ id: s.id, name: s.name, key: s.key })),
+      ...(follows ?? [])
+        .filter((f) => f.type === 'channel')
+        .map((f) => ({ id: f.id, name: f.name, key: f.id })),
+    ]
+      .filter((c) => !seen.has(c.id) && seen.add(c.id))
+      .sort((a, b) => (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0));
+  }, [allVideos, data, follows]);
   const trackItems = useMemo(() => {
     if (!allVideos) return [];
     if (trackTab === 'latest') {
@@ -748,6 +768,9 @@ function AiManjuClient() {
             </HScroll>
           </div>
         )}
+
+        {/* 各频道热门 20：一个频道一排，卷到才载入 */}
+        <AiManjuChannelTop channels={topChannels} onPlay={setPlaying} />
 
         {/* 来源筛选：预设全部展开；嫌占版面可以收起，选择会记住 */}
         {data && (
