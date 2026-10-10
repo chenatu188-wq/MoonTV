@@ -6,30 +6,10 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { SearchResult } from '@/lib/types';
 
 import ActressesPanel from '@/components/ActressesPanel';
-import HScroll from '@/components/HScroll';
+import AdultRankStrip, { type RankItem } from '@/components/AdultRankStrip';
 import PageLayout from '@/components/PageLayout';
 import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
 import VideoCard from '@/components/VideoCard';
-
-interface RankItem {
-  id: string;
-  title: string;
-  poster: string;
-  source: string;
-  source_name: string;
-  /** 上架時間，Unix 秒 */
-  added: number;
-  hits?: number;
-}
-
-/** Unix 秒 → 台北時間的「10/09」 */
-function shortDate(sec: number): string {
-  if (!sec) return '';
-  const d = new Date((sec + 8 * 3600) * 1000);
-  return `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(
-    d.getUTCDate()
-  ).padStart(2, '0')}`;
-}
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 type Tab = 'browse' | 'search' | 'actresses';
@@ -164,29 +144,17 @@ function AdultClient() {
 
   const [activeRegion, setActiveRegion] = useState<string>('all');
 
-  // 地區榜單：最新上架／熱門（熱門只在該地區有點擊數可信的來源時才有）
-  const [rankTab, setRankTab] = useState<'latest' | 'hot'>('latest');
-  const [ranks, setRanks] = useState<{
-    latest: RankItem[];
-    hot: RankItem[];
-  } | null>(null);
-
-  useEffect(() => {
-    if (!unlocked) return;
-    let stale = false; // 切到別的地區後，舊地區晚到的結果不要蓋上來
-    setRanks(null);
-    setRankTab('latest');
-    fetch(`/api/adult/latest?region=${encodeURIComponent(activeRegion)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!stale && d?.latest)
-          setRanks({ latest: d.latest, hot: d.hot ?? [] });
-      })
-      .catch(() => undefined); // 榜單抓不到就不顯示，不影響下面的瀏覽
-    return () => {
-      stale = true;
-    };
-  }, [activeRegion, unlocked]);
+  const playRank = useCallback(
+    (it: RankItem) =>
+      router.push(
+        `/play?source=${encodeURIComponent(it.source)}&id=${encodeURIComponent(
+          it.id
+        )}&title=${encodeURIComponent(it.title)}&stitle=${encodeURIComponent(
+          it.title
+        )}&adult=1`
+      ),
+    [router]
+  );
 
   const REGIONS = [
     { key: 'all', label: '全部' },
@@ -382,90 +350,13 @@ function AdultClient() {
             </div>
 
             {/* 地區榜單 */}
-            {ranks && ranks.latest.length > 0 && (
-              <div>
-                <div className='mb-2 flex flex-wrap items-center gap-2'>
-                  <h2 className='text-base font-bold text-gray-800 dark:text-white'>
-                    排行榜
-                  </h2>
-                  {(
-                    [
-                      {
-                        key: 'latest',
-                        name: '最新上架榜',
-                        n: ranks.latest.length,
-                      },
-                      { key: 'hot', name: '熱門榜', n: ranks.hot.length },
-                    ] as { key: 'latest' | 'hot'; name: string; n: number }[]
-                  )
-                    .filter((t) => t.n > 0)
-                    .map((t) => (
-                      <button
-                        key={t.key}
-                        onClick={() => setRankTab(t.key)}
-                        className={`px-3 py-1 rounded-full text-sm ${
-                          rankTab === t.key
-                            ? 'bg-rose-500 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {t.name}
-                      </button>
-                    ))}
-                  <span className='text-xs text-gray-500 dark:text-gray-400'>
-                    {rankTab === 'latest'
-                      ? '各來源最近上架的，點了直接播'
-                      : '依本月點擊數排名，點了直接播'}
-                  </span>
-                </div>
-                <HScroll
-                  resetKey={`${activeRegion}:${rankTab}:${ranks[rankTab].length}`}
-                  arrowTop='2.75rem'
-                >
-                  {ranks[rankTab].map((it, i) => (
-                    <button
-                      key={`${it.source}-${it.id}`}
-                      onClick={() =>
-                        router.push(
-                          `/play?source=${encodeURIComponent(
-                            it.source
-                          )}&id=${encodeURIComponent(
-                            it.id
-                          )}&title=${encodeURIComponent(
-                            it.title
-                          )}&stitle=${encodeURIComponent(it.title)}&adult=1`
-                        )
-                      }
-                      className='group w-44 shrink-0 text-left'
-                      data-rank
-                    >
-                      <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
-                        {it.poster && (
-                          <img
-                            src={it.poster}
-                            alt={it.title}
-                            loading='lazy'
-                            referrerPolicy='no-referrer'
-                            className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                          />
-                        )}
-                        <span className='absolute left-0 top-0 rounded-br-lg bg-rose-500 px-1.5 py-0.5 text-xs font-bold text-white'>
-                          {rankTab === 'latest' ? shortDate(it.added) : i + 1}
-                        </span>
-                      </div>
-                      <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-                        {it.title}
-                      </div>
-                      <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
-                        {rankTab === 'hot' && it.hits
-                          ? `${it.hits} 次點擊 · ${it.source_name}`
-                          : it.source_name}
-                      </div>
-                    </button>
-                  ))}
-                </HScroll>
-              </div>
-            )}
+            <AdultRankStrip
+              title='排行榜'
+              query={`region=${encodeURIComponent(activeRegion)}`}
+              enabled={unlocked}
+              latestHint='各來源最近上架的，點了直接播'
+              onPlay={playRank}
+            />
 
             {/* Source tabs */}
             {regionedSources.length > 0 && (
@@ -486,6 +377,20 @@ function AdultClient() {
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* 單一片源的榜單：跟著上面選的片源換 */}
+            {activeSource && (
+              <AdultRankStrip
+                title={`${
+                  adultSources.find((x) => x.key === activeSource)?.name ?? ''
+                } 排行榜`}
+                query={`source=${encodeURIComponent(activeSource)}`}
+                enabled={unlocked}
+                latestHint='這個片源最近上架的，點了直接播'
+                showSource={false}
+                onPlay={playRank}
+              />
             )}
 
             {/* Year filter */}
