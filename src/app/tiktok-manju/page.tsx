@@ -17,10 +17,13 @@ import {
   PENDING_TTL_MS,
 } from '@/lib/tiktok-follows';
 import { hotTiktok, latestPerAccount } from '@/lib/tiktok-hot';
+import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
+import { resumeFrom } from '@/lib/watch-marks';
 
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 import TiktokShortDrama from '@/components/TiktokShortDrama';
+import WatchLaterStrip from '@/components/WatchLaterStrip';
 
 import type {
   TiktokManjuData,
@@ -221,10 +224,37 @@ function TiktokManjuClient() {
     };
   }, [playing, manageOpen]);
 
+  // 标记，下次继续看：存在浏览器，每台装置各自一份
+  const { marks, mark, unmark } = useWatchMarks<TiktokManjuVideo>(
+    'moontv_tiktok_manju_marks'
+  );
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
+  const playerRef = useRef<HTMLIFrameElement>(null);
+  const playingId = playing?.id ?? null;
+  // 只在换影片时决定从哪里开始播：播到一半按标记不能让播放器重新载入
+  const startAt = useMemo(
+    () =>
+      resumeFrom(
+        marksRef.current.find((m) => m.id === playingId)?.seconds ?? 0
+      ),
+    [playingId]
+  );
+  const position = usePlayerSeconds('tiktok', playerRef, playingId, startAt);
+  const playingMarked = marks.some((m) => m.id === playingId);
+  const saveMark = useCallback(
+    (v: TiktokManjuVideo) => mark(v.id, v, position.current),
+    [mark, position]
+  );
+
   const close = useCallback(() => {
+    // 已经标记的影片，关掉时把进度更新到最新
+    if (playing && marksRef.current.some((m) => m.id === playing.id)) {
+      saveMark(playing);
+    }
     setPlaying(null);
     setManageOpen(false);
-  }, []);
+  }, [playing, saveMark]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
@@ -275,6 +305,26 @@ function TiktokManjuClient() {
             {data && ` · 资料更新于 ${timeAgo(data.updated)}`}
           </p>
         </div>
+
+        {/* 继续观看：在播放器按了标记的影片 */}
+        <WatchLaterStrip
+          portrait
+          items={marks.map((m) => ({
+            id: m.id,
+            title: m.video.title,
+            // 缩图网址约两天半过期，资料里还有这支就用新的
+            thumbnail:
+              data?.videos.find((v) => v.id === m.id)?.thumbnail ??
+              m.video.thumbnail,
+            note: m.video.name,
+            seconds: m.seconds,
+          }))}
+          onPlay={(id) => {
+            const m = marks.find((x) => x.id === id);
+            if (m) setPlaying(m.video);
+          }}
+          onRemove={unmark}
+        />
 
         {/* 新片榜：跟 AI 漫剧页的红果榜同一种排法，内容是追踪帐号的影片 */}
         {topItems.length > 0 && (
@@ -677,6 +727,7 @@ function TiktokManjuClient() {
               }}
             >
               <iframe
+                ref={playerRef}
                 src={`https://www.tiktok.com/player/v1/${playing.id}?autoplay=1&rel=0&description=0&music_info=0`}
                 title={playing.title}
                 allow='autoplay; fullscreen; encrypted-media; picture-in-picture'
@@ -693,6 +744,23 @@ function TiktokManjuClient() {
               >
                 {playing.name} ↗
               </a>
+              {playingMarked ? (
+                <button
+                  onClick={() => unmark(playing.id)}
+                  className='shrink-0 rounded-full bg-amber-500 px-4 py-2 text-sm text-white hover:bg-amber-400'
+                  data-mark
+                >
+                  ★ 已标记 · 取消
+                </button>
+              ) : (
+                <button
+                  onClick={() => saveMark(playing)}
+                  className='shrink-0 rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                  data-mark
+                >
+                  ☆ 标记，下次继续看
+                </button>
+              )}
               {/* 这里的影片都来自已追踪的帐号，所以按钮是「取消追踪」 */}
               {pending.some(
                 (p) =>

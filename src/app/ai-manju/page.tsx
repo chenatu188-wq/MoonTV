@@ -1,14 +1,24 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
+import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
+import { resumeFrom } from '@/lib/watch-marks';
 
 import AiManjuChannelTop from '@/components/AiManjuChannelTop';
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
+import WatchLaterStrip from '@/components/WatchLaterStrip';
 
 import type { HongguoRankList } from '@/app/api/ai-manju/hongguo/route';
 import type { AiManjuVideo } from '@/app/api/ai-manju/route';
@@ -45,6 +55,7 @@ const TRACK_TABS: { key: TrackTab; name: string }[] = [
 const FOLLOWS_KEY = 'moontv_ai_manju_follows';
 const MAX_FOLLOWS = 30;
 const CHIPS_KEY = 'moontv_ai_manju_chips_open';
+const MARKS_KEY = 'moontv_ai_manju_marks';
 
 function loadFollows(): Follow[] {
   try {
@@ -360,10 +371,36 @@ function AiManjuClient() {
     };
   }, [playing, manageOpen]);
 
+  // 标记，下次继续看：存在浏览器，每台装置各自一份
+  const { marks, mark, unmark } = useWatchMarks<AiManjuVideo>(MARKS_KEY);
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
+  const playerRef = useRef<HTMLIFrameElement>(null);
+  const playingId = playing?.videoId ?? null;
+  // 只在换影片时决定从哪里开始播：播到一半按标记不能让播放器重新载入
+  const startAt = useMemo(
+    () =>
+      resumeFrom(
+        marksRef.current.find((m) => m.id === playingId)?.seconds ?? 0
+      ),
+    [playingId]
+  );
+  const position = usePlayerSeconds('youtube', playerRef, playingId, startAt);
+  const playingMarked = marks.some((m) => m.id === playingId);
+  const saveMark = useCallback(
+    (v: AiManjuVideo) =>
+      mark(v.videoId, { ...v, description: '' }, position.current),
+    [mark, position]
+  );
+
   const close = useCallback(() => {
+    // 已经标记的影片，关掉时把进度更新到最新
+    if (playing && marksRef.current.some((m) => m.id === playing.videoId)) {
+      saveMark(playing);
+    }
     setPlaying(null);
     setManageOpen(false);
-  }, []);
+  }, [playing, saveMark]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
@@ -649,6 +686,22 @@ function AiManjuClient() {
             </HScroll>
           </div>
         )}
+
+        {/* 继续观看：在播放器按了标记的影片 */}
+        <WatchLaterStrip
+          items={marks.map((m) => ({
+            id: m.id,
+            title: m.video.title,
+            thumbnail: m.video.thumbnail,
+            note: m.video.channel || m.video.sourceName,
+            seconds: m.seconds,
+          }))}
+          onPlay={(id) => {
+            const m = marks.find((x) => x.id === id);
+            if (m) setPlaying(m.video);
+          }}
+          onRemove={unmark}
+        />
 
         {/* 追踪频道榜：跟红果榜同一种排法，内容换成我们追踪的频道 */}
         {trackItems.length > 0 && (
@@ -1020,7 +1073,12 @@ function AiManjuClient() {
           >
             <div className='relative aspect-video overflow-hidden rounded-lg bg-black'>
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${playing.videoId}?autoplay=1&rel=0`}
+                ref={playerRef}
+                src={`https://www.youtube-nocookie.com/embed/${
+                  playing.videoId
+                }?autoplay=1&rel=0&enablejsapi=1${
+                  startAt > 0 ? `&start=${startAt}` : ''
+                }`}
                 title={playing.title}
                 allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                 allowFullScreen
@@ -1051,6 +1109,23 @@ function AiManjuClient() {
                     className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
                   >
                     找全季／全集
+                  </button>
+                )}
+                {playingMarked ? (
+                  <button
+                    onClick={() => unmark(playing.videoId)}
+                    className='rounded-full bg-amber-500 px-4 py-2 text-sm text-white hover:bg-amber-400'
+                    data-mark
+                  >
+                    ★ 已标记 · 取消
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => saveMark(playing)}
+                    className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                    data-mark
+                  >
+                    ☆ 标记，下次继续看
                   </button>
                 )}
                 {playingChannelId &&
