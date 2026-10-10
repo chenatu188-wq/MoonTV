@@ -60,13 +60,70 @@ export function parseDramaList(data: any): ShortDrama[] {
   return out;
 }
 
+/** 分类筛选：每组最多选一个题材（组跟组之间是「而且」），外加发行时间 */
+export interface DramaFilter {
+  tags: string[];
+  days: 7 | 30 | null;
+}
+
+export interface DramaCategoryGroup {
+  title: string;
+  items: { id: string; name: string }[];
+}
+
+/** 筛选只有「综合」这个 themeType 吃得到；排行榜、最新带了也不会变（2026-10-10 实测） */
+export const FILTER_THEME = 10;
+
+/** TikTok 的三组题材没有给组名（只有「所有设定」这种选项），自己取 */
+const GROUP_TITLES = ['背景', '剧情', '看点'];
+
+/**
+ * 整理 TikTok 的筛选选项。只留题材那几组（categoryFilterType 2），
+ * 「所有 xx」和发行时间那组不要：发行时间页面上自己画。
+ */
+export function parseCategories(data: any): DramaCategoryGroup[] {
+  const out: DramaCategoryGroup[] = [];
+  for (const g of Array.isArray(data?.dramaCategoryLists)
+    ? data.dramaCategoryLists
+    : []) {
+    const items = (Array.isArray(g?.dramaCategories) ? g.dramaCategories : [])
+      .filter(
+        (c: any) =>
+          c?.categoryFilterType === 2 &&
+          /^\d{5,25}$/.test(String(c.categoryID ?? '')) &&
+          c.name
+      )
+      .map((c: any) => ({ id: String(c.categoryID), name: String(c.name) }));
+    if (items.length > 0) {
+      out.push({ title: GROUP_TITLES[out.length] ?? '其他', items });
+    }
+  }
+  return out;
+}
+
+/**
+ * 把网址参数整理成筛选条件；不合法的值直接丢掉。
+ * allowed 有给的话只收清单里有的题材，免得任意字串被转送给 TikTok。
+ */
+export function parseFilter(
+  tags: string | null,
+  days: string | null,
+  allowed?: Set<string>
+): DramaFilter {
+  const ids = Array.from(new Set((tags ?? '').split(',')))
+    .filter((t) => /^\d{5,25}$/.test(t) && (!allowed || allowed.has(t)))
+    .slice(0, GROUP_TITLES.length);
+  return { tags: ids, days: days === '7' ? 7 : days === '30' ? 30 : null };
+}
+
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
 /** 抓片单的一页（20 部）。回的是 TikTok 的原始 JSON，交给 parseDramaList 整理 */
 export async function fetchDramaPage(
   theme: number,
-  cursor: string
+  cursor: string,
+  filter?: DramaFilter
 ): Promise<any> {
   const q = new URLSearchParams({
     aid: '1988',
@@ -82,6 +139,8 @@ export async function fetchDramaPage(
     cursor,
     themeType: String(theme),
   });
+  if (filter?.tags.length) q.set('tagIDList', filter.tags.join(','));
+  if (filter?.days) q.set('categoryDateType', filter.days === 7 ? '1' : '2');
   const res = await fetch(
     `https://www.tiktok.com/api/drama/theme/drama_list/?${q}`,
     {
@@ -97,4 +156,30 @@ export async function fetchDramaPage(
   const text = await res.text();
   if (!text) throw new Error('TikTok 回了空内容（可能被挡）');
   return JSON.parse(text);
+}
+
+/** TikTok 短剧页上方那排筛选选项 */
+export async function fetchCategories(): Promise<DramaCategoryGroup[]> {
+  const q = new URLSearchParams({
+    aid: '1988',
+    app_name: 'tiktok_web',
+    device_platform: 'web_pc',
+    app_language: 'zh-Hant-TW',
+    language: 'zh-Hant-TW',
+    region: 'TW',
+    priority_region: 'TW',
+  });
+  const res = await fetch(
+    `https://www.tiktok.com/api/drama/filter/category_list/?${q}`,
+    {
+      headers: {
+        'User-Agent': UA,
+        Referer: 'https://www.tiktok.com/shortdrama',
+      },
+      cache: 'no-store',
+    }
+  );
+  if (!res.ok) throw new Error(`TikTok 回应 HTTP ${res.status}`);
+  const text = await res.text();
+  return text ? parseCategories(JSON.parse(text)) : [];
 }
