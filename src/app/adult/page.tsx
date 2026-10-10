@@ -15,6 +15,8 @@ const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 type Tab = 'browse' | 'search' | 'actresses';
 
 const SESSION_KEY = 'adult_unlocked';
+/** 各片源一列的榜單，一開始顯示幾個片源 */
+const SOURCE_ROWS_FIRST = 5;
 
 function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   const [input, setInput] = useState('');
@@ -155,6 +157,11 @@ function AdultClient() {
       ),
     [router]
   );
+
+  // 各片源一列的榜單先顯示幾個；換地區就收回來
+  const [sourceRows, setSourceRows] = useState(SOURCE_ROWS_FIRST);
+  const browseRef = useRef<HTMLDivElement>(null);
+  useEffect(() => setSourceRows(SOURCE_ROWS_FIRST), [activeRegion]);
 
   const REGIONS = [
     { key: 'all', label: '全部' },
@@ -358,6 +365,34 @@ function AdultClient() {
               onPlay={playRank}
             />
 
+            {/* 各片源一列：最新上架／熱門。捲到才載入，先顯示幾個再按鈕展開 */}
+            {regionedSources.slice(0, sourceRows).map((src) => (
+              <AdultRankStrip
+                key={src.key}
+                title={src.name}
+                query={`source=${encodeURIComponent(src.key)}`}
+                enabled={unlocked}
+                latestHint='最近上架的，點了直接播'
+                showSource={false}
+                lazy
+                onMore={() => {
+                  setActiveSource(src.key);
+                  setFilterQuery('');
+                  browseRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                onPlay={playRank}
+              />
+            ))}
+            {sourceRows < regionedSources.length && (
+              <button
+                onClick={() => setSourceRows((n) => n + 8)}
+                className='w-full rounded-lg bg-gray-100 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+              >
+                顯示更多片源（還有 {regionedSources.length - sourceRows} 個）
+              </button>
+            )}
+
+            <div ref={browseRef} className='scroll-mt-20' />
             {/* Source tabs */}
             {regionedSources.length > 0 && (
               <div className='flex flex-wrap gap-2'>
@@ -377,20 +412,6 @@ function AdultClient() {
                   </button>
                 ))}
               </div>
-            )}
-
-            {/* 單一片源的榜單：跟著上面選的片源換 */}
-            {activeSource && (
-              <AdultRankStrip
-                title={`${
-                  adultSources.find((x) => x.key === activeSource)?.name ?? ''
-                } 排行榜`}
-                query={`source=${encodeURIComponent(activeSource)}`}
-                enabled={unlocked}
-                latestHint='這個片源最近上架的，點了直接播'
-                showSource={false}
-                onPlay={playRank}
-              />
             )}
 
             {/* Year filter */}

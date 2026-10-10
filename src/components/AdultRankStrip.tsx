@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import HScroll from '@/components/HScroll';
 
@@ -36,6 +36,8 @@ export default function AdultRankStrip({
   enabled,
   latestHint,
   showSource = true,
+  lazy = false,
+  onMore,
   onPlay,
 }: {
   title: string;
@@ -44,6 +46,10 @@ export default function AdultRankStrip({
   latestHint: string;
   /** 單一片源的榜單每格都是同一個來源，不用再寫 */
   showSource?: boolean;
+  /** 一頁排很多列時用：捲到附近才去抓，還沒抓到先佔位 */
+  lazy?: boolean;
+  /** 有給的話標題旁多一顆「看全部」 */
+  onMore?: () => void;
   onPlay: (it: RankItem) => void;
 }) {
   const [tab, setTab] = useState<'latest' | 'hot'>('latest');
@@ -52,10 +58,26 @@ export default function AdultRankStrip({
     hot: RankItem[];
   } | null>(null);
 
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(!lazy);
+  const [done, setDone] = useState(false);
+
   useEffect(() => {
-    if (!enabled) return;
+    const el = ref.current;
+    if (!el || near) return;
+    const io = new IntersectionObserver(
+      (entries) => entries.some((e) => e.isIntersecting) && setNear(true),
+      { rootMargin: '400px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
+
+  useEffect(() => {
+    if (!enabled || !near) return;
     let stale = false; // 切到別的範圍後，舊範圍晚到的結果不要蓋上來
     setRanks(null);
+    setDone(false);
     setTab('latest');
     fetch(`/api/adult/latest?${query}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -63,17 +85,29 @@ export default function AdultRankStrip({
         if (!stale && d?.latest)
           setRanks({ latest: d.latest, hot: d.hot ?? [] });
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => !stale && setDone(true));
     return () => {
       stale = true;
     };
-  }, [query, enabled]);
+  }, [query, enabled, near]);
 
-  if (!ranks || ranks.latest.length === 0) return null;
+  if (!ranks || ranks.latest.length === 0) {
+    // 還沒抓完先佔位（不然捲不到它，也就永遠不會去抓）；抓完是空的才整列拿掉
+    if (!lazy || done) return null;
+    return (
+      <div ref={ref}>
+        <h2 className='mb-2 text-base font-bold text-gray-800 dark:text-white'>
+          {title}
+        </h2>
+        <div className='h-36 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800' />
+      </div>
+    );
+  }
   const items = ranks[tab];
 
   return (
-    <div data-rank-strip={query}>
+    <div ref={ref} data-rank-strip={query}>
       <div className='mb-2 flex flex-wrap items-center gap-2'>
         <h2 className='text-base font-bold text-gray-800 dark:text-white'>
           {title}
@@ -101,6 +135,14 @@ export default function AdultRankStrip({
         <span className='text-xs text-gray-500 dark:text-gray-400'>
           {tab === 'latest' ? latestHint : '依本月點擊數排名，點了直接播'}
         </span>
+        {onMore && (
+          <button
+            onClick={onMore}
+            className='text-xs text-rose-500 hover:underline'
+          >
+            看全部 ›
+          </button>
+        )}
       </div>
       <HScroll resetKey={`${query}:${tab}:${items.length}`} arrowTop='2.75rem'>
         {items.map((it, i) => (
