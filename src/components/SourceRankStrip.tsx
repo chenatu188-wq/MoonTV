@@ -14,6 +14,7 @@ export interface RankItem {
   /** 上架時間，Unix 秒 */
   added: number;
   hits?: number;
+  year?: string;
 }
 
 /** Unix 秒 → 台北時間的「10/09」 */
@@ -26,17 +27,20 @@ function shortDate(sec: number): string {
 }
 
 /**
- * 彩虹頻道的榜單：最新上架榜／熱門榜（熱門只在點擊數可信時才有）。
- * query 決定看哪個範圍：region=地區 或 source=單一片源。
+ * 來源榜單：最新上架榜／熱門榜（熱門只在點擊數可信時才有）。彩虹頻道和一般分區共用。
+ * endpoint + query 決定看哪個範圍：彩虹頻道是 region=地區 或 source=單一片源，
+ * 一般分區是 /api/browse/latest 的 category=分區&source=片源。
  * 榜單抓不到或是空的就整塊不顯示，不影響下面的瀏覽。
  */
-export default function AdultRankStrip({
+export default function SourceRankStrip({
   title,
   query,
   enabled,
   latestHint,
   showSource = true,
   lazy = false,
+  endpoint = '/api/adult/latest',
+  portrait = false,
   onMore,
   onPlay,
 }: {
@@ -48,6 +52,9 @@ export default function AdultRankStrip({
   showSource?: boolean;
   /** 一頁排很多列時用：捲到附近才去抓，還沒抓到先佔位 */
   lazy?: boolean;
+  endpoint?: string;
+  /** 一般分區的海報是直的；彩虹頻道的縮圖是橫的 */
+  portrait?: boolean;
   /** 有給的話標題旁多一顆「看全部」 */
   onMore?: () => void;
   onPlay: (it: RankItem) => void;
@@ -79,7 +86,7 @@ export default function AdultRankStrip({
     setRanks(null);
     setDone(false);
     setTab('latest');
-    fetch(`/api/adult/latest?${query}`)
+    fetch(`${endpoint}?${query}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!stale && d?.latest)
@@ -90,7 +97,7 @@ export default function AdultRankStrip({
     return () => {
       stale = true;
     };
-  }, [query, enabled, near]);
+  }, [endpoint, query, enabled, near]);
 
   if (!ranks || ranks.latest.length === 0) {
     // 還沒抓完先佔位（不然捲不到它，也就永遠不會去抓）；抓完是空的才整列拿掉
@@ -144,15 +151,22 @@ export default function AdultRankStrip({
           </button>
         )}
       </div>
-      <HScroll resetKey={`${query}:${tab}:${items.length}`} arrowTop='2.75rem'>
+      <HScroll
+        resetKey={`${query}:${tab}:${items.length}`}
+        arrowTop={portrait ? '4.5rem' : '2.75rem'}
+      >
         {items.map((it, i) => (
           <button
             key={`${it.source}-${it.id}`}
             onClick={() => onPlay(it)}
-            className='group w-44 shrink-0 text-left'
+            className={`group shrink-0 text-left ${portrait ? 'w-28' : 'w-44'}`}
             data-rank
           >
-            <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+            <div
+              className={`relative overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
+                portrait ? 'aspect-[5/7]' : 'aspect-video'
+              }`}
+            >
               {it.poster && (
                 <img
                   src={it.poster}

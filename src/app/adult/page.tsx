@@ -6,8 +6,8 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { SearchResult } from '@/lib/types';
 
 import ActressesPanel from '@/components/ActressesPanel';
-import AdultRankStrip, { type RankItem } from '@/components/AdultRankStrip';
 import PageLayout from '@/components/PageLayout';
+import SourceRankStrip, { type RankItem } from '@/components/SourceRankStrip';
 import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
 import VideoCard from '@/components/VideoCard';
 
@@ -357,7 +357,7 @@ function AdultClient() {
             </div>
 
             {/* 地區榜單 */}
-            <AdultRankStrip
+            <SourceRankStrip
               title='排行榜'
               query={`region=${encodeURIComponent(activeRegion)}`}
               enabled={unlocked}
@@ -367,7 +367,7 @@ function AdultClient() {
 
             {/* 各片源一列：最新上架／熱門。捲到才載入，先顯示幾個再按鈕展開 */}
             {regionedSources.slice(0, sourceRows).map((src) => (
-              <AdultRankStrip
+              <SourceRankStrip
                 key={src.key}
                 title={src.name}
                 query={`source=${encodeURIComponent(src.key)}`}

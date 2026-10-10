@@ -1,13 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { LatestItem } from '@/lib/browse-latest';
 import { SearchResult } from '@/lib/types';
 
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
+import SourceRankStrip from '@/components/SourceRankStrip';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
@@ -67,6 +68,9 @@ function shortDate(sec: number): string {
     d.getUTCDate()
   ).padStart(2, '0')}`;
 }
+
+/** 各片源一列的榜單，一開始顯示幾個片源 */
+const SOURCE_ROWS_FIRST = 5;
 
 /** 各分區熱門榜的資料來源 */
 const HOT_SOURCES: Record<
@@ -247,6 +251,11 @@ function BrowseClient() {
       ? 'hot'
       : 'latest';
   const rankCards = shownTab === 'latest' ? latestRank : hotRank;
+
+  // 各片源一列的榜單先顯示幾個；換分區就收回來
+  const [sourceRows, setSourceRows] = useState(SOURCE_ROWS_FIRST);
+  const browseRef = useRef<HTMLDivElement>(null);
+  useEffect(() => setSourceRows(SOURCE_ROWS_FIRST), [category]);
 
   // Derived: sources filtered by current category
   const sources = allSources.filter((s) =>
@@ -452,6 +461,45 @@ function BrowseClient() {
             </HScroll>
           </div>
         )}
+
+        {/* 各片源一列：最新上架／熱門。捲到才載入，先顯示幾個再按鈕展開 */}
+        {sources.slice(0, sourceRows).map((src) => (
+          <SourceRankStrip
+            key={`${category}:${src.key}`}
+            title={src.name}
+            endpoint='/api/browse/latest'
+            query={`category=${category}&source=${encodeURIComponent(src.key)}`}
+            enabled
+            portrait
+            latestHint='最近上架的，點了直接播'
+            showSource={false}
+            lazy
+            onMore={() => {
+              setActiveSource(src.key);
+              setFilterQuery('');
+              browseRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            onPlay={(it) =>
+              router.push(
+                `/play?source=${encodeURIComponent(
+                  it.source
+                )}&id=${encodeURIComponent(it.id)}&title=${encodeURIComponent(
+                  it.title
+                )}${it.year ? `&year=${it.year}` : ''}`
+              )
+            }
+          />
+        ))}
+        {sourceRows < sources.length && (
+          <button
+            onClick={() => setSourceRows((n) => n + 8)}
+            className='w-full rounded-lg bg-gray-100 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+          >
+            顯示更多片源（還有 {sources.length - sourceRows} 個）
+          </button>
+        )}
+
+        <div ref={browseRef} className='scroll-mt-20' />
 
         {/* Source tabs */}
         {sources.length > 0 && (
