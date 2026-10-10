@@ -5,6 +5,7 @@ import {
   type LatestItem,
   type LatestRaw,
   isAdultCategoryName,
+  mergeHot,
   mergeLatest,
 } from '@/lib/browse-latest';
 import { API_CONFIG, getAvailableApiSites } from '@/lib/config';
@@ -16,13 +17,17 @@ export const dynamic = 'force-dynamic';
  * 各分区的「最新上架榜」：这个分区的每个来源，各抓几个对应分类最近更新的一页，
  * 合起来按上架时间排。来源多（二三十个）而且常有挂掉的，所以每个请求限时、
  * 结果放记忆体缓存。
+ * 带 source=来源 key 时只看那一个来源：多抓一页，另外回热门榜（点击数可信才有）。
  */
 const FRESH_MS = 30 * 60 * 1000;
 const TIMEOUT_MS = 7000;
 /** 每个来源最多看几个上游分类（电影、电视剧会对到好几个） */
 const MAX_CATEGORIES = 4;
-const cache = new Map<string, { items: LatestItem[]; at: number }>();
-const inflight = new Map<string, Promise<LatestItem[]>>();
+/** 单一来源的榜单只有它自己的片，每个分类多抓一页 */
+const SOURCE_PAGES = 2;
+type Ranks = { items: LatestItem[]; hot: LatestItem[] };
+const cache = new Map<string, { data: Ranks; at: number }>();
+const inflight = new Map<string, Promise<Ranks>>();
 
 async function getJson(url: string) {
   const res = await fetch(url, {
@@ -36,7 +41,8 @@ async function getJson(url: string) {
 
 async function loadSource(
   site: { api: string; group?: string },
-  keywords: string[]
+  keywords: string[],
+  pageCount = 1
 ): Promise<LatestRaw[]> {
   try {
     const listData = await getJson(`${site.api}?ac=list`);
@@ -48,9 +54,11 @@ async function loadSource(
     );
     const matched = matchCategories(cats, keywords).slice(0, MAX_CATEGORIES);
     const pages = await Promise.all(
-      matched.map((cat) =>
-        getJson(`${site.api}?ac=videolist&t=${cat.type_id}&pg=1`).catch(
-          () => null
+      matched.flatMap((cat) =>
+        Array.from({ length: pageCount }, (_, i) =>
+          getJson(
+            `${site.api}?ac=videolist&t=${cat.type_id}&pg=${i + 1}`
+          ).catch(() => null)
         )
       )
     );
@@ -62,12 +70,14 @@ async function loadSource(
   }
 }
 
-async function load(category: string): Promise<LatestItem[]> {
+async function load(category: string, source: string): Promise<Ranks> {
   const cfg = BROWSE_RANK_CONFIG[category];
   // getAvailableApiSites 已经排除停用的和成人来源
-  const sites = (await getAvailableApiSites()).filter((s) =>
-    cfg.matchGroup(s.group || '')
+  const sites = (await getAvailableApiSites()).filter(
+    (s) => cfg.matchGroup(s.group || '') && (!source || s.key === source)
   );
+  // 这个分区没有这个来源
+  if (source && sites.length === 0) return { items: [], hot: [] };
   // 同一个上游被登记成好几个来源时只抓一次
   const seenApi = new Set<string>();
   const unique = sites.filter((s) => {
@@ -80,31 +90,39 @@ async function load(category: string): Promise<LatestItem[]> {
     unique.map(async (s) => ({
       source: s.key,
       source_name: s.name,
-      list: await loadSource(s, cfg.keywords(s.group || '')),
+      list: await loadSource(
+        s,
+        cfg.keywords(s.group || ''),
+        source ? SOURCE_PAGES : 1
+      ),
     }))
   );
   const items = mergeLatest(batches, 40);
-  if (items.length === 0) throw new Error('所有来源都抓不到');
-  return items;
+  if (items.length === 0 && !source) throw new Error('所有来源都抓不到');
+  // 分区的热门榜另外用豆瓣／红果；单一来源才用它自己的点击数
+  return { items, hot: source ? mergeHot(batches, 40) : [] };
 }
 
 export async function GET(request: Request) {
-  const category =
-    new URL(request.url).searchParams.get('category') || 'anime3d';
-  if (!BROWSE_RANK_CONFIG[category]) {
+  const sp = new URL(request.url).searchParams;
+  const category = sp.get('category') || 'anime3d';
+  const source = sp.get('source') || '';
+  if (!BROWSE_RANK_CONFIG[category] || !/^[\w.-]{0,60}$/.test(source)) {
     return NextResponse.json({ error: 'unknown category' }, { status: 400 });
   }
 
-  let hit = cache.get(category);
+  const key = source ? `${category}|${source}` : category;
+  let hit = cache.get(key);
   if (!hit || Date.now() - hit.at > FRESH_MS) {
     try {
-      let job = inflight.get(category);
+      let job = inflight.get(key);
       if (!job) {
-        job = load(category).finally(() => inflight.delete(category));
-        inflight.set(category, job);
+        job = load(category, source).finally(() => inflight.delete(key));
+        inflight.set(key, job);
       }
-      hit = { items: await job, at: Date.now() };
-      cache.set(category, hit);
+      hit = { data: await job, at: Date.now() };
+      cache.set(key, hit);
+      if (cache.size > 300) cache.delete(cache.keys().next().value as string);
     } catch (e) {
       if (!hit) {
         return NextResponse.json(
@@ -115,7 +133,13 @@ export async function GET(request: Request) {
     }
   }
   return NextResponse.json(
-    { items: hit.items, updated: Math.floor(hit.at / 1000) },
+    {
+      items: hit.data.items,
+      // latest 是给各来源一列的榜单用的（跟彩虹频道同一个元件）
+      latest: hit.data.items,
+      hot: hit.data.hot,
+      updated: Math.floor(hit.at / 1000),
+    },
     { headers: { 'Cache-Control': 'private, max-age=600' } }
   );
 }
