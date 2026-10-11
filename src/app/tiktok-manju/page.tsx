@@ -109,9 +109,13 @@ function postFollow(op: 'add' | 'rm', handle: string, total: number) {
   });
 }
 
-/** yt-dlp 回报「这个帐号没有发布任何影片」：帐号存在，只是没有一般影片 */
-const hasNoPosts = (error: string) =>
-  error.includes('does not have any videos posted');
+/**
+ * 帐号存在，只是没有一般影片（短剧专区的上传帐号）。
+ * 看 yt-dlp 回报的「没有发布任何影片」；TikTok 限流时会改回别种错误，
+ * 所以 Mac 查过、附了 secUid 的也算。
+ */
+const hasNoPosts = (f: { error: string; secUid?: string }) =>
+  !!f.secUid || f.error.includes('does not have any videos posted');
 
 function TiktokManjuClient() {
   const [data, setData] = useState<TiktokManjuData | null>(null);
@@ -405,9 +409,7 @@ function TiktokManjuClient() {
 
         {/* TikTok 短剧专区的片单：站内播不了，点了另开 TikTok */}
         <TiktokShortDrama
-          creators={missing
-            .filter((f) => hasNoPosts(f.error))
-            .map((f) => f.handle)}
+          creators={missing.filter((f) => hasNoPosts(f)).map((f) => f.handle)}
         />
 
         {/* 推荐：TikTok 不开放搜寻，没办法在站内列出没追踪的帐号，改连到 TikTok 自己的推荐页 */}
@@ -521,22 +523,22 @@ function TiktokManjuClient() {
 
         {missing.length > 0 && (
           <div className='mb-4 space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'>
-            {missing.some((f) => !hasNoPosts(f.error)) && (
+            {missing.some((f) => !hasNoPosts(f)) && (
               <div>
                 这些帐号暂时抓不到：
                 {missing
-                  .filter((f) => !hasNoPosts(f.error))
+                  .filter((f) => !hasNoPosts(f))
                   .map((f) => `@${f.handle}`)
                   .join('、')}
               </div>
             )}
-            {missing.some((f) => hasNoPosts(f.error)) && (
+            {missing.some((f) => hasNoPosts(f)) && (
               <div>
                 这些帐号已追踪，但帐号下没有一般影片（多半是 TikTok
                 短剧专区的帐号，他上传的短剧列在上面「TikTok
                 短剧」那一区的下方）：
                 {missing
-                  .filter((f) => hasNoPosts(f.error))
+                  .filter((f) => hasNoPosts(f))
                   .map((f) => `@${f.handle}`)
                   .join('、')}
               </div>
@@ -683,7 +685,7 @@ function TiktokManjuClient() {
                     )
                     .map((f) => ({
                       handle: f.handle,
-                      name: hasNoPosts(f.error)
+                      name: hasNoPosts(f)
                         ? '已追踪，但帐号下没有一般影片'
                         : '抓不到影片',
                       bad: true,
