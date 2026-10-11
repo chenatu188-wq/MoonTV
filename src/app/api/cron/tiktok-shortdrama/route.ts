@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { parseHandle } from '@/lib/tiktok-follows';
 import {
-  fetchCreator,
   fetchCreatorDramaPage,
   fetchDramaPage,
   parseDramaList,
+  resolveCreator,
 } from '@/lib/tiktok-shortdrama';
 
 export const runtime = 'nodejs';
@@ -16,14 +16,19 @@ export const dynamic = 'force-dynamic';
  * TikTok 会挡部分机房 IP，部署后用这支确认；只回笔数，不回内容。
  */
 export async function GET(request: Request) {
-  // 带 handle 时改测「某个上传者的短剧」那条路（要先读帐号主页，更容易被挡）
+  // 带 handle 时改测「某个上传者的短剧」那条路（帐号的 secUid 靠 Mac 推上来的资料）
   const handle = parseHandle(
     new URL(request.url).searchParams.get('handle') ?? ''
   );
   try {
     const count = parseDramaList(
       handle
-        ? await fetchCreatorDramaPage((await fetchCreator(handle)).secUid, '0')
+        ? await fetchCreatorDramaPage(
+            (
+              await resolveCreator(handle)
+            ).secUid,
+            '0'
+          )
         : await fetchDramaPage(2, '0')
     ).length;
     return NextResponse.json(
