@@ -12,6 +12,7 @@ import {
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
+import type { HongguoSearchItem } from '@/lib/hongguo-search';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import { resumeFrom } from '@/lib/watch-marks';
 
@@ -124,6 +125,32 @@ function AiManjuClient() {
   // 红果热播榜：只当「找哪部剧」的依据，点片名就去 YouTube 搜那部剧
   const [ranks, setRanks] = useState<HongguoRankList[] | null>(null);
   const [rankTab, setRankTab] = useState('ai');
+  // 红果口令／关键字搜寻：TikTok 上常只给口令不给剧名，用红果官网的搜寻换回剧名
+  const [hgInput, setHgInput] = useState('');
+  const [hgResult, setHgResult] = useState<{
+    q: string;
+    items: HongguoSearchItem[] | null;
+    error: string | null;
+  } | null>(null);
+  const searchHongguo = useCallback((raw: string) => {
+    const q = raw.trim();
+    if (!q) return;
+    setHgInput(q);
+    setHgResult({ q, items: null, error: null });
+    fetch(`/api/ai-manju/hongguo/search?q=${encodeURIComponent(q)}`)
+      .then(async (r) => {
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+        return body;
+      })
+      .then((d) => setHgResult({ q, items: d.items ?? [], error: null }))
+      .catch((e) => setHgResult({ q, items: [], error: (e as Error).message }));
+  }, []);
+  // 从 TikTok 漫剧的播放器按「用口令找剧」过来时，网址会带 ?hg=口令
+  useEffect(() => {
+    const hg = new URLSearchParams(window.location.search).get('hg');
+    if (hg) searchHongguo(hg);
+  }, [searchHongguo]);
   // 追踪频道榜：各频道最新一支／近期最多人看
   const [trackTab, setTrackTab] = useState<TrackTab>('latest');
   // 推荐榜：还没追踪的频道本周发的漫剧，用来发现新频道
@@ -630,9 +657,12 @@ function AiManjuClient() {
               {ranks.map((l) => (
                 <button
                   key={l.key}
-                  onClick={() => setRankTab(l.key)}
+                  onClick={() => {
+                    setRankTab(l.key);
+                    setHgResult(null);
+                  }}
                   className={`px-3 py-1 rounded-full text-sm ${
-                    rankList.key === l.key
+                    !hgResult && rankList.key === l.key
                       ? 'bg-red-500 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                   }`}
@@ -644,46 +674,125 @@ function AiManjuClient() {
                 点片名在 YouTube 找这部剧
               </span>
             </div>
-            <HScroll
-              resetKey={`${rankList.key}:${rankList.items.length}`}
-              arrowTop='4.5rem'
+            {/* 口令搜寻：TikTok 片段只给口令（例：石海尋徒）时，在这里换回剧名 */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                searchHongguo(hgInput);
+              }}
+              className='mb-2 flex flex-wrap items-center gap-2'
+              data-hg-search
             >
-              {rankList.items.map((it) => (
+              <input
+                value={hgInput}
+                onChange={(e) => setHgInput(e.target.value)}
+                placeholder='红果口令／关键字（例：石海尋徒），查出是哪部剧'
+                className='w-full max-w-sm rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-900 outline-none focus:border-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
+              />
+              <button
+                type='submit'
+                disabled={!hgInput.trim()}
+                className='shrink-0 rounded-full bg-red-500 px-4 py-1.5 text-sm text-white hover:bg-red-400 disabled:opacity-50'
+              >
+                查剧名
+              </button>
+              {hgResult && (
                 <button
-                  key={it.seriesId}
-                  onClick={() => searchTitle(it.title)}
-                  className='group w-28 shrink-0 text-left'
-                  data-rank
+                  type='button'
+                  onClick={() => {
+                    setHgResult(null);
+                    setHgInput('');
+                  }}
+                  className='text-xs text-gray-500 underline dark:text-gray-400'
                 >
-                  <div
-                    className={`relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
-                      search?.q === it.title ? 'ring-2 ring-red-500' : ''
-                    }`}
-                  >
-                    {it.cover && (
-                      <img
-                        src={it.cover}
-                        alt={it.title}
-                        loading='lazy'
-                        referrerPolicy='no-referrer'
-                        className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                      />
-                    )}
-                    <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
-                      {it.rank}
-                    </span>
-                  </div>
-                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-                    {it.title}
-                  </div>
-                  {(it.note || it.heat) && (
-                    <div className='text-xs text-gray-500 dark:text-gray-400'>
-                      {it.note ?? `${it.heat}热度`}
-                    </div>
-                  )}
+                  清除，回到榜单
                 </button>
-              ))}
-            </HScroll>
+              )}
+            </form>
+            {hgResult && (
+              <div className='mb-2 text-xs text-gray-500 dark:text-gray-400'>
+                {hgResult.items === null
+                  ? `正在红果找「${hgResult.q}」…`
+                  : hgResult.error
+                  ? hgResult.error
+                  : hgResult.items.length === 0
+                  ? `红果找不到「${hgResult.q}」，口令可能打错字或已失效`
+                  : `「${hgResult.q}」在红果的搜寻结果，越前面越接近（不一定第一个就是）· 点片名在 YouTube 找这部剧`}
+              </div>
+            )}
+            {hgResult?.items === null ? (
+              <div className='h-52 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800' />
+            ) : (
+              (!hgResult || hgResult.items.length > 0) && (
+                <HScroll
+                  resetKey={
+                    hgResult
+                      ? `hg:${hgResult.q}`
+                      : `${rankList.key}:${rankList.items.length}`
+                  }
+                  arrowTop='4.5rem'
+                >
+                  {(hgResult?.items
+                    ? hgResult.items.map((it, i) => ({
+                        seriesId: it.seriesId,
+                        title: it.title,
+                        cover: it.cover,
+                        badge: String(i + 1),
+                        note: [
+                          it.episodes > 0 ? `全${it.episodes}集` : '',
+                          it.heat,
+                        ]
+                          .filter(Boolean)
+                          .join(' · '),
+                        tip: it.intro,
+                      }))
+                    : rankList.items.map((it) => ({
+                        seriesId: it.seriesId,
+                        title: it.title,
+                        cover: it.cover,
+                        badge: String(it.rank),
+                        note: it.note ?? (it.heat ? `${it.heat}热度` : ''),
+                        tip: '',
+                      }))
+                  ).map((it) => (
+                    <button
+                      key={it.seriesId}
+                      onClick={() => searchTitle(it.title)}
+                      title={it.tip || undefined}
+                      className='group w-28 shrink-0 text-left'
+                      data-rank
+                    >
+                      <div
+                        className={`relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
+                          search?.q === it.title ? 'ring-2 ring-red-500' : ''
+                        }`}
+                      >
+                        {it.cover && (
+                          <img
+                            src={it.cover}
+                            alt={it.title}
+                            loading='lazy'
+                            referrerPolicy='no-referrer'
+                            className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                          />
+                        )}
+                        <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+                          {it.badge}
+                        </span>
+                      </div>
+                      <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                        {it.title}
+                      </div>
+                      {it.note && (
+                        <div className='text-xs text-gray-500 dark:text-gray-400'>
+                          {it.note}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </HScroll>
+              )
+            )}
           </div>
         )}
 

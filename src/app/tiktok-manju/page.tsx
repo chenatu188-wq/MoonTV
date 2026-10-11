@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react';
 
+import { promoKeywordOf } from '@/lib/hongguo-search';
 import { toSimplifiedFull } from '@/lib/t2s-table';
 import {
   type PendingFollow,
@@ -773,6 +774,18 @@ function TiktokManjuClient() {
               >
                 {playing.name} ↗
               </a>
+              {/* 说明只给红果口令、没写剧名的片段：带口令去 AI 漫剧页查是哪部剧 */}
+              {promoKeywordOf(playing.title) && (
+                <a
+                  href={`/ai-manju?hg=${encodeURIComponent(
+                    promoKeywordOf(playing.title) ?? ''
+                  )}`}
+                  className='shrink-0 rounded-full bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-400'
+                  data-promo
+                >
+                  用口令找剧：{promoKeywordOf(playing.title)}
+                </a>
+              )}
               {playingMarked ? (
                 <button
                   onClick={() => unmark(playing.id)}
