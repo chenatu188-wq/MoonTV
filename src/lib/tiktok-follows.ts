@@ -29,7 +29,11 @@ const HANDLE_RE = /^[A-Za-z0-9._]{2,24}$/;
  * 认不出来回 null。
  */
 export function parseHandle(input: string): string | null {
-  let s = input.trim();
+  // 中文输入法常打出全形的「＠」和全形英数字，先转成半形；复制贴上夹带的隐形字元也拿掉
+  let s = input
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g, '')
+    .trim();
   if (!s) return null;
   const url = /tiktok\.com\/@([^/?#\s]+)/i.exec(s);
   if (url) s = url[1];
