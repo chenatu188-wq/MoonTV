@@ -1,5 +1,6 @@
 import {
   parseCategories,
+  parseCreator,
   parseDramaList,
   parseFilter,
   shortDramaUrl,
@@ -130,5 +131,34 @@ describe('parseFilter', () => {
     expect(parseFilter('111111,222222,333333,444444', null).tags).toHaveLength(
       3
     );
+  });
+});
+
+describe('parseCreator', () => {
+  const page = (user: unknown) =>
+    `<html><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">${JSON.stringify(
+      { __DEFAULT_SCOPE__: { 'webapp.user-detail': { userInfo: { user } } } }
+    )}</script></html>`;
+
+  it('取出 secUid 和显示名称', () => {
+    expect(
+      parseCreator(
+        page({
+          secUid: 'MS4wLjABAAAA5BaMOITg2hBeketepiaLG',
+          nickname: 'ActFort',
+        })
+      )
+    ).toEqual({ secUid: 'MS4wLjABAAAA5BaMOITg2hBeketepiaLG', name: 'ActFort' });
+  });
+
+  it('帐号不存在、页面被挡、内容坏掉都回 null', () => {
+    expect(parseCreator(page(undefined))).toBeNull();
+    expect(parseCreator(page({ secUid: 'bad id!' }))).toBeNull();
+    expect(parseCreator('<html>captcha</html>')).toBeNull();
+    expect(
+      parseCreator(
+        '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">{oops</script>'
+      )
+    ).toBeNull();
   });
 });

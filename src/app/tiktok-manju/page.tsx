@@ -403,7 +403,11 @@ function TiktokManjuClient() {
         )}
 
         {/* TikTok 短剧专区的片单：站内播不了，点了另开 TikTok */}
-        <TiktokShortDrama />
+        <TiktokShortDrama
+          creators={missing
+            .filter((f) => hasNoPosts(f.error))
+            .map((f) => f.handle)}
+        />
 
         {/* 推荐：TikTok 不开放搜寻，没办法在站内列出没追踪的帐号，改连到 TikTok 自己的推荐页 */}
         <div className='mb-6 flex flex-wrap items-center gap-2'>
@@ -528,7 +532,8 @@ function TiktokManjuClient() {
             {missing.some((f) => hasNoPosts(f.error)) && (
               <div>
                 这些帐号已追踪，但帐号下没有一般影片（多半是 TikTok
-                短剧专区的帐号，内容只在上面的「TikTok 短剧」）：
+                短剧专区的帐号，他上传的短剧列在上面「TikTok
+                短剧」那一区的下方）：
                 {missing
                   .filter((f) => hasNoPosts(f.error))
                   .map((f) => `@${f.handle}`)
