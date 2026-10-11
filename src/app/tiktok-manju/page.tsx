@@ -108,6 +108,10 @@ function postFollow(op: 'add' | 'rm', handle: string, total: number) {
   });
 }
 
+/** yt-dlp 回报「这个帐号没有发布任何影片」：帐号存在，只是没有一般影片 */
+const hasNoPosts = (error: string) =>
+  error.includes('does not have any videos posted');
+
 function TiktokManjuClient() {
   const [data, setData] = useState<TiktokManjuData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -511,8 +515,26 @@ function TiktokManjuClient() {
         )}
 
         {missing.length > 0 && (
-          <div className='mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'>
-            这些帐号暂时抓不到：{missing.map((f) => `@${f.handle}`).join('、')}
+          <div className='mb-4 space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'>
+            {missing.some((f) => !hasNoPosts(f.error)) && (
+              <div>
+                这些帐号暂时抓不到：
+                {missing
+                  .filter((f) => !hasNoPosts(f.error))
+                  .map((f) => `@${f.handle}`)
+                  .join('、')}
+              </div>
+            )}
+            {missing.some((f) => hasNoPosts(f.error)) && (
+              <div>
+                这些帐号已追踪，但帐号下没有一般影片（多半是 TikTok
+                短剧专区的帐号，内容只在上面的「TikTok 短剧」）：
+                {missing
+                  .filter((f) => hasNoPosts(f.error))
+                  .map((f) => `@${f.handle}`)
+                  .join('、')}
+              </div>
+            )}
           </div>
         )}
 
@@ -655,7 +677,9 @@ function TiktokManjuClient() {
                     )
                     .map((f) => ({
                       handle: f.handle,
-                      name: '抓不到影片',
+                      name: hasNoPosts(f.error)
+                        ? '已追踪，但帐号下没有一般影片'
+                        : '抓不到影片',
                       bad: true,
                     })),
                 ].map((a) => {
