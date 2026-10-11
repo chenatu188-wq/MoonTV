@@ -18,6 +18,10 @@ describe('parseHandle', () => {
       'cc_tv1227',
     ],
     ['tiktok.com/@cc_tv1227?is_from_webapp=1', 'cc_tv1227'],
+    ['＠crayon2027', 'crayon2027'], // 全形 ＠（中文输入法）
+    ['＠ｃｒａｙｏｎ２０２７', 'crayon2027'], // 全形英数字
+    ['\u200B@crayon2027\u200B', 'crayon2027'], // 复制贴上夹带的隐形字元
+    ['https://www.tiktok.com/＠crayon2027', 'crayon2027'],
   ])('%s → %s', (input, expected) => {
     expect(parseHandle(input)).toBe(expected);
   });
