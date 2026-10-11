@@ -183,3 +183,71 @@ export async function fetchCategories(): Promise<DramaCategoryGroup[]> {
   const text = await res.text();
   return text ? parseCategories(JSON.parse(text)) : [];
 }
+
+export interface DramaCreator {
+  secUid: string;
+  /** 显示名称；页面上没有就是空字串 */
+  name: string;
+}
+
+/**
+ * 从帐号主页的 HTML 取出 secUid（上传者短剧清单的介面只认这个，不认帐号名）。
+ * 页面里嵌了一包 JSON，直接在里面找；帐号不存在或页面被挡回 null。
+ */
+export function parseCreator(html: string): DramaCreator | null {
+  const m =
+    /<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/.exec(
+      html
+    );
+  if (!m) return null;
+  try {
+    const user = JSON.parse(m[1])?.__DEFAULT_SCOPE__?.['webapp.user-detail']
+      ?.userInfo?.user;
+    const secUid = String(user?.secUid ?? '');
+    if (!/^[\w-]{20,200}$/.test(secUid)) return null;
+    return { secUid, name: String(user?.nickname ?? '') };
+  } catch {
+    return null;
+  }
+}
+
+/** handle 要先经过 parseHandle，这里不再检查 */
+export async function fetchCreator(handle: string): Promise<DramaCreator> {
+  const res = await fetch(`https://www.tiktok.com/@${handle}`, {
+    headers: { 'User-Agent': UA, 'Accept-Language': 'zh-TW,zh;q=0.9' },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`TikTok 回应 HTTP ${res.status}`);
+  const creator = parseCreator(await res.text());
+  if (!creator) throw new Error('读不到这个帐号（不存在或被挡）');
+  return creator;
+}
+
+/** 某个上传者在短剧专区的剧，一页 20 部。回原始 JSON，交给 parseDramaList 整理 */
+export async function fetchCreatorDramaPage(
+  secUid: string,
+  cursor: string
+): Promise<any> {
+  const q = new URLSearchParams({
+    aid: '1988',
+    app_name: 'tiktok_web',
+    device_platform: 'web_pc',
+    app_language: 'zh-Hant-TW',
+    language: 'zh-Hant-TW',
+    region: 'TW',
+    priority_region: 'TW',
+    storeRegion: 'TW',
+    coverFormat: '2',
+    count: '20',
+    cursor,
+    secUid,
+  });
+  const res = await fetch(
+    `https://www.tiktok.com/api/drama/user/drama_list/?${q}`,
+    { headers: { 'User-Agent': UA }, cache: 'no-store' }
+  );
+  if (!res.ok) throw new Error(`TikTok 回应 HTTP ${res.status}`);
+  const text = await res.text();
+  if (!text) throw new Error('TikTok 回了空内容（可能被挡）');
+  return JSON.parse(text);
+}

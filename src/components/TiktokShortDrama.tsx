@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   type DramaCategoryGroup,
@@ -32,11 +32,128 @@ const chip = (on: boolean) =>
       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
   }`;
 
+/** 短剧卡片：每一格都是连结，另开 TikTok 的短剧页从第 1 集看起 */
+function DramaCards({ items }: { items: ShortDrama[] }) {
+  return (
+    <>
+      {items.map((d, i) => (
+        <a
+          key={d.id}
+          href={shortDramaUrl(d.id)}
+          target='_blank'
+          rel='noopener noreferrer'
+          title={d.description}
+          className='group w-28 shrink-0 text-left'
+          data-shortdrama
+        >
+          <div className='relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+            {d.cover && (
+              <img
+                src={d.cover}
+                alt={d.name}
+                loading='lazy'
+                referrerPolicy='no-referrer'
+                className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+              />
+            )}
+            <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
+              {i + 1}
+            </span>
+            {d.episodes > 0 && (
+              <span className='absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[10px] text-white'>
+                {d.episodes} 集
+              </span>
+            )}
+          </div>
+          <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+            {d.name}
+          </div>
+          <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+            {formatWatched(d.watched)}
+          </div>
+        </a>
+      ))}
+    </>
+  );
+}
+
+/**
+ * 某个上传者在短剧专区的剧。短剧专区的上传帐号没有一般影片，
+ * 追踪了在影片墙上看不到东西，所以改在这里列出他的短剧。卷到才载入。
+ */
+function CreatorRow({ handle }: { handle: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+  const [data, setData] = useState<{
+    name: string;
+    items: ShortDrama[];
+  } | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || near) return;
+    const io = new IntersectionObserver(
+      (entries) => entries.some((e) => e.isIntersecting) && setNear(true),
+      { rootMargin: '400px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
+
+  useEffect(() => {
+    if (!near) return;
+    let cancelled = false;
+    fetch(
+      `/api/tiktok-manju/shortdrama/creator?handle=${encodeURIComponent(
+        handle
+      )}`
+    )
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((d) => !cancelled && setData(d))
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [near, handle]);
+
+  // 抓不到，或这个帐号在短剧专区也没有剧，就整列不显示
+  if (failed || data?.items.length === 0) return null;
+
+  return (
+    <div ref={ref} className='mt-4' data-shortdrama-creator={handle}>
+      <h3 className='mb-1.5 text-sm font-semibold text-gray-800 dark:text-gray-200'>
+        {data?.name ? `${data.name}（@${handle}）` : `@${handle}`} 的短剧
+        {data && (
+          <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
+            {data.items.length} 部
+          </span>
+        )}
+      </h3>
+      {data ? (
+        <HScroll resetKey={`creator:${handle}`} arrowTop='4.5rem'>
+          <DramaCards items={data.items} />
+        </HScroll>
+      ) : (
+        <div className='h-52 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800' />
+      )}
+    </div>
+  );
+}
+
 /**
  * TikTok 短剧专区的片单。这些剧站内播不了（要登入 TikTok），
  * 所以每一格都是连结，另开 TikTok 的短剧页从第 1 集看起。
  */
-export default function TiktokShortDrama() {
+export default function TiktokShortDrama({
+  creators = [],
+}: {
+  /** 已追踪、但帐号下没有一般影片的帐号：当成短剧上传者，各列出他的短剧 */
+  creators?: string[];
+}) {
   const [lists, setLists] = useState<ShortDramaList[] | null>(null);
   const [groups, setGroups] = useState<DramaCategoryGroup[]>([]);
   const [tab, setTab] = useState('');
@@ -207,45 +324,13 @@ export default function TiktokShortDrama() {
           resetKey={`${filtering ? filterKey : list.key}:${items.length}`}
           arrowTop='4.5rem'
         >
-          {items.map((d, i) => (
-            <a
-              key={d.id}
-              href={shortDramaUrl(d.id)}
-              target='_blank'
-              rel='noopener noreferrer'
-              title={d.description}
-              className='group w-28 shrink-0 text-left'
-              data-shortdrama
-            >
-              <div className='relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
-                {d.cover && (
-                  <img
-                    src={d.cover}
-                    alt={d.name}
-                    loading='lazy'
-                    referrerPolicy='no-referrer'
-                    className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                  />
-                )}
-                <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
-                  {i + 1}
-                </span>
-                {d.episodes > 0 && (
-                  <span className='absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[10px] text-white'>
-                    {d.episodes} 集
-                  </span>
-                )}
-              </div>
-              <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-                {d.name}
-              </div>
-              <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
-                {formatWatched(d.watched)}
-              </div>
-            </a>
-          ))}
+          <DramaCards items={items} />
         </HScroll>
       )}
+
+      {creators.map((h) => (
+        <CreatorRow key={h} handle={h} />
+      ))}
     </div>
   );
 }
