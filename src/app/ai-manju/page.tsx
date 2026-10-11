@@ -12,6 +12,7 @@ import {
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
+import { MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
 import type { HongguoSearchItem } from '@/lib/hongguo-search';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import { resumeFrom } from '@/lib/watch-marks';
@@ -36,7 +37,7 @@ interface ApiResponse {
   failed: { key: string; name: string; error: string }[];
 }
 
-/** 使用者自己追踪的来源。存在浏览器 localStorage，所以每台装置各自一份 */
+/** 使用者在页面上追踪的来源。全站共用（lib/ai-manju-shared.ts），所有装置看到同一份 */
 interface Follow {
   type: 'channel' | 'playlist';
   id: string;
@@ -53,14 +54,17 @@ const TRACK_TABS: { key: TrackTab; name: string }[] = [
   { key: 'month', name: '本月热门' },
 ];
 
+/** 旧版：追踪清单存在这台装置。现在清单全站共用，这把 key 只用来把旧清单搬过去 */
 const FOLLOWS_KEY = 'moontv_ai_manju_follows';
-const MAX_FOLLOWS = 30;
+/** 这台装置按了追踪、但共用清单还没确认收到的：下次开页会补送（伺服器重新部署会忘记待办） */
+const PENDING_FOLLOWS_KEY = 'moontv_ai_manju_follow_pending';
+const MAX_FOLLOWS = MAX_CUSTOM_SOURCES;
 const CHIPS_KEY = 'moontv_ai_manju_chips_open';
 const MARKS_KEY = 'moontv_ai_manju_marks';
 
-function loadFollows(): Follow[] {
+function loadFollows(key: string): Follow[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(FOLLOWS_KEY) || '[]');
+    const raw = JSON.parse(localStorage.getItem(key) || '[]');
     if (!Array.isArray(raw)) return [];
     return raw.filter(
       (f): f is Follow =>
@@ -74,12 +78,27 @@ function loadFollows(): Follow[] {
   }
 }
 
-function saveFollows(list: Follow[]) {
+function saveFollows(key: string, list: Follow[]) {
   try {
-    localStorage.setItem(FOLLOWS_KEY, JSON.stringify(list));
+    localStorage.setItem(key, JSON.stringify(list));
   } catch {
     // 无痕模式或容量满了就只保留在这次画面里
   }
+}
+
+/** 两份清单合起来，同一个来源只留前面那份的 */
+function mergeFollows(a: Follow[], b: Follow[]): Follow[] {
+  const seen = new Set<string>();
+  return [...a, ...b].filter((f) => !seen.has(f.id) && seen.add(f.id));
+}
+
+/** 把追踪／移除送到全站共用的清单。失败不挡画面：新增的会留在这台装置，下次开页补送 */
+function postFollow(op: 'add' | 'rm', f: Follow) {
+  fetch('/api/ai-manju/follows', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op, type: f.type, id: f.id, name: f.name }),
+  }).catch(() => undefined);
 }
 
 /** 缩图左上角的「第 2 季」「第 8 集」标签；标题没写就不显示 */
@@ -278,7 +297,7 @@ function AiManjuClient() {
     });
   }, []);
 
-  // null = 还没从 localStorage 读出来，读完才发第一次请求，避免抓两次
+  // 全站共用的追踪清单。null = 还没读到，读完才发第一次请求，避免抓两次
   const [follows, setFollows] = useState<Follow[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
@@ -289,7 +308,28 @@ function AiManjuClient() {
   );
 
   useEffect(() => {
-    setFollows(loadFollows());
+    // 旧版存在这台装置的清单，当成「还没送出去的新增」搬到共用清单
+    const legacy = loadFollows(FOLLOWS_KEY);
+    let waiting = mergeFollows(loadFollows(PENDING_FOLLOWS_KEY), legacy);
+    if (legacy.length > 0) {
+      saveFollows(PENDING_FOLLOWS_KEY, waiting);
+      try {
+        localStorage.removeItem(FOLLOWS_KEY);
+      } catch {
+        // 删不掉就下次再搬一次，重复新增不会出事
+      }
+    }
+    fetch('/api/ai-manju/follows')
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d: { follows?: Follow[]; confirmed?: string[] }) => {
+        const confirmed = new Set(d.confirmed ?? []);
+        waiting = waiting.filter((f) => !confirmed.has(f.id));
+        saveFollows(PENDING_FOLLOWS_KEY, waiting);
+        waiting.forEach((f) => postFollow('add', f));
+        setFollows(mergeFollows(d.follows ?? [], waiting));
+      })
+      // 共用清单读不到时，至少这台装置自己加的还看得到
+      .catch(() => setFollows(waiting));
   }, []);
 
   useEffect(() => {
@@ -321,7 +361,12 @@ function AiManjuClient() {
 
   const updateFollows = useCallback((next: Follow[]) => {
     setFollows(next);
-    saveFollows(next);
+    // 留在这台装置的只有「等共用清单确认」的那几笔；清单里已经没有的就不用等了
+    const ids = new Set(next.map((f) => f.id));
+    saveFollows(
+      PENDING_FOLLOWS_KEY,
+      loadFollows(PENDING_FOLLOWS_KEY).filter((f) => ids.has(f.id))
+    );
   }, []);
 
   // 自己追的频道后来变成内建来源时，从自己的清单拿掉，免得筛选列出现两个
@@ -346,7 +391,12 @@ function AiManjuClient() {
       if (isTracked(f.id)) return `「${f.name}」已经在追踪清单里`;
       if (list.length >= MAX_FOLLOWS)
         return `最多追踪 ${MAX_FOLLOWS} 个，请先移除不看的`;
+      saveFollows(
+        PENDING_FOLLOWS_KEY,
+        mergeFollows(loadFollows(PENDING_FOLLOWS_KEY), [f])
+      );
       updateFollows([...list, f]);
+      postFollow('add', f);
       return null;
     },
     [follows, isTracked, updateFollows]
@@ -354,7 +404,9 @@ function AiManjuClient() {
 
   const removeFollow = useCallback(
     (id: string) => {
+      const gone = (follows ?? []).find((f) => f.id === id);
       updateFollows((follows ?? []).filter((f) => f.id !== id));
+      if (gone) postFollow('rm', gone);
       setActive((cur) => (cur === id ? 'all' : cur));
     },
     [follows, updateFollows]
@@ -552,7 +604,7 @@ function AiManjuClient() {
         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
     }`;
   const rankList = ranks?.find((l) => l.key === rankTab) ?? ranks?.[0];
-  // 伺服器只知道内建清单；使用者自己追踪的存在浏览器，这里再滤一次，追踪后也会马上消失
+  // 推荐榜的伺服器只滤掉内建清单；页面上追踪的这里再滤一次，追踪后也会马上消失
   const recommendItems = (recommend ?? []).filter(
     (v) => !isTracked(v.channelId)
   );
@@ -1324,7 +1376,7 @@ function AiManjuClient() {
               </p>
             )}
             <p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
-              贴影片网址会追踪发布那支影片的频道。清单存在这台装置的浏览器里，换装置要重新加。
+              贴影片网址会追踪发布那支影片的频道。清单全站共用，所有装置都看得到；新增或移除约 5 分钟内同步到其他装置。
             </p>
 
             <div className='mt-4 min-h-0 flex-1 overflow-y-auto'>
@@ -1371,7 +1423,7 @@ function AiManjuClient() {
               {data && data.sources.length > 0 && (
                 <>
                   <h3 className='mt-4 text-sm font-medium text-gray-700 dark:text-gray-300'>
-                    内建来源（所有装置共用，不能在这里移除）
+                    内建来源（写在程式里，不能在这里移除）
                   </h3>
                   <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
                     {data.sources.map((s) => s.name).join('、')}

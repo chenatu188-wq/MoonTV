@@ -6,8 +6,8 @@
  * 播放数与广告收益仍归原作者。
  *
  * 这个数组是「内建来源」，所有装置都看得到。
- * 使用者在页面上「管理追踪」加的来源另外存在浏览器 localStorage
- *（线上是 localstorage 模式，没有伺服器端资料库），不会写回这里。
+ * 使用者在页面上「管理追踪」加的来源另外放在全站共用的清单
+ *（lib/ai-manju-shared.ts，由站长的 Mac 写进 tiktok-data 分支），不会写回这里。
  *
  * 要增删内建来源，直接改这个数组：
  * - 频道：打开频道页，网址 youtube.com/channel/UCxxxx 里的 UCxxxx 就是 id
@@ -1058,7 +1058,7 @@ export const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
 export const PLAYLIST_ID_RE = /^(PL|UU|OL|FL|RD)[\w-]{10,60}$/;
 
 /** 单次请求最多带多少个使用者自订来源，避免被拿来当抓取跳板 */
-export const MAX_CUSTOM_SOURCES = 30;
+export const MAX_CUSTOM_SOURCES = 60;
 
 export function isValidSourceId(
   type: AiManjuSource['type'],
