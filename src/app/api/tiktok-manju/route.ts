@@ -22,7 +22,8 @@ export interface TiktokManjuData {
   updated: number;
   accounts: { handle: string; name: string }[];
   videos: TiktokManjuVideo[];
-  failed: { handle: string; error: string; stale: boolean }[];
+  /** secUid：Mac 查到这个帐号是短剧上传者时才有（见 lib/tiktok-shortdrama.ts） */
+  failed: { handle: string; error: string; stale: boolean; secUid?: string }[];
   /** 还在等 Mac 处理的追踪变更 */
   pending?: PendingFollow[];
 }
