@@ -4,9 +4,9 @@ import { parseHandle } from '@/lib/tiktok-follows';
 import {
   type DramaCreator,
   type ShortDrama,
-  fetchCreator,
   fetchCreatorDramaPage,
   parseDramaList,
+  resolveCreator,
 } from '@/lib/tiktok-shortdrama';
 
 export const runtime = 'nodejs';
@@ -27,7 +27,7 @@ const creators = new Map<string, DramaCreator>();
 async function load(handle: string): Promise<Result> {
   let creator = creators.get(handle);
   if (!creator) {
-    creator = await fetchCreator(handle);
+    creator = await resolveCreator(handle);
     creators.set(handle, creator);
   }
   const items: ShortDrama[] = [];

@@ -1,4 +1,5 @@
 import {
+  findCreator,
   parseCategories,
   parseCreator,
   parseDramaList,
@@ -160,5 +161,31 @@ describe('parseCreator', () => {
         '<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">{oops</script>'
       )
     ).toBeNull();
+  });
+});
+
+describe('findCreator', () => {
+  const data = {
+    failed: [
+      {
+        handle: 'ActFort_CA',
+        secUid: 'MS4wLjABAAAA5BaMOITg2hBeketepiaLG',
+        name: 'ActFort',
+      },
+      { handle: 'nosec', error: 'x' },
+    ],
+  };
+
+  it('帐号名不分大小写', () => {
+    expect(findCreator(data, 'actfort_ca')).toEqual({
+      secUid: 'MS4wLjABAAAA5BaMOITg2hBeketepiaLG',
+      name: 'ActFort',
+    });
+  });
+
+  it('没有 secUid、不在清单里、资料坏掉都回 null', () => {
+    expect(findCreator(data, 'nosec')).toBeNull();
+    expect(findCreator(data, 'other')).toBeNull();
+    expect(findCreator(null, 'actfort_ca')).toBeNull();
   });
 });

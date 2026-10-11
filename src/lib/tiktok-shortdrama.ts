@@ -211,6 +211,20 @@ export function parseCreator(html: string): DramaCreator | null {
   }
 }
 
+/**
+ * 从 Mac 推上来的 tiktok.json 里找这个帐号的 secUid。
+ * 机房 IP 读 TikTok 帐号主页会被挡（2026-10-11 Zeabur 实测），所以由 Mac 查好、
+ * 附在「抓不到影片」那几笔上。找不到回 null。
+ */
+export function findCreator(data: any, handle: string): DramaCreator | null {
+  const hit = (Array.isArray(data?.failed) ? data.failed : []).find(
+    (f: any) => String(f?.handle ?? '').toLowerCase() === handle.toLowerCase()
+  );
+  const secUid = String(hit?.secUid ?? '');
+  if (!/^[\w-]{20,200}$/.test(secUid)) return null;
+  return { secUid, name: String(hit.name ?? '') };
+}
+
 /** handle 要先经过 parseHandle，这里不再检查 */
 export async function fetchCreator(handle: string): Promise<DramaCreator> {
   const res = await fetch(`https://www.tiktok.com/@${handle}`, {
@@ -250,4 +264,20 @@ export async function fetchCreatorDramaPage(
   const text = await res.text();
   if (!text) throw new Error('TikTok 回了空内容（可能被挡）');
   return JSON.parse(text);
+}
+
+/** 跟 api/tiktok-manju/route.ts 读的是同一份：Mac 推上来的资料 */
+const DATA_URL =
+  'https://raw.githubusercontent.com/chenatu188-wq/MoonTV/tiktok-data/tiktok.json';
+
+export async function resolveCreator(handle: string): Promise<DramaCreator> {
+  // 先看 Mac 有没有查好；没有再自己读帐号主页（机房 IP 多半会被挡）
+  try {
+    const res = await fetch(DATA_URL, { cache: 'no-store' });
+    const found = res.ok ? findCreator(await res.json(), handle) : null;
+    if (found) return found;
+  } catch {
+    // 读不到就走下面
+  }
+  return fetchCreator(handle);
 }
