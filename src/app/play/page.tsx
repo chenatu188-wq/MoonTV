@@ -9,6 +9,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  addPick,
+  loadPicks,
+  pickKey,
+  removePick,
+  savePicks,
+} from '@/lib/adult-picks';
+import {
   deleteFavorite,
   deletePlayRecord,
   generateStorageKey,
@@ -1229,6 +1236,37 @@ function PlayPageClient() {
     return unsubscribe;
   }, [currentSource, currentId]);
 
+  // 彩虹頻道的「精選影片」：存在這台裝置的 localStorage
+  const [picked, setPicked] = useState(false);
+  useEffect(() => {
+    if (!currentSource || !currentId) return;
+    const key = pickKey({ source: currentSource, id: currentId });
+    setPicked(loadPicks().some((p) => pickKey(p) === key));
+  }, [currentSource, currentId]);
+
+  const togglePick = () => {
+    if (!currentSourceRef.current || !currentIdRef.current) return;
+    const target = {
+      source: currentSourceRef.current,
+      id: currentIdRef.current,
+    };
+    if (picked) {
+      savePicks(removePick(loadPicks(), target));
+      setPicked(false);
+      return;
+    }
+    savePicks(
+      addPick(loadPicks(), {
+        ...target,
+        title: videoTitleRef.current || '',
+        poster: detailRef.current?.poster || '',
+        sourceName: detailRef.current?.source_name || '',
+        at: Date.now(),
+      })
+    );
+    setPicked(true);
+  };
+
   // 切换收藏
   const handleToggleFavorite = async () => {
     if (
@@ -2414,6 +2452,23 @@ function PlayPageClient() {
                 >
                   <FavoriteIcon filled={favorited} />
                 </button>
+                {/* 彩虹頻道的片：加到「精選影片」分頁（存在這台裝置） */}
+                {isAdultSearch && currentSource && currentId && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePick();
+                    }}
+                    className={`ml-3 flex-shrink-0 rounded-full px-3 py-1 text-sm font-normal tracking-normal transition-colors ${
+                      picked
+                        ? 'bg-rose-500 text-white hover:bg-rose-400'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                    data-pick-toggle
+                  >
+                    {picked ? '★ 已在精選影片' : '☆ 加到精選影片'}
+                  </button>
+                )}
               </h1>
 
               {/* 关键信息行 */}

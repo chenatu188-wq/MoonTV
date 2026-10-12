@@ -3,6 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
+import {
+  type SavedPick,
+  BUILTIN_PICKS,
+  loadPicks,
+  pickKey,
+  removePick,
+  savePicks,
+} from '@/lib/adult-picks';
 import { SearchResult } from '@/lib/types';
 
 import ActressesPanel from '@/components/ActressesPanel';
@@ -12,7 +20,7 @@ import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
-type Tab = 'browse' | 'search' | 'actresses';
+type Tab = 'browse' | 'search' | 'actresses' | 'picks';
 
 const SESSION_KEY = 'adult_unlocked';
 /** 各片源一列的榜單，一開始顯示幾個片源 */
@@ -145,6 +153,12 @@ function AdultClient() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [activeRegion, setActiveRegion] = useState<string>('all');
+
+  // 精選影片：在播放頁存下來的那些。每次切到這個分頁重讀一次（可能剛從播放頁加了新的回來）
+  const [savedPicks, setSavedPicks] = useState<SavedPick[]>([]);
+  useEffect(() => {
+    if (tab === 'picks') setSavedPicks(loadPicks());
+  }, [tab]);
 
   const playRank = useCallback(
     (it: RankItem) =>
@@ -310,6 +324,7 @@ function AdultClient() {
               { key: 'browse', label: '瀏覽' },
               { key: 'search', label: '搜索' },
               { key: 'actresses', label: '演員' },
+              { key: 'picks', label: '精選影片' },
             ] as { key: Tab; label: string }[]
           ).map((t) => (
             <button
@@ -596,6 +611,106 @@ function AdultClient() {
         {/* ── Actresses tab ── */}
         {tab === 'actresses' && (
           <ActressesPanel onSearch={(name) => handleSearch(name)} />
+        )}
+
+        {/* ── 精選影片 tab ── */}
+        {tab === 'picks' && (
+          <div className='space-y-6' data-picks>
+            {/* 在播放頁按「加到精選影片」存下來的：點了直接播那個片源 */}
+            <div>
+              <h2 className='mb-2 text-base font-bold text-gray-800 dark:text-white'>
+                我加入的
+                <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
+                  {savedPicks.length > 0
+                    ? `${savedPicks.length} 部 · 只存在這台裝置`
+                    : '看片時在片名旁按「加到精選影片」，就會出現在這裡'}
+                </span>
+              </h2>
+              {savedPicks.length > 0 && (
+                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
+                  {savedPicks.map((p) => (
+                    <div key={pickKey(p)} className='group relative'>
+                      <button
+                        onClick={() =>
+                          router.push(
+                            `/play?source=${encodeURIComponent(
+                              p.source
+                            )}&id=${encodeURIComponent(
+                              p.id
+                            )}&title=${encodeURIComponent(
+                              p.title
+                            )}&stitle=${encodeURIComponent(p.title)}&adult=1`
+                          )
+                        }
+                        className='block w-full text-left'
+                        data-saved-pick
+                      >
+                        <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+                          {p.poster && (
+                            <img
+                              src={p.poster}
+                              alt={p.title}
+                              loading='lazy'
+                              referrerPolicy='no-referrer'
+                              className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                            />
+                          )}
+                        </div>
+                        <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+                          {p.title}
+                        </div>
+                        <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+                          {p.sourceName}
+                        </div>
+                      </button>
+                      <button
+                        aria-label='從精選影片拿掉'
+                        title='從精選影片拿掉'
+                        onClick={() => {
+                          const next = removePick(savedPicks, p);
+                          setSavedPicks(next);
+                          savePicks(next);
+                        }}
+                        className='absolute right-1 top-1 h-6 w-6 rounded-full bg-black/70 text-sm leading-none text-white hover:bg-red-600'
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 內建的番號清單：點了用番號去各片源搜 */}
+            <div>
+              <h2 className='mb-2 text-base font-bold text-gray-800 dark:text-white'>
+                精選番號
+                <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
+                  {BUILTIN_PICKS.length} 部 · 點了用番號到各片源搜尋
+                </span>
+              </h2>
+              <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
+                {BUILTIN_PICKS.map((p) => (
+                  <button
+                    key={p.code}
+                    onClick={() => {
+                      handleSearch(p.code);
+                      window.scrollTo({ top: 0 });
+                    }}
+                    className='rounded-lg bg-gray-100 p-3 text-left transition-colors hover:bg-rose-100 dark:bg-gray-800 dark:hover:bg-rose-900/30'
+                    data-code-pick
+                  >
+                    <div className='text-sm font-bold text-rose-500'>
+                      {p.code}
+                    </div>
+                    <div className='mt-0.5 truncate text-sm text-gray-800 dark:text-gray-200'>
+                      {p.actress}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </PageLayout>
