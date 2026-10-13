@@ -41,10 +41,6 @@ export async function middleware(request: NextRequest) {
     if (!authInfo.password || authInfo.password !== guest?.code) {
       return handleAuthFailure(request, pathname);
     }
-    // 访客密码只给人看，不让它拿来查「现在的访客密码」
-    if (pathname.startsWith('/api/guest-pass')) {
-      return handleAuthFailure(request, pathname);
-    }
     return NextResponse.next();
   }
 
