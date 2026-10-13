@@ -17,10 +17,14 @@ const STEP = 8;
 function ChannelRow({
   id,
   name,
+  pinned,
+  onTogglePin,
   onPlay,
 }: {
   id: string;
   name: string;
+  pinned?: boolean;
+  onTogglePin?: () => void;
   onPlay: (v: TopVideo) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -59,8 +63,18 @@ function ChannelRow({
 
   return (
     <div ref={ref} className='mb-4' data-channel-top={id}>
-      <h3 className='mb-1.5 text-sm font-semibold text-gray-800 dark:text-gray-200'>
+      <h3 className='mb-1.5 flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200'>
+        {pinned && <span title='已置顶'>📌</span>}
         {name}
+        {onTogglePin && (
+          <button
+            onClick={onTogglePin}
+            className='rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+            data-pin-toggle
+          >
+            {pinned ? '取消置顶' : '置顶'}
+          </button>
+        )}
       </h3>
       {videos ? (
         <HScroll resetKey={`top:${id}`} arrowTop='2.75rem'>
@@ -101,9 +115,12 @@ function ChannelRow({
 
 export default function AiManjuChannelTop({
   channels,
+  onTogglePin,
   onPlay,
 }: {
-  channels: { id: string; name: string }[];
+  /** pinned：使用者置顶的频道，呼叫端已经把它们排在最前面 */
+  channels: { id: string; name: string; key: string; pinned: boolean }[];
+  onTogglePin: (key: string) => void;
   onPlay: (v: TopVideo) => void;
 }) {
   const [count, setCount] = useState(FIRST);
@@ -116,12 +133,19 @@ export default function AiManjuChannelTop({
           各频道热门 20
         </h2>
         <span className='text-xs text-gray-500 dark:text-gray-400'>
-          每个追踪频道观看数最高的 20 支 · 最近有更新的频道排前面 · 共{' '}
-          {channels.length} 个频道
+          每个追踪频道观看数最高的 20 支 ·
+          置顶的频道排最前面，其余最近有更新的在前 · 共 {channels.length} 个频道
         </span>
       </div>
       {channels.slice(0, count).map((c) => (
-        <ChannelRow key={c.id} id={c.id} name={c.name} onPlay={onPlay} />
+        <ChannelRow
+          key={c.id}
+          id={c.id}
+          name={c.name}
+          pinned={c.pinned}
+          onTogglePin={() => onTogglePin(c.key)}
+          onPlay={onPlay}
+        />
       ))}
       {count < channels.length && (
         <button

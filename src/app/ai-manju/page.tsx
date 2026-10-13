@@ -61,6 +61,8 @@ const PENDING_FOLLOWS_KEY = 'moontv_ai_manju_follow_pending';
 const MAX_FOLLOWS = MAX_CUSTOM_SOURCES;
 const CHIPS_KEY = 'moontv_ai_manju_chips_open';
 const MARKS_KEY = 'moontv_ai_manju_marks';
+/** 置顶的频道（来源 key）。个人喜好，存在这台装置 */
+const PINS_KEY = 'moontv_ai_manju_pins';
 
 function loadFollows(key: string): Follow[] {
   try {
@@ -277,6 +279,30 @@ function AiManjuClient() {
 
   // 频道筛选列是否展开。预设展开，让所有追踪的频道都看得到
   const [chipsOpen, setChipsOpen] = useState(true);
+  // 置顶的频道：排在频道列、各频道热门、最新上架的最前面。新置顶的排最前
+  const [pins, setPins] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(PINS_KEY) || '[]');
+      if (Array.isArray(raw))
+        setPins(raw.filter((k) => typeof k === 'string').slice(0, 100));
+    } catch {
+      // 读不到就当没有
+    }
+  }, []);
+  const togglePin = useCallback((key: string) => {
+    setPins((cur) => {
+      const next = cur.includes(key)
+        ? cur.filter((k) => k !== key)
+        : [key, ...cur].slice(0, 100);
+      try {
+        localStorage.setItem(PINS_KEY, JSON.stringify(next));
+      } catch {
+        // 存不了就只在这次画面生效
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     try {
@@ -571,7 +597,19 @@ function AiManjuClient() {
   const followName = (key: string) =>
     followList.find((f) => f.id === key)?.name;
   const builtinSources = data?.sources ?? [];
+  const allChipItems: { key: string; name: string }[] = [
+    ...builtinSources,
+    ...followList.map((f) => ({ key: f.id, name: f.name })),
+  ];
+  const pinSet = new Set(pins);
   const chipGroups = [
+    {
+      title: '📌 置顶',
+      // 照置顶的先后排（新置顶的在前）；频道已经不在清单里的就略过
+      items: pins
+        .map((k) => allChipItems.find((s) => s.key === k))
+        .filter((s): s is { key: string; name: string } => !!s),
+    },
     {
       title: '原有来源',
       items: builtinSources.filter((s) => (s.group ?? 'base') === 'base'),
@@ -587,7 +625,12 @@ function AiManjuClient() {
       title: '红果片单',
       items: builtinSources.filter((s) => s.group === 'hongguo'),
     },
-  ].filter((g) => g.items.length > 0);
+  ]
+    // 置顶的只出现在置顶那一组，不在原本的组里重复
+    .map((g, i) =>
+      i === 0 ? g : { ...g, items: g.items.filter((s) => !pinSet.has(s.key)) }
+    )
+    .filter((g) => g.items.length > 0);
   const chips = [
     { key: 'all', name: '全部' },
     ...chipGroups.flatMap((g) => g.items),
@@ -626,12 +669,25 @@ function AiManjuClient() {
         .map((f) => ({ id: f.id, name: f.name, key: f.id })),
     ]
       .filter((c) => !seen.has(c.id) && seen.add(c.id))
-      .sort((a, b) => (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0));
-  }, [allVideos, data, follows]);
+      .map((c) => ({ ...c, pinned: pins.includes(c.key) }))
+      .sort(
+        (a, b) =>
+          // 置顶的排最前面（照置顶先后），其余照最近更新
+          Number(b.pinned) - Number(a.pinned) ||
+          (a.pinned
+            ? pins.indexOf(a.key) - pins.indexOf(b.key)
+            : (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0))
+      );
+  }, [allVideos, data, follows, pins]);
   const trackItems = useMemo(() => {
     if (!allVideos) return [];
     if (trackTab === 'latest') {
-      return latestPerSource(allVideos).map((video) => ({
+      const latest = latestPerSource(allVideos);
+      // 置顶频道的最新一支排最前面，其余维持新到旧
+      return [
+        ...latest.filter((v) => pins.includes(v.sourceKey)),
+        ...latest.filter((v) => !pins.includes(v.sourceKey)),
+      ].map((video) => ({
         video,
         title: video.title,
         views: video.views ?? 0,
@@ -644,7 +700,7 @@ function AiManjuClient() {
       views: h.views,
       count: h.count,
     }));
-  }, [allVideos, trackTab]);
+  }, [allVideos, trackTab, pins]);
   const playingChannelId = playing ? channelIdOf(playing.channelUrl) : null;
   const playingSeries = playing ? seriesNameOf(playing.title) : null;
 
@@ -984,7 +1040,11 @@ function AiManjuClient() {
         )}
 
         {/* 各频道热门 20：一个频道一排，卷到才载入 */}
-        <AiManjuChannelTop channels={topChannels} onPlay={setPlaying} />
+        <AiManjuChannelTop
+          channels={topChannels}
+          onTogglePin={togglePin}
+          onPlay={setPlaying}
+        />
 
         {/* 来源筛选：预设全部展开；嫌占版面可以收起，选择会记住 */}
         {data && (
@@ -1007,6 +1067,24 @@ function AiManjuClient() {
                   ? '收起频道 ▴'
                   : `展开全部 ${chips.length - 1} 个频道 ▾`}
               </button>
+              {/* 选了某个频道时可以把它置顶；置顶的频道排在各区的最前面 */}
+              {!search && active !== 'all' ? (
+                <button
+                  onClick={() => togglePin(active)}
+                  className={`px-3 py-1.5 rounded-full text-sm ${
+                    pinSet.has(active)
+                      ? 'bg-amber-500 text-white hover:bg-amber-400'
+                      : 'border border-amber-500 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20'
+                  }`}
+                  data-pin-active
+                >
+                  {pinSet.has(active) ? '📌 已置顶 · 取消' : '📌 置顶这个频道'}
+                </button>
+              ) : (
+                <span className='text-xs text-gray-500 dark:text-gray-400'>
+                  点一个频道后可以按「置顶」，常看的排最前面
+                </span>
+              )}
               {refreshing && (
                 <span className='text-xs text-gray-500 dark:text-gray-400'>
                   更新中…
@@ -1376,7 +1454,8 @@ function AiManjuClient() {
               </p>
             )}
             <p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
-              贴影片网址会追踪发布那支影片的频道。清单全站共用，所有装置都看得到；新增或移除约 5 分钟内同步到其他装置。
+              贴影片网址会追踪发布那支影片的频道。清单全站共用，所有装置都看得到；新增或移除约
+              5 分钟内同步到其他装置。
             </p>
 
             <div className='mt-4 min-h-0 flex-1 overflow-y-auto'>
