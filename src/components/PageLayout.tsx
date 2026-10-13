@@ -1,4 +1,5 @@
 import { BackButton } from './BackButton';
+import { GuestExpiryNotice } from './GuestPassCard';
 import { LogoutButton } from './LogoutButton';
 import MobileBottomNav from './MobileBottomNav';
 import MobileHeader from './MobileHeader';
@@ -47,6 +48,8 @@ const PageLayout = ({ children, activePath = '/' }: PageLayoutProps) => {
               paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom))',
             }}
           >
+            {/* 用访客密码登入的人：提示密码什么时候到期 */}
+            <GuestExpiryNotice />
             {children}
           </main>
         </div>
