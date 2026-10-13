@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import {
+  canAttempt,
+  currentGuestPass,
+  newFailLog,
+  recordFail,
+} from '@/lib/guest-pass';
 
 export const runtime = 'edge';
 
@@ -13,6 +19,9 @@ const STORAGE_TYPE =
     | 'redis'
     | 'd1'
     | undefined) || 'localstorage';
+
+// 登入失败次数（防止有人一组一组试访客密码）。记在记忆体里，重新部署会归零
+const failLog = newFailLog();
 
 // 生成签名
 async function generateSignature(
@@ -92,12 +101,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '密码不能为空' }, { status: 400 });
       }
 
-      const validPasswords = [envPassword, process.env.PASSWORD_TV].filter(Boolean);
-      if (!validPasswords.includes(password)) {
-        return NextResponse.json(
-          { ok: false, error: '密码错误' },
-          { status: 401 }
+      // 主密码永远直接比对，不受失败次数限制（站长不会被别人乱试而锁在外面）
+      if (password !== envPassword) {
+        const ip =
+          req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+        if (!canAttempt(failLog, ip)) {
+          return NextResponse.json(
+            { ok: false, error: '密码错太多次，请 15 分钟后再试' },
+            { status: 429 }
+          );
+        }
+        const guest = await currentGuestPass();
+        const validPasswords = [process.env.PASSWORD_TV, guest?.code].filter(
+          Boolean
         );
+        if (!validPasswords.includes(password)) {
+          recordFail(failLog, ip);
+          return NextResponse.json(
+            { ok: false, error: '密码错误' },
+            { status: 401 }
+          );
+        }
       }
 
       // 验证成功，设置认证cookie

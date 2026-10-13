@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { currentGuestPass } from '@/lib/guest-pass';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -28,8 +29,20 @@ export async function middleware(request: NextRequest) {
 
   // localstorage模式：在middleware中完成验证
   if (storageType === 'localstorage') {
-    const validPasswords = [process.env.PASSWORD, process.env.PASSWORD_TV].filter(Boolean);
-    if (!authInfo.password || !validPasswords.includes(authInfo.password)) {
+    const validPasswords = [
+      process.env.PASSWORD,
+      process.env.PASSWORD_TV,
+    ].filter(Boolean);
+    if (authInfo.password && validPasswords.includes(authInfo.password)) {
+      return NextResponse.next();
+    }
+    // 访客密码：每个请求都跟「这一期」的密码比，换期后旧密码当场失效
+    const guest = await currentGuestPass();
+    if (!authInfo.password || authInfo.password !== guest?.code) {
+      return handleAuthFailure(request, pathname);
+    }
+    // 访客密码只给人看，不让它拿来查「现在的访客密码」
+    if (pathname.startsWith('/api/guest-pass')) {
       return handleAuthFailure(request, pathname);
     }
     return NextResponse.next();

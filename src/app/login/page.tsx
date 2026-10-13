@@ -50,6 +50,8 @@ function LoginPageClient() {
         router.replace(redirect);
       } else if (res.status === 401) {
         setError('密码错误');
+      } else if (res.status === 429) {
+        setError('密码错太多次，请 15 分钟后再试');
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? '服务器错误');

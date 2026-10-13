@@ -6,6 +6,8 @@ import { Settings, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import GuestPassCard from '@/components/GuestPassCard';
+
 export const SettingsButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [defaultAggregateSearch, setDefaultAggregateSearch] = useState(true);
@@ -164,6 +166,9 @@ export const SettingsButton: React.FC = () => {
 
         {/* 设置项 */}
         <div className='space-y-6'>
+          {/* 访客密码：只有用主密码登入、而且有启用时才会显示 */}
+          <GuestPassCard />
+
           {/* 默认聚合搜索结果 */}
           <div className='flex items-center justify-between'>
             <div>
