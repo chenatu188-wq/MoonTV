@@ -40,8 +40,7 @@ export async function POST(req: Request) {
   if (!handle) {
     return json(
       {
-        error:
-          '认不出这个帐号。请贴 @帐号 或帐号主页网址（https://www.tiktok.com/@帐号）；分享用的短网址不行',
+        error: '认不出这个帐号。请贴 @帐号、帐号主页网址，或影片的分享连结',
       },
       400
     );

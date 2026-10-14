@@ -18,6 +18,7 @@ import {
   PENDING_TTL_MS,
 } from '@/lib/tiktok-follows';
 import { hotTiktok, latestPerAccount } from '@/lib/tiktok-hot';
+import { classifyTiktokUrl } from '@/lib/tiktok-link';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import { resumeFrom } from '@/lib/watch-marks';
 
@@ -97,6 +98,29 @@ function writeLocalPending(list: PendingFollow[]) {
   }
 }
 
+/** 贴上来的 TikTok 连结换算出来的结果（见 api/tiktok-manju/link） */
+type LinkResult =
+  | {
+      kind: 'video';
+      handle: string;
+      videoId: string;
+      title: string;
+      name: string;
+      thumbnail: string;
+    }
+  | { kind: 'profile'; handle: string }
+  | { kind: 'drama'; dramaId: string };
+
+function resolveLink(text: string): Promise<LinkResult> {
+  return fetch(`/api/tiktok-manju/link?url=${encodeURIComponent(text)}`).then(
+    async (r) => {
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+      return body as LinkResult;
+    }
+  );
+}
+
 function postFollow(op: 'add' | 'rm', handle: string, total: number) {
   return fetch('/api/tiktok-manju/follows', {
     method: 'POST',
@@ -123,6 +147,12 @@ function TiktokManjuClient() {
   const [active, setActive] = useState<string>('all');
   const [playing, setPlaying] = useState<TiktokManjuVideo | null>(null);
   const [query, setQuery] = useState('');
+  // 搜寻框贴上 TikTok 连结时，查出是哪支影片／哪个帐号
+  const [linkResult, setLinkResult] = useState<{
+    text: string;
+    result: LinkResult | null;
+    error: string | null;
+  } | null>(null);
   const [limit, setLimit] = useState(PAGE_SIZE);
   // 上方的新片榜：各帐号最新一支／近期最多人看
   const [topTab, setTopTab] = useState<TopTab>('latest');
@@ -192,7 +222,17 @@ function TiktokManjuClient() {
       setMsg(null);
       try {
         const total = data?.accounts.length ?? 0;
-        const res = await postFollow(op, raw, total);
+        // 贴的是影片连结或分享短网址：先查出是哪个帐号
+        let input = raw;
+        if (classifyTiktokUrl(raw)) {
+          const link = await resolveLink(raw);
+          if (link.kind === 'drama')
+            throw new Error(
+              '这是短剧专区的连结，请改贴上传者的 @帐号（短剧页上点上传者名称）'
+            );
+          input = link.handle;
+        }
+        const res = await postFollow(op, input, total);
         const known = new Set(
           [...(data?.accounts ?? []), ...(data?.failed ?? [])].map((x) =>
             x.handle.toLowerCase()
@@ -224,6 +264,32 @@ function TiktokManjuClient() {
     },
     [data, pending]
   );
+
+  useEffect(() => {
+    if (!classifyTiktokUrl(query)) {
+      setLinkResult(null);
+      return;
+    }
+    let cancelled = false;
+    setLinkResult({ text: query, result: null, error: null });
+    resolveLink(query)
+      .then(
+        (result) =>
+          !cancelled && setLinkResult({ text: query, result, error: null })
+      )
+      .catch(
+        (e) =>
+          !cancelled &&
+          setLinkResult({
+            text: query,
+            result: null,
+            error: (e as Error).message,
+          })
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
 
   // 打开播放器时锁背景滚动
   useEffect(() => {
@@ -272,7 +338,12 @@ function TiktokManjuClient() {
   }, [close]);
 
   // 搜寻只搜已经抓下来的影片（每个帐号最新 30 支），可用空白隔开多个关键字
-  const words = norm(query) ? query.split(/\s+/).map(norm).filter(Boolean) : [];
+  // 搜寻框贴的是 TikTok 连结时不当关键字，改成「找这支影片／这个帐号」
+  const queryIsLink = classifyTiktokUrl(query) !== null;
+  const words =
+    !queryIsLink && norm(query)
+      ? query.split(/\s+/).map(norm).filter(Boolean)
+      : [];
   const videos =
     data?.videos.filter((v) => {
       if (active !== 'all' && v.handle !== active) return false;
@@ -450,7 +521,7 @@ function TiktokManjuClient() {
                   setQuery(e.target.value);
                   setLimit(PAGE_SIZE);
                 }}
-                placeholder='搜寻片名、标签或帐号（繁简皆可）'
+                placeholder='搜寻片名、标签或帐号，或贴上 TikTok 影片连结'
                 className='w-full rounded-full border border-gray-300 bg-white py-2 pl-4 pr-10 text-sm text-gray-900 outline-none focus:border-green-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
               />
               {query && (
@@ -467,6 +538,119 @@ function TiktokManjuClient() {
               <span className='text-sm text-gray-500 dark:text-gray-400'>
                 找到 {videos.length} 支
                 {active !== 'all' && '（只搜目前选的帐号）'}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* 贴上 TikTok 连结：直接播这支，或追踪发这支影片的帐号 */}
+        {linkResult && (
+          <div
+            className='mb-6 flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-900'
+            data-link-result
+          >
+            {linkResult.error ? (
+              <span className='text-sm text-red-600 dark:text-red-400'>
+                {linkResult.error}
+              </span>
+            ) : !linkResult.result ? (
+              <span className='text-sm text-gray-500 dark:text-gray-400'>
+                正在查这个连结…
+              </span>
+            ) : linkResult.result.kind === 'drama' ? (
+              <>
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  这是 TikTok 短剧专区的剧，站内播不了
+                </span>
+                <a
+                  href={`https://www.tiktok.com/shortdrama/episode/${linkResult.result.dramaId}/1`}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='rounded-full bg-red-500 px-4 py-1.5 text-sm text-white hover:bg-red-400'
+                >
+                  到 TikTok 看 ↗
+                </a>
+              </>
+            ) : (
+              (() => {
+                const r = linkResult.result;
+                const handle = r.handle;
+                const followed = [
+                  ...(data?.accounts ?? []),
+                  ...(data?.failed ?? []),
+                ].some((a) => a.handle.toLowerCase() === handle);
+                const adding = pending.some(
+                  (p) => p.op === 'add' && p.handle === handle
+                );
+                return (
+                  <>
+                    {r.kind === 'video' && r.thumbnail && (
+                      <img
+                        src={r.thumbnail}
+                        alt={r.title}
+                        referrerPolicy='no-referrer'
+                        className='h-24 w-[4.25rem] shrink-0 rounded object-cover'
+                      />
+                    )}
+                    <div className='min-w-0 flex-1'>
+                      {r.kind === 'video' && (
+                        <div className='line-clamp-2 text-sm font-medium text-gray-900 dark:text-gray-100'>
+                          {r.title || '（没有说明文字）'}
+                        </div>
+                      )}
+                      <div className='text-sm text-gray-500 dark:text-gray-400'>
+                        {r.kind === 'video' && r.name ? `${r.name} · ` : ''}@
+                        {handle}
+                        {followed && ' · 已追踪'}
+                      </div>
+                    </div>
+                    {r.kind === 'video' && (
+                      <button
+                        onClick={() =>
+                          setPlaying({
+                            id: r.videoId,
+                            handle,
+                            name: r.name || handle,
+                            title: r.title,
+                            published: 0,
+                            thumbnail: r.thumbnail,
+                            views: null,
+                            duration: null,
+                          })
+                        }
+                        className='rounded-full bg-red-500 px-4 py-1.5 text-sm text-white hover:bg-red-400'
+                        data-link-play
+                      >
+                        ▶ 播放这支
+                      </button>
+                    )}
+                    {followed ? null : adding ? (
+                      <span className='rounded-full bg-gray-200 px-4 py-1.5 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300'>
+                        加入中
+                      </span>
+                    ) : (
+                      <button
+                        disabled={busy}
+                        onClick={() => submitFollow('add', handle)}
+                        className='rounded-full bg-green-600 px-4 py-1.5 text-sm text-white hover:bg-green-500 disabled:opacity-50'
+                        data-link-follow
+                      >
+                        ＋ 追踪 @{handle}
+                      </button>
+                    )}
+                  </>
+                );
+              })()
+            )}
+            {msg && (
+              <span
+                className={`w-full text-xs ${
+                  msg.ok
+                    ? 'text-green-700 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                {msg.text}
               </span>
             )}
           </div>
