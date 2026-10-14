@@ -17,12 +17,10 @@ import {
   MAX_ACCOUNTS,
   PENDING_TTL_MS,
 } from '@/lib/tiktok-follows';
-import { hotTiktok, latestPerAccount } from '@/lib/tiktok-hot';
 import { classifyTiktokUrl } from '@/lib/tiktok-link';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import { resumeFrom } from '@/lib/watch-marks';
 
-import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 import TiktokShortDrama from '@/components/TiktokShortDrama';
 import WatchLaterStrip from '@/components/WatchLaterStrip';
@@ -56,15 +54,8 @@ function formatDuration(sec: number | null): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-type TopTab = 'latest' | 'week' | 'month';
-const TOP_TABS: { key: TopTab; name: string }[] = [
-  { key: 'latest', name: '最新上架' },
-  { key: 'week', name: '本周热门' },
-  { key: 'month', name: '本月热门' },
-];
-
-/** 一次显示几支影片 */
-const PAGE_SIZE = 120;
+/** 每个订阅频道最多显示最新几支；抓取端也同步保留这个数量。 */
+const VIDEOS_PER_CHANNEL = 60;
 
 /** 搜寻比对用：转简体、去空白、转小写，繁简混打都找得到 */
 const norm = (s: string) =>
@@ -149,7 +140,6 @@ const hasNoPosts = (f: { error: string; secUid?: string }) =>
 function TiktokManjuClient() {
   const [data, setData] = useState<TiktokManjuData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [active, setActive] = useState<string>('all');
   const [playing, setPlaying] = useState<TiktokManjuVideo | null>(null);
   const [query, setQuery] = useState('');
   // 搜寻框贴上 TikTok 连结时，查出是哪支影片／哪个帐号
@@ -158,9 +148,6 @@ function TiktokManjuClient() {
     result: LinkResult | null;
     error: string | null;
   } | null>(null);
-  const [limit, setLimit] = useState(PAGE_SIZE);
-  // 上方的新片榜：各帐号最新一支／近期最多人看
-  const [topTab, setTopTab] = useState<TopTab>('latest');
   // 追踪管理
   const [manageOpen, setManageOpen] = useState(false);
   const [addInput, setAddInput] = useState('');
@@ -344,39 +331,33 @@ function TiktokManjuClient() {
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
 
-  // 搜寻只搜已经抓下来的影片（每个帐号最新 30 支），可用空白隔开多个关键字
+  // 搜寻只搜已经抓下来的影片（每个帐号最新 60 支），可用空白隔开多个关键字
   // 搜寻框贴的是 TikTok 连结时不当关键字，改成「找这支影片／这个帐号」
   const queryIsLink = classifyTiktokUrl(query) !== null;
   const words =
     !queryIsLink && norm(query)
       ? query.split(/\s+/).map(norm).filter(Boolean)
       : [];
-  const videos =
-    data?.videos.filter((v) => {
-      if (active !== 'all' && v.handle !== active) return false;
-      if (words.length === 0) return true;
-      const hay = norm(`${v.title} ${v.name} ${v.handle}`);
-      return words.every((w) => hay.includes(w));
-    }) ?? [];
-  const shown = videos.slice(0, limit);
-  const allVideos = data?.videos;
-  const topItems = useMemo(() => {
-    if (!allVideos) return [];
-    if (topTab === 'latest') {
-      return latestPerAccount(allVideos).map((video) => ({
-        video,
-        title: video.title,
-        views: video.views ?? 0,
-        count: 1,
-      }));
-    }
-    return hotTiktok(allVideos, topTab === 'week' ? 7 : 30).map((h) => ({
-      video: h.video,
-      title: h.series ?? h.video.title,
-      views: h.views,
-      count: h.count,
-    }));
-  }, [allVideos, topTab]);
+  /** 频道顺序跟订阅名单一致；每一列从新到旧，最多 60 支。 */
+  const channelRows = useMemo(() => {
+    if (!data) return [];
+    return data.accounts.map((account) => {
+      const videos = data.videos
+        .filter((v) => v.handle === account.handle)
+        .filter((v) => {
+          if (words.length === 0) return true;
+          const hay = norm(`${v.title} ${v.name} ${v.handle}`);
+          return words.every((w) => hay.includes(w));
+        })
+        .sort((a, b) => b.published - a.published)
+        .slice(0, VIDEOS_PER_CHANNEL);
+      return { account, videos };
+    });
+  }, [data, words]);
+  const visibleVideoCount = channelRows.reduce(
+    (sum, row) => sum + row.videos.length,
+    0
+  );
   // 完全没有旧资料可顶的帐号才提示；有旧资料的照常显示，不打扰
   const missing = data?.failed.filter((f) => !f.stale) ?? [];
 
@@ -412,78 +393,6 @@ function TiktokManjuClient() {
           }}
           onRemove={unmark}
         />
-
-        {/* 新片榜：跟 AI 漫剧页的红果榜同一种排法，内容是追踪帐号的影片 */}
-        {topItems.length > 0 && (
-          <div className='mb-6'>
-            <div className='mb-2 flex flex-wrap items-center gap-2'>
-              <h2 className='text-base font-bold text-gray-900 dark:text-gray-100'>
-                新片榜
-              </h2>
-              {TOP_TABS.map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => setTopTab(t.key)}
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    topTab === t.key
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {t.name}
-                </button>
-              ))}
-              <span className='text-xs text-gray-500 dark:text-gray-400'>
-                {topTab === 'latest'
-                  ? '每个帐号最新的一支，点了直接播'
-                  : '依观看数排名，点了直接播'}
-              </span>
-            </div>
-            <HScroll
-              resetKey={`${topTab}:${topItems.length}`}
-              arrowTop='4.5rem'
-            >
-              {topItems.map((it, i) => (
-                <button
-                  key={it.video.id}
-                  onClick={() => setPlaying(it.video)}
-                  className='group w-28 shrink-0 text-left'
-                  data-top
-                >
-                  <div className='relative aspect-[5/7] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
-                    {it.video.thumbnail && (
-                      <img
-                        src={it.video.thumbnail}
-                        alt={it.title}
-                        loading='lazy'
-                        referrerPolicy='no-referrer'
-                        className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                      />
-                    )}
-                    <span className='absolute left-0 top-0 rounded-br-lg bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white'>
-                      {topTab === 'latest'
-                        ? timeAgo(it.video.published)
-                        : i + 1}
-                    </span>
-                    {it.count > 1 && (
-                      <span className='absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[10px] text-white'>
-                        {it.count} 支
-                      </span>
-                    )}
-                  </div>
-                  <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-                    {it.title || '（无标题）'}
-                  </div>
-                  <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
-                    {topTab === 'latest'
-                      ? it.video.name
-                      : formatViews(it.views)}
-                  </div>
-                </button>
-              ))}
-            </HScroll>
-          </div>
-        )}
 
         {/* TikTok 短剧专区的片单：站内播不了，点了另开 TikTok */}
         <TiktokShortDrama
@@ -524,10 +433,7 @@ function TiktokManjuClient() {
             <div className='relative w-full max-w-md'>
               <input
                 value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setLimit(PAGE_SIZE);
-                }}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder='搜寻片名、标签或帐号，或贴上 TikTok 影片连结'
                 className='w-full rounded-full border border-gray-300 bg-white py-2 pl-4 pr-10 text-sm text-gray-900 outline-none focus:border-green-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
               />
@@ -543,8 +449,7 @@ function TiktokManjuClient() {
             </div>
             {words.length > 0 && (
               <span className='text-sm text-gray-500 dark:text-gray-400'>
-                找到 {videos.length} 支
-                {active !== 'all' && '（只搜目前选的帐号）'}
+                找到 {visibleVideoCount} 支
               </span>
             )}
           </div>
@@ -669,7 +574,7 @@ function TiktokManjuClient() {
           </div>
         )}
 
-        {/* 帐号筛选 */}
+        {/* 订阅管理 */}
         {data && (
           <div className='mb-6 flex flex-wrap items-center gap-2'>
             <button
@@ -682,22 +587,9 @@ function TiktokManjuClient() {
               ＋ 管理追踪
               {pending.length > 0 && `（${pending.length} 笔处理中）`}
             </button>
-            {[{ handle: 'all', name: '全部' }, ...data.accounts].map((a) => (
-              <button
-                key={a.handle}
-                onClick={() => {
-                  setActive(a.handle);
-                  setLimit(PAGE_SIZE);
-                }}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                  active === a.handle
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
-              >
-                {a.name}
-              </button>
-            ))}
+            <span className='text-xs text-gray-500 dark:text-gray-400'>
+              所有订阅频道依名单顺序排列，每个频道最新 60 部
+            </span>
           </div>
         )}
 
@@ -743,7 +635,7 @@ function TiktokManjuClient() {
           </div>
         )}
 
-        {data && videos.length === 0 && (
+        {data && visibleVideoCount === 0 && (
           <div className='text-gray-500 dark:text-gray-400'>
             {words.length > 0
               ? `找不到「${query.trim()}」。这里只搜得到已追踪帐号最近的影片，搜不到整个 TikTok`
@@ -751,50 +643,55 @@ function TiktokManjuClient() {
           </div>
         )}
 
-        <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4'>
-          {shown.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => setPlaying(v)}
-              className='group text-left'
-            >
-              <div className='relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
-                {v.thumbnail && (
-                  <img
-                    src={v.thumbnail}
-                    alt={v.title}
-                    loading='lazy'
-                    referrerPolicy='no-referrer'
-                    className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                  />
-                )}
-                {v.duration ? (
-                  <span className='absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white'>
-                    {formatDuration(v.duration)}
+        <div className='space-y-10'>
+          {channelRows.map(({ account, videos }) =>
+            videos.length > 0 ? (
+              <section key={account.handle}>
+                <div className='mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1'>
+                  <h2 className='text-lg font-bold text-gray-900 dark:text-gray-100'>
+                    {account.name}
+                  </h2>
+                  <span className='text-sm text-gray-500 dark:text-gray-400'>
+                    @{account.handle} · 最新 {videos.length} 部
                   </span>
-                ) : null}
-              </div>
-              <h3 className='mt-2 line-clamp-2 text-sm font-medium text-gray-900 dark:text-gray-100'>
-                {v.title || '（无标题）'}
-              </h3>
-              <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                {v.name}
-                {v.views != null && ` · ${formatViews(v.views)}`}
-                {v.published ? ` · ${timeAgo(v.published)}` : ''}
-              </p>
-            </button>
-          ))}
+                </div>
+                <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'>
+                  {videos.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setPlaying(v)}
+                      className='group text-left'
+                    >
+                      <div className='relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+                        {v.thumbnail && (
+                          <img
+                            src={v.thumbnail}
+                            alt={v.title}
+                            loading='lazy'
+                            referrerPolicy='no-referrer'
+                            className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                          />
+                        )}
+                        {v.duration ? (
+                          <span className='absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white'>
+                            {formatDuration(v.duration)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <h3 className='mt-2 line-clamp-2 text-sm font-medium text-gray-900 dark:text-gray-100'>
+                        {v.title || '（无标题）'}
+                      </h3>
+                      <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                        {v.views != null && `${formatViews(v.views)} · `}
+                        {v.published ? timeAgo(v.published) : ''}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          )}
         </div>
-        {videos.length > shown.length && (
-          <div className='mt-6 flex justify-center'>
-            <button
-              onClick={() => setLimit((n) => n + PAGE_SIZE)}
-              className='rounded-full bg-gray-100 px-6 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-            >
-              显示更多（还有 {videos.length - shown.length} 支）
-            </button>
-          </div>
-        )}
       </div>
 
       {/* 管理追踪 */}
