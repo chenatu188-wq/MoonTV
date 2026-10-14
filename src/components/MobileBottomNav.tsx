@@ -2,6 +2,7 @@
 
 import {
   Clapperboard,
+  ChevronRight,
   Clover,
   Film,
   Home,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 interface MobileBottomNavProps {
   /**
@@ -23,6 +25,8 @@ interface MobileBottomNavProps {
 
 const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   // 当前激活路径：优先使用传入的 activePath，否则回退到浏览器地址
   const currentActive = activePath ?? pathname;
@@ -53,8 +57,34 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     );
   };
 
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const updateScrollHint = () => {
+      setCanScrollRight(nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4);
+    };
+    const activeItem = nav.querySelector('[data-active="true"]');
+    activeItem?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+
+    updateScrollHint();
+    nav.addEventListener('scroll', updateScrollHint, { passive: true });
+    const observer = new ResizeObserver(updateScrollHint);
+    observer.observe(nav);
+    return () => {
+      nav.removeEventListener('scroll', updateScrollHint);
+      observer.disconnect();
+    };
+  }, [currentActive]);
+
   return (
     <nav
+      ref={navRef}
+      aria-label='主要分類，可左右滑動'
       className='md:hidden fixed left-0 right-0 z-[600] bg-white/90 backdrop-blur-xl border-t border-gray-200/50 overflow-x-auto overflow-y-hidden dark:bg-gray-900/80 dark:border-gray-700/50 scrollbar-hide'
       style={{
         /* 紧贴视口底部，同时在内部留出安全区高度 */
@@ -62,13 +92,17 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
-      <ul className='flex items-center flex-nowrap'>
+      <ul className='flex items-center flex-nowrap snap-x snap-mandatory'>
         {navItems.map((item) => {
           const active = isActive(item.href);
           return (
-            <li key={item.href} className='flex-shrink-0 w-[20vw] min-w-[72px]'>
+            <li
+              key={item.href}
+              className='flex-shrink-0 w-[20vw] min-w-[72px] snap-start'
+            >
               <Link
                 href={item.href}
+                data-active={active}
                 className='flex flex-col items-center justify-center w-full h-14 gap-0.5 text-[11px]'
               >
                 <item.icon
@@ -92,6 +126,14 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
           );
         })}
       </ul>
+      {canScrollRight && (
+        <div className='pointer-events-none absolute inset-y-0 right-0 flex items-center pl-6 pr-1 bg-gradient-to-l from-white/95 via-white/70 to-transparent dark:from-gray-900/95 dark:via-gray-900/70'>
+          <span className='flex items-center gap-0.5 rounded-full bg-green-600 px-1.5 py-1 text-[10px] font-medium text-white shadow-sm'>
+            滑動
+            <ChevronRight className='h-3 w-3' aria-hidden='true' />
+          </span>
+        </div>
+      )}
     </nav>
   );
 };
