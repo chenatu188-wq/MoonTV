@@ -121,11 +121,16 @@ function resolveLink(text: string): Promise<LinkResult> {
   );
 }
 
-function postFollow(op: 'add' | 'rm', handle: string, total: number) {
+function postFollow(
+  op: 'add' | 'rm',
+  handle: string,
+  total: number,
+  videoId?: string
+) {
   return fetch('/api/tiktok-manju/follows', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ op, handle, total }),
+    body: JSON.stringify({ op, handle, total, videoId }),
   }).then(async (r) => {
     const body = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
@@ -217,13 +222,14 @@ function TiktokManjuClient() {
   }, [pending.length, load]);
 
   const submitFollow = useCallback(
-    async (op: 'add' | 'rm', raw: string) => {
+    async (op: 'add' | 'rm', raw: string, knownVideoId?: string) => {
       setBusy(true);
       setMsg(null);
       try {
         const total = data?.accounts.length ?? 0;
         // 贴的是影片连结或分享短网址：先查出是哪个帐号
         let input = raw;
+        let videoId = knownVideoId;
         if (classifyTiktokUrl(raw)) {
           const link = await resolveLink(raw);
           if (link.kind === 'drama')
@@ -231,8 +237,9 @@ function TiktokManjuClient() {
               '这是短剧专区的连结，请改贴上传者的 @帐号（短剧页上点上传者名称）'
             );
           input = link.handle;
+          if (link.kind === 'video') videoId = link.videoId;
         }
-        const res = await postFollow(op, input, total);
+        const res = await postFollow(op, input, total, videoId);
         const known = new Set(
           [...(data?.accounts ?? []), ...(data?.failed ?? [])].map((x) =>
             x.handle.toLowerCase()
@@ -631,7 +638,13 @@ function TiktokManjuClient() {
                     ) : (
                       <button
                         disabled={busy}
-                        onClick={() => submitFollow('add', handle)}
+                        onClick={() =>
+                          submitFollow(
+                            'add',
+                            handle,
+                            r.kind === 'video' ? r.videoId : undefined
+                          )
+                        }
                         className='rounded-full bg-green-600 px-4 py-1.5 text-sm text-white hover:bg-green-500 disabled:opacity-50'
                         data-link-follow
                       >

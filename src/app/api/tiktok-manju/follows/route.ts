@@ -22,11 +22,11 @@ export async function GET() {
 }
 
 /**
- * body: { op: 'add' | 'rm', handle: string, total?: number }
+ * body: { op: 'add' | 'rm', handle: string, total?: number, videoId?: string }
  * handle 可以是 @帐号 或 TikTok 网址；total 是前端目前看到的追踪数，用来挡超量。
  */
 export async function POST(req: Request) {
-  let body: { op?: string; handle?: string; total?: number };
+  let body: { op?: string; handle?: string; total?: number; videoId?: string };
   try {
     body = await req.json();
   } catch {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         { error: `最多追踪 ${MAX_ACCOUNTS} 个帐号，请先移除不看的` },
         400
       );
-    addPending(op, handle);
+    addPending(op, handle, Date.now(), String(body.videoId ?? ''));
   }
   return json({ handle, pending: listPending() });
 }
