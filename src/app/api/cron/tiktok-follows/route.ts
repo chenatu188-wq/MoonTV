@@ -13,7 +13,13 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   return NextResponse.json(
-    { pending: listPending().map(({ op, handle }) => ({ op, handle })) },
+    {
+      pending: listPending().map(({ op, handle, videoId }) => ({
+        op,
+        handle,
+        ...(videoId ? { videoId } : {}),
+      })),
+    },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }

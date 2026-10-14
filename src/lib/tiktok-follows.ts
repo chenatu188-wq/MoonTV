@@ -15,6 +15,11 @@ export interface PendingFollow {
   handle: string;
   /** Unix 毫秒 */
   at: number;
+  /**
+   * 用影片连结追踪时的那支影片。帐号主页被 TikTok 挡的时候，
+   * Mac 可以从这支影片反查帐号编号，新帐号才抓得到（见 tiktok-manju/fetch.py）。
+   */
+  videoId?: string;
 }
 
 export const MAX_ACCOUNTS = 40;
@@ -60,10 +65,16 @@ export function listPending(now = Date.now()): PendingFollow[] {
 export function addPending(
   op: FollowOp,
   handle: string,
-  at = Date.now()
+  at = Date.now(),
+  videoId?: string
 ): void {
   queue.delete(handle);
-  queue.set(handle, { op, handle, at });
+  queue.set(handle, {
+    op,
+    handle,
+    at,
+    ...(videoId && /^\d{8,25}$/.test(videoId) ? { videoId } : {}),
+  });
 }
 
 export function clearPending(): void {
