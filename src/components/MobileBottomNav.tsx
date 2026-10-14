@@ -35,13 +35,13 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   const navItems = [
     { icon: Home, label: '首页', href: '/' },
     { icon: Search, label: '搜索', href: '/search' },
+    { icon: Wand2, label: 'AI 漫剧', href: '/ai-manju' },
+    { icon: Music2, label: 'TikTok', href: '/tiktok-manju' },
     { icon: Film, label: '电影', href: '/browse?category=movie' },
     { icon: Tv, label: '剧集', href: '/browse?category=tv' },
     { icon: Clover, label: '综艺', href: '/douban?type=show' },
     { icon: Clapperboard, label: '短剧', href: '/browse?category=duanju' },
     { icon: Sparkles, label: '动漫', href: '/browse?category=anime3d' },
-    { icon: Wand2, label: 'AI 漫剧', href: '/ai-manju' },
-    { icon: Music2, label: 'TikTok', href: '/tiktok-manju' },
     { icon: Flame, label: '彩虹', href: '/adult' },
   ];
 
