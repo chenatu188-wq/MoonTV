@@ -43,13 +43,33 @@ const FRESH_MS = 5 * 60 * 1000;
 const FRESH_PENDING_MS = 45 * 1000;
 let cache: { data: TiktokManjuData; at: number } | null = null;
 
+/**
+ * Mac 推上来的资料有时数字是字串（yt-dlp 用帐号编号抓时会这样，2026-10-15 发现），
+ * 前端拿去加总、排序会出错，这里统一转成数字。
+ */
+function normalize(raw: TiktokManjuData): TiktokManjuData {
+  const num = (v: unknown) => {
+    const n = Number(v);
+    return v == null || v === '' || !Number.isFinite(n) ? null : n;
+  };
+  return {
+    ...raw,
+    videos: (raw.videos ?? []).map((v) => ({
+      ...v,
+      published: num(v.published) ?? 0,
+      views: num(v.views),
+      duration: num(v.duration),
+    })),
+  };
+}
+
 export async function GET() {
   const fresh = listPending().length > 0 ? FRESH_PENDING_MS : FRESH_MS;
   if (!cache || Date.now() - cache.at > fresh) {
     try {
       const res = await fetch(DATA_URL, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      cache = { data: (await res.json()) as TiktokManjuData, at: Date.now() };
+      cache = { data: normalize(await res.json()), at: Date.now() };
     } catch (e) {
       // GitHub 一时抓不到就沿用旧的；连旧的都没有才报错
       if (!cache) {
