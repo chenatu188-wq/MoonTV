@@ -48,6 +48,22 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+/** 见 <head> 里的说明：容忍浏览器翻译改动过的 DOM */
+const TRANSLATE_SAFE_SCRIPT = `(function(){
+  if (typeof Node !== 'function' || !Node.prototype || Node.prototype.__translateSafe) return;
+  Node.prototype.__translateSafe = true;
+  var remove = Node.prototype.removeChild;
+  Node.prototype.removeChild = function (child) {
+    if (child.parentNode !== this) return child;
+    return remove.apply(this, arguments);
+  };
+  var insert = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function (node, ref) {
+    if (ref && ref.parentNode !== this) return insert.call(this, node, null);
+    return insert.apply(this, arguments);
+  };
+})();`;
+
 export default async function RootLayout({
   children,
 }: {
@@ -77,6 +93,12 @@ export default async function RootLayout({
   return (
     <html lang='zh-CN' suppressHydrationWarning>
       <head>
+        {/*
+          浏览器的「翻译这个网页」（例如简体翻成繁体）会把文字换成 <font> 包起来，
+          之后 React 要搬动或删掉那些文字旁边的元素时找不到原本的节点，整页跳出「發生錯誤了」
+          （2026-10-15 置顶 AI 漫剧频道时踩到）。这段让找不到节点时安静略过，不让整页崩掉。
+        */}
+        <script dangerouslySetInnerHTML={{ __html: TRANSLATE_SAFE_SCRIPT }} />
         {/* 将配置序列化后直接写入脚本，浏览器端可通过 window.RUNTIME_CONFIG 获取 */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script
