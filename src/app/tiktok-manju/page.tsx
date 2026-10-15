@@ -21,6 +21,7 @@ import { classifyTiktokUrl } from '@/lib/tiktok-link';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import { resumeFrom } from '@/lib/watch-marks';
 
+import DouyinDramas from '@/components/DouyinDramas';
 import PageLayout from '@/components/PageLayout';
 import TiktokShortDrama from '@/components/TiktokShortDrama';
 import WatchLaterStrip from '@/components/WatchLaterStrip';
@@ -393,6 +394,9 @@ function TiktokManjuClient() {
           }}
           onRemove={unmark}
         />
+
+        {/* 抖音追剧：贴抖音短剧连结，整部剧的集数站内播 */}
+        <DouyinDramas />
 
         {/* TikTok 短剧专区的片单：站内播不了，点了另开 TikTok */}
         <TiktokShortDrama
