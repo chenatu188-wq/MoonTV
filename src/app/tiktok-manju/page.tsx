@@ -22,6 +22,7 @@ import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import { resumeFrom } from '@/lib/watch-marks';
 
 import DouyinDramas from '@/components/DouyinDramas';
+import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 import TiktokShortDrama from '@/components/TiktokShortDrama';
 import WatchLaterStrip from '@/components/WatchLaterStrip';
@@ -647,10 +648,45 @@ function TiktokManjuClient() {
           </div>
         )}
 
-        <div className='space-y-10'>
+        {/* 频道目录：频道很多，点名字直接跳到那一列 */}
+        {visibleVideoCount > 0 && (
+          <div className='mb-6' data-channel-index>
+            <h2 className='mb-2 text-base font-bold text-gray-900 dark:text-gray-100'>
+              已追踪频道（
+              {channelRows.filter((r) => r.videos.length > 0).length}）
+            </h2>
+            <div className='flex flex-wrap gap-2'>
+              {channelRows.map(({ account, videos }) =>
+                videos.length > 0 ? (
+                  <button
+                    key={account.handle}
+                    onClick={() =>
+                      document
+                        .getElementById(`ch-${account.handle}`)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                    className='rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  >
+                    {account.name}
+                    <span className='ml-1 text-xs text-gray-400'>
+                      {videos.length}
+                    </span>
+                  </button>
+                ) : null
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className='space-y-8'>
           {channelRows.map(({ account, videos }) =>
             videos.length > 0 ? (
-              <section key={account.handle}>
+              <section
+                key={account.handle}
+                id={`ch-${account.handle}`}
+                className='scroll-mt-20'
+                data-channel-row
+              >
                 <div className='mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1'>
                   <h2 className='text-lg font-bold text-gray-900 dark:text-gray-100'>
                     {account.name}
@@ -659,12 +695,13 @@ function TiktokManjuClient() {
                     @{account.handle} · 最新 {videos.length} 部
                   </span>
                 </div>
-                <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'>
+                {/* 一个频道一列横向卷动，60 支排成直的会让整页长到滑不完 */}
+                <HScroll resetKey={`tt:${account.handle}`} arrowTop='5.5rem'>
                   {videos.map((v) => (
                     <button
                       key={v.id}
                       onClick={() => setPlaying(v)}
-                      className='group text-left'
+                      className='group w-32 shrink-0 text-left sm:w-36'
                     >
                       <div className='relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
                         {v.thumbnail && (
@@ -691,7 +728,7 @@ function TiktokManjuClient() {
                       </p>
                     </button>
                   ))}
-                </div>
+                </HScroll>
               </section>
             ) : null
           )}
