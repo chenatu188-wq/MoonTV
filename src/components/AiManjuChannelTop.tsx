@@ -13,7 +13,7 @@ type TopVideo = AiManjuVideo & { channelId: string };
 const FIRST = 4;
 const STEP = 8;
 
-/** 一个频道一排：观看数最高的 20 支。卷到附近才去抓，免得一开页就打一百多次 */
+/** 一个频道一排：观看数最高的 20 支，可按「换一批」看下一批。卷到附近才去抓，免得一开页就打一百多次 */
 function ChannelRow({
   id,
   name,
@@ -31,6 +31,11 @@ function ChannelRow({
   const [near, setNear] = useState(false);
   const [videos, setVideos] = useState<TopVideo[] | null>(null);
   const [failed, setFailed] = useState(false);
+  /** 「换一批」：照热门顺序往下一页 20 支，翻到底再回第一批 */
+  const [page, setPage] = useState(0);
+  const [pages, setPages] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState('');
 
   useEffect(() => {
     const el = ref.current;
@@ -58,8 +63,43 @@ function ChannelRow({
     };
   }, [near, id]);
 
+  const nextBatch = async () => {
+    if (loading) return;
+    let next = page + 1;
+    if (pages !== null && next >= pages) next = 0;
+    setLoading(true);
+    setNote('');
+    try {
+      const r = await fetch(`/api/ai-manju/top?id=${id}&page=${next}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      const list: TopVideo[] = d.videos ?? [];
+      if (typeof d.pages === 'number') setPages(d.pages);
+      if (list.length === 0) {
+        // 已经是最后一批了：回到第一批（第一批手上就有，重抓一次也快）
+        if (next > 0) setPages(next);
+        setNote(
+          next > 1 ? '已经看完热门前几名，回到第一批' : '这个频道没有其他影片了'
+        );
+        if (next > 1) {
+          const r0 = await fetch(`/api/ai-manju/top?id=${id}&page=0`);
+          const d0 = await r0.json();
+          setVideos(d0.videos ?? []);
+          setPage(0);
+        }
+        return;
+      }
+      setVideos(list);
+      setPage(next);
+    } catch {
+      setNote('换不了，请稍后再试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 抓不到或频道没影片就整排不显示
-  if (failed || videos?.length === 0) return null;
+  if (failed || (page === 0 && videos?.length === 0)) return null;
 
   return (
     <div ref={ref} className='mb-4' data-channel-top={id}>
@@ -75,9 +115,32 @@ function ChannelRow({
             {pinned ? '取消置顶' : '置顶'}
           </button>
         )}
+        {videos && (
+          <button
+            onClick={nextBatch}
+            disabled={loading}
+            className='rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-600 hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+            data-next-batch
+          >
+            {loading
+              ? '换一批…'
+              : `🔄 换一批${
+                  pages
+                    ? `（${page + 1}/${pages}）`
+                    : page > 0
+                    ? `（第 ${page + 1} 批）`
+                    : ''
+                }`}
+          </button>
+        )}
+        {note && (
+          <span className='text-xs font-normal text-gray-500 dark:text-gray-400'>
+            {note}
+          </span>
+        )}
       </h3>
       {videos ? (
-        <HScroll resetKey={`top:${id}`} arrowTop='2.75rem'>
+        <HScroll resetKey={`top:${id}:${page}`} arrowTop='2.75rem'>
           {videos.map((v, i) => (
             <button
               key={v.videoId}
@@ -92,7 +155,7 @@ function ChannelRow({
                   className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                 />
                 <span className='absolute left-0 top-0 rounded-br-lg bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white'>
-                  {i + 1}
+                  {page * 20 + i + 1}
                 </span>
               </div>
               <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
