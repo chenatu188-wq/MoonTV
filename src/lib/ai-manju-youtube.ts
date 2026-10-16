@@ -208,8 +208,22 @@ export async function listPopular(
     collect(first, 'channelMetadataRenderer')[0]?.title ?? '';
   const fallback = { channel: name, channelId };
   const token = popularToken(first);
-  const data = token ? await browse({ continuation: token }) : first;
-  return parseVideos(data, fallback).slice(0, limit);
+  let data = token ? await browse({ continuation: token }) : first;
+  // 一页约 30 支，要更多（「换一批」）就照热门顺序往下翻，最多 5 页
+  const out = parseVideos(data, fallback);
+  const seen = new Set(out.map((v) => v.videoId));
+  for (let page = 1; page < 5 && out.length < limit; page++) {
+    const next = nextToken(data);
+    if (!next) break;
+    data = await browse({ continuation: next });
+    const more = parseVideos(data, fallback).filter(
+      (v) => !seen.has(v.videoId)
+    );
+    if (more.length === 0) break;
+    more.forEach((v) => seen.add(v.videoId));
+    out.push(...more);
+  }
+  return out.slice(0, limit);
 }
 
 /**
