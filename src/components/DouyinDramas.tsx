@@ -10,6 +10,12 @@ import {
   douyinEmbedUrl,
   douyinPageUrl,
 } from '@/lib/douyin-drama';
+import { takeOverClick } from '@/lib/link-click';
+import {
+  clearVideoParams,
+  douyinFromSearch,
+  douyinHref,
+} from '@/lib/video-links';
 
 import HScroll from '@/components/HScroll';
 
@@ -140,7 +146,26 @@ export default function DouyinDramas() {
     setProgress(next);
   };
 
-  const close = useCallback(() => setPlaying(null), []);
+  const epHref = (d: DouyinDrama, i: number) =>
+    douyinHref(d.id, d.episodes[i].id);
+
+  const close = useCallback(() => {
+    setPlaying(null);
+    clearVideoParams(['dy', 'ep']);
+  }, []);
+
+  // 在集数卡片上按右键「在新分页开启」开过来的：清单载入后直接播那一集（只做一次）
+  const [deepLinked, setDeepLinked] = useState(false);
+  useEffect(() => {
+    if (!state || deepLinked) return;
+    setDeepLinked(true);
+    const want = douyinFromSearch(window.location.search);
+    const drama = want && state.dramas.find((d) => d.id === want.dramaId);
+    const index = drama
+      ? drama.episodes.findIndex((e) => e.id === want.episodeId)
+      : -1;
+    if (drama && index >= 0) setPlaying({ drama, index });
+  }, [state, deepLinked]);
   useEffect(() => {
     if (!playing) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
@@ -276,9 +301,10 @@ export default function DouyinDramas() {
             </div>
             <HScroll resetKey={`douyin:${d.id}`} arrowTop='4rem'>
               {d.episodes.map((e, i) => (
-                <button
+                <a
                   key={e.id}
-                  onClick={() => play(d, i)}
+                  href={epHref(d, i)}
+                  onClick={(e) => takeOverClick(e) && play(d, i)}
                   title={e.title}
                   className='group w-28 shrink-0 text-left'
                   data-douyin-ep
@@ -309,7 +335,7 @@ export default function DouyinDramas() {
                   <div className='mt-1 line-clamp-2 text-xs text-gray-900 dark:text-gray-100'>
                     {e.title || d.name}
                   </div>
-                </button>
+                </a>
               ))}
             </HScroll>
           </div>

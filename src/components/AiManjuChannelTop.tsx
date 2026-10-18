@@ -4,6 +4,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { AiManjuVideo } from '@/lib/ai-manju-feed';
+import { takeOverClick } from '@/lib/link-click';
+import { aiManjuHref } from '@/lib/video-links';
 
 import HScroll from '@/components/HScroll';
 
@@ -142,9 +144,10 @@ function ChannelRow({
       {videos ? (
         <HScroll resetKey={`top:${id}:${page}`} arrowTop='2.75rem'>
           {videos.map((v, i) => (
-            <button
+            <a
               key={v.videoId}
-              onClick={() => onPlay({ ...v, channel: v.channel || name })}
+              href={aiManjuHref({ ...v, channel: v.channel || name })}
+              onClick={(e) => takeOverClick(e) && onPlay({ ...v, channel: v.channel || name })}
               className='group w-44 shrink-0 text-left'
             >
               <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
@@ -166,7 +169,7 @@ function ChannelRow({
                   {v.meta}
                 </div>
               )}
-            </button>
+            </a>
           ))}
         </HScroll>
       ) : (

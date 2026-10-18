@@ -14,7 +14,13 @@ import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 import { MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
 import type { HongguoSearchItem } from '@/lib/hongguo-search';
+import { takeOverClick } from '@/lib/link-click';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
+import {
+  aiManjuFromSearch,
+  aiManjuHref,
+  clearVideoParams,
+} from '@/lib/video-links';
 import { resumeFrom } from '@/lib/watch-marks';
 
 import AiManjuChannelTop from '@/components/AiManjuChannelTop';
@@ -172,6 +178,11 @@ function AiManjuClient() {
     const hg = new URLSearchParams(window.location.search).get('hg');
     if (hg) searchHongguo(hg);
   }, [searchHongguo]);
+  // 在卡片上按右键「在新分页开启」开过来的：网址带着影片，直接打开播放器
+  useEffect(() => {
+    const v = aiManjuFromSearch(window.location.search);
+    if (v) setPlaying(v);
+  }, []);
   // 追踪频道榜：各频道最新一支／近期最多人看
   const [trackTab, setTrackTab] = useState<TrackTab>('latest');
   // 推荐榜：还没追踪的频道本周发的漫剧，用来发现新频道
@@ -505,6 +516,7 @@ function AiManjuClient() {
     }
     setPlaying(null);
     setManageOpen(false);
+    clearVideoParams(['v', 't', 'c', 'ch']);
   }, [playing, saveMark]);
 
   useEffect(() => {
@@ -911,6 +923,7 @@ function AiManjuClient() {
             title: m.video.title,
             thumbnail: m.video.thumbnail,
             note: m.video.channel || m.video.sourceName,
+            href: aiManjuHref(m.video),
             seconds: m.seconds,
           }))}
           onPlay={(id) => {
@@ -951,9 +964,10 @@ function AiManjuClient() {
               arrowTop='2.75rem'
             >
               {trackItems.map((it, i) => (
-                <button
+                <a
                   key={it.video.videoId}
-                  onClick={() => setPlaying(it.video)}
+                  href={aiManjuHref(it.video)}
+                  onClick={(e) => takeOverClick(e) && setPlaying(it.video)}
                   className='group w-44 shrink-0 text-left'
                   data-track
                 >
@@ -983,7 +997,7 @@ function AiManjuClient() {
                       ? it.video.sourceName
                       : `${formatViews(it.views)} · ${it.video.sourceName}`}
                   </div>
-                </button>
+                </a>
               ))}
             </HScroll>
           </div>
@@ -1005,9 +1019,10 @@ function AiManjuClient() {
               arrowTop='2.75rem'
             >
               {recommendItems.map((v) => (
-                <button
+                <a
                   key={v.videoId}
-                  onClick={() => setPlaying(v)}
+                  href={aiManjuHref(v)}
+                  onClick={(e) => takeOverClick(e) && setPlaying(v)}
                   className='group w-44 shrink-0 text-left'
                   data-recommend
                 >
@@ -1033,7 +1048,7 @@ function AiManjuClient() {
                       {v.meta}
                     </div>
                   )}
-                </button>
+                </a>
               ))}
             </HScroll>
           </div>
@@ -1216,9 +1231,10 @@ function AiManjuClient() {
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
           {shown.map((v) => (
-            <button
+            <a
               key={v.videoId}
-              onClick={() => setPlaying(v)}
+              href={aiManjuHref(v)}
+              onClick={(e) => takeOverClick(e) && setPlaying(v)}
               className='group text-left'
             >
               <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
@@ -1256,7 +1272,7 @@ function AiManjuClient() {
                       v.published ? ` · ${timeAgo(v.published)}` : ''
                     }`}
               </p>
-            </button>
+            </a>
           ))}
         </div>
 
