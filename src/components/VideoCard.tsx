@@ -13,6 +13,7 @@ import {
   saveFavorite,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+import { takeOverClick } from '@/lib/link-click';
 import { SearchResult } from '@/lib/types';
 import { processImageUrl } from '@/lib/utils';
 
@@ -199,20 +200,17 @@ export default function VideoCard({
     [from, actualSource, actualId, onDelete]
   );
 
-  const handleClick = useCallback(() => {
+  /** 卡片要连到的播放页；做成真的连结，右键才有「在新分页开启」 */
+  const playUrl = useMemo(() => {
     if (from === 'douban') {
-      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${
+      return `/play?title=${encodeURIComponent(actualTitle.trim())}${
         actualYear ? `&year=${encodeURIComponent(actualYear)}` : ''
       }${
         actualSearchType ? `&stype=${encodeURIComponent(actualSearchType)}` : ''
       }`;
-      if (reloadOnNavigate) {
-        window.location.href = url;
-      } else {
-        router.push(url);
-      }
-    } else if (actualSource && actualId) {
-      const url = `/play?source=${encodeURIComponent(
+    }
+    if (actualSource && actualId) {
+      return `/play?source=${encodeURIComponent(
         actualSource
       )}&id=${encodeURIComponent(actualId)}&title=${encodeURIComponent(
         actualTitle
@@ -223,25 +221,31 @@ export default function VideoCard({
       }${
         actualSearchType ? `&stype=${encodeURIComponent(actualSearchType)}` : ''
       }${adultSearch ? '&adult=1' : ''}`;
-      if (reloadOnNavigate) {
-        window.location.href = url;
-      } else {
-        router.push(url);
-      }
     }
+    return '';
   }, [
     from,
     actualSource,
     actualId,
-    router,
     actualTitle,
     actualYear,
     isAggregate,
     actualQuery,
     actualSearchType,
     adultSearch,
-    reloadOnNavigate,
   ]);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!takeOverClick(e) || !playUrl) return;
+      if (reloadOnNavigate) {
+        window.location.href = playUrl;
+      } else {
+        router.push(playUrl);
+      }
+    },
+    [playUrl, reloadOnNavigate, router]
+  );
 
   const config = useMemo(() => {
     const configs = {
@@ -286,8 +290,9 @@ export default function VideoCard({
   }, [from, isAggregate, actualDoubanId, rate]);
 
   return (
-    <div
-      className='group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-[500]'
+    <a
+      href={playUrl || undefined}
+      className='group relative block w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-[500]'
       onClick={handleClick}
     >
       {/* 海报容器 */}
@@ -359,17 +364,25 @@ export default function VideoCard({
 
         {/* 豆瓣链接 */}
         {config.showDoubanLink && actualDoubanId && (
-          <a
-            href={`https://movie.douban.com/subject/${actualDoubanId}`}
-            target='_blank'
-            rel='noopener noreferrer'
-            onClick={(e) => e.stopPropagation()}
+          // 整张卡片已经是连结，里面不能再放 <a>，改用按钮另开豆瓣
+          <span
+            role='link'
+            title='豆瓣'
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(
+                `https://movie.douban.com/subject/${actualDoubanId}`,
+                '_blank',
+                'noopener,noreferrer'
+              );
+            }}
             className='absolute top-2 left-2 opacity-0 -translate-x-2 transition-all duration-300 ease-in-out delay-100 group-hover:opacity-100 group-hover:translate-x-0'
           >
             <div className='bg-green-500 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow-md hover:bg-green-600 hover:scale-[1.1] transition-all duration-300 ease-out'>
               <Link size={16} />
             </div>
-          </a>
+          </span>
         )}
       </div>
 
@@ -403,6 +416,6 @@ export default function VideoCard({
           </span>
         )}
       </div>
-    </div>
+    </a>
   );
 }

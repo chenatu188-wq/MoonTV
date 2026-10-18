@@ -11,6 +11,7 @@ import {
   removePick,
   savePicks,
 } from '@/lib/adult-picks';
+import { takeOverClick } from '@/lib/link-click';
 import { SearchResult } from '@/lib/types';
 
 import ActressesPanel from '@/components/ActressesPanel';
@@ -160,16 +161,21 @@ function AdultClient() {
     if (tab === 'picks') setSavedPicks(loadPicks());
   }, [tab]);
 
+  const pickHref = (p: { source: string; id: string; title: string }) =>
+    `/play?source=${encodeURIComponent(p.source)}&id=${encodeURIComponent(
+      p.id
+    )}&title=${encodeURIComponent(p.title)}&stitle=${encodeURIComponent(
+      p.title
+    )}&adult=1`;
+
   const playRank = useCallback(
     (it: RankItem) =>
-      router.push(
-        `/play?source=${encodeURIComponent(it.source)}&id=${encodeURIComponent(
-          it.id
-        )}&title=${encodeURIComponent(it.title)}&stitle=${encodeURIComponent(
-          it.title
-        )}&adult=1`
-      ),
-    [router]
+      `/play?source=${encodeURIComponent(it.source)}&id=${encodeURIComponent(
+        it.id
+      )}&title=${encodeURIComponent(it.title)}&stitle=${encodeURIComponent(
+        it.title
+      )}&adult=1`,
+    []
   );
 
   // 各片源一列的榜單先顯示幾個；換地區就收回來
@@ -377,7 +383,7 @@ function AdultClient() {
               query={`region=${encodeURIComponent(activeRegion)}`}
               enabled={unlocked}
               latestHint='各來源最近上架的，點了直接播'
-              onPlay={playRank}
+              playHref={playRank}
             />
 
             {/* 各片源一列：最新上架／熱門。捲到才載入，先顯示幾個再按鈕展開 */}
@@ -395,7 +401,7 @@ function AdultClient() {
                   setFilterQuery('');
                   browseRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                onPlay={playRank}
+                playHref={playRank}
               />
             ))}
             {sourceRows < regionedSources.length && (
@@ -630,17 +636,10 @@ function AdultClient() {
                 <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
                   {savedPicks.map((p) => (
                     <div key={pickKey(p)} className='group relative'>
-                      <button
-                        onClick={() =>
-                          router.push(
-                            `/play?source=${encodeURIComponent(
-                              p.source
-                            )}&id=${encodeURIComponent(
-                              p.id
-                            )}&title=${encodeURIComponent(
-                              p.title
-                            )}&stitle=${encodeURIComponent(p.title)}&adult=1`
-                          )
+                      <a
+                        href={pickHref(p)}
+                        onClick={(e) =>
+                          takeOverClick(e) && router.push(pickHref(p))
                         }
                         className='block w-full text-left'
                         data-saved-pick
@@ -662,7 +661,7 @@ function AdultClient() {
                         <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
                           {p.sourceName}
                         </div>
-                      </button>
+                      </a>
                       <button
                         aria-label='從精選影片拿掉'
                         title='從精選影片拿掉'

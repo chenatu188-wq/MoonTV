@@ -1,7 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+
+import { takeOverClick } from '@/lib/link-click';
 
 import HScroll from '@/components/HScroll';
 
@@ -42,7 +45,7 @@ export default function SourceRankStrip({
   endpoint = '/api/adult/latest',
   portrait = false,
   onMore,
-  onPlay,
+  playHref,
 }: {
   title: string;
   query: string;
@@ -57,8 +60,10 @@ export default function SourceRankStrip({
   portrait?: boolean;
   /** 有給的話標題旁多一顆「看全部」 */
   onMore?: () => void;
-  onPlay: (it: RankItem) => void;
+  /** 每格要连到的播放页；做成真的连结，右键才能「在新分页开启」 */
+  playHref: (it: RankItem) => string;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<'latest' | 'hot'>('latest');
   const [ranks, setRanks] = useState<{
     latest: RankItem[];
@@ -156,9 +161,10 @@ export default function SourceRankStrip({
         arrowTop={portrait ? '4.5rem' : '2.75rem'}
       >
         {items.map((it, i) => (
-          <button
+          <a
             key={`${it.source}-${it.id}`}
-            onClick={() => onPlay(it)}
+            href={playHref(it)}
+            onClick={(e) => takeOverClick(e) && router.push(playHref(it))}
             className={`group shrink-0 text-left ${portrait ? 'w-28' : 'w-44'}`}
             data-rank
           >
@@ -191,7 +197,7 @@ export default function SourceRankStrip({
                 .filter(Boolean)
                 .join(' · ')}
             </div>
-          </button>
+          </a>
         ))}
       </HScroll>
     </div>

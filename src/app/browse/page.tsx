@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { LatestItem } from '@/lib/browse-latest';
+import { takeOverClick } from '@/lib/link-click';
 import { SearchResult } from '@/lib/types';
 
 import HScroll from '@/components/HScroll';
@@ -430,9 +431,10 @@ function BrowseClient() {
               arrowTop='4.5rem'
             >
               {rankCards.map((c) => (
-                <button
+                <a
                   key={c.key}
-                  onClick={() => router.push(c.href)}
+                  href={c.href}
+                  onClick={(e) => takeOverClick(e) && router.push(c.href)}
                   className='group w-28 shrink-0 text-left'
                   data-rank
                 >
@@ -456,7 +458,7 @@ function BrowseClient() {
                   <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
                     {c.note}
                   </div>
-                </button>
+                </a>
               ))}
             </HScroll>
           </div>
@@ -479,14 +481,12 @@ function BrowseClient() {
               setFilterQuery('');
               browseRef.current?.scrollIntoView({ behavior: 'smooth' });
             }}
-            onPlay={(it) =>
-              router.push(
-                `/play?source=${encodeURIComponent(
-                  it.source
-                )}&id=${encodeURIComponent(it.id)}&title=${encodeURIComponent(
-                  it.title
-                )}${it.year ? `&year=${it.year}` : ''}`
-              )
+            playHref={(it) =>
+              `/play?source=${encodeURIComponent(
+                it.source
+              )}&id=${encodeURIComponent(it.id)}&title=${encodeURIComponent(
+                it.title
+              )}${it.year ? `&year=${it.year}` : ''}`
             }
           />
         ))}

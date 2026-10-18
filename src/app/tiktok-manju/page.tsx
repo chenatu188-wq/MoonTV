@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { promoKeywordOf } from '@/lib/hongguo-search';
+import { takeOverClick } from '@/lib/link-click';
 import { toSimplifiedFull } from '@/lib/t2s-table';
 import {
   type PendingFollow,
@@ -19,6 +20,11 @@ import {
 } from '@/lib/tiktok-follows';
 import { classifyTiktokUrl } from '@/lib/tiktok-link';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
+import {
+  clearVideoParams,
+  tiktokFromSearch,
+  tiktokHref,
+} from '@/lib/video-links';
 import { resumeFrom } from '@/lib/watch-marks';
 
 import DouyinDramas from '@/components/DouyinDramas';
@@ -325,7 +331,15 @@ function TiktokManjuClient() {
     }
     setPlaying(null);
     setManageOpen(false);
+    clearVideoParams(['v', 'h', 'n', 't']);
   }, [playing, saveMark]);
+
+  // 在卡片上按右键「在新分页开启」开过来的：网址带着影片，直接打开播放器
+  useEffect(() => {
+    const v = tiktokFromSearch(window.location.search);
+    if (v)
+      setPlaying({ ...v, published: 0, thumbnail: '', views: null, duration: null });
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
@@ -388,6 +402,7 @@ function TiktokManjuClient() {
               m.video.thumbnail,
             note: m.video.name,
             seconds: m.seconds,
+            href: tiktokHref(m.video),
           }))}
           onPlay={(id) => {
             const m = marks.find((x) => x.id === id);
@@ -698,9 +713,10 @@ function TiktokManjuClient() {
                 {/* 一个频道一列横向卷动，60 支排成直的会让整页长到滑不完 */}
                 <HScroll resetKey={`tt:${account.handle}`} arrowTop='5.5rem'>
                   {videos.map((v) => (
-                    <button
+                    <a
                       key={v.id}
-                      onClick={() => setPlaying(v)}
+                      href={tiktokHref(v)}
+                      onClick={(e) => takeOverClick(e) && setPlaying(v)}
                       className='group w-32 shrink-0 text-left sm:w-36'
                     >
                       <div className='relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
@@ -726,7 +742,7 @@ function TiktokManjuClient() {
                         {v.views != null && `${formatViews(v.views)} · `}
                         {v.published ? timeAgo(v.published) : ''}
                       </p>
-                    </button>
+                    </a>
                   ))}
                 </HScroll>
               </section>

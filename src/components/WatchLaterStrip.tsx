@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
+import { takeOverClick } from '@/lib/link-click';
 import { formatPosition } from '@/lib/watch-marks';
 
 import HScroll from '@/components/HScroll';
@@ -12,6 +13,8 @@ export interface WatchLaterCard {
   /** 片名下面那一行（频道／帐号名） */
   note: string;
   seconds: number;
+  /** 这支影片的网址；有的话卡片是连结，右键可「在新分页开启」 */
+  href?: string;
 }
 
 /**
@@ -51,9 +54,10 @@ export default function WatchLaterStrip({
             key={it.id}
             className={`group relative shrink-0 ${portrait ? 'w-28' : 'w-44'}`}
           >
-            <button
-              onClick={() => onPlay(it.id)}
-              className='block w-full text-left'
+            <a
+              href={it.href}
+              onClick={(e) => takeOverClick(e) && onPlay(it.id)}
+              className='block w-full cursor-pointer text-left'
               data-watch-later-card
             >
               <div
@@ -82,7 +86,7 @@ export default function WatchLaterStrip({
               <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
                 {it.note}
               </div>
-            </button>
+            </a>
             <button
               aria-label='拿掉标记'
               title='拿掉标记'
