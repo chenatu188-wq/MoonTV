@@ -12,9 +12,11 @@ import {
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
+import { followKey } from '@/lib/ai-manju-series-follow';
 import { MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
 import type { HongguoSearchItem } from '@/lib/hongguo-search';
 import { takeOverClick } from '@/lib/link-click';
+import { useSeriesFollows } from '@/lib/use-series-follows';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import {
   aiManjuFromSearch,
@@ -24,6 +26,7 @@ import {
 import { resumeFrom } from '@/lib/watch-marks';
 
 import AiManjuChannelTop from '@/components/AiManjuChannelTop';
+import AiManjuSeriesStrip from '@/components/AiManjuSeriesStrip';
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 import WatchLaterStrip from '@/components/WatchLaterStrip';
@@ -148,6 +151,12 @@ function AiManjuClient() {
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<string>('all');
   const [playing, setPlaying] = useState<AiManjuVideo | null>(null);
+  // 追剧：追的剧出了新集就标「新」
+  const series = useSeriesFollows();
+  const seenVideo = series.seenVideo;
+  useEffect(() => {
+    if (playing) seenVideo(playing.videoId);
+  }, [playing, seenVideo]);
   const [limit, setLimit] = useState(PAGE_SIZE);
   // 红果热播榜：只当「找哪部剧」的依据，点片名就去 YouTube 搜那部剧
   const [ranks, setRanks] = useState<HongguoRankList[] | null>(null);
@@ -916,6 +925,27 @@ function AiManjuClient() {
           </div>
         )}
 
+        {/* 追剧：出了新集标「新」 */}
+        <AiManjuSeriesStrip
+          follows={series.follows}
+          checking={series.checking}
+          onPlay={(ep) =>
+            setPlaying({
+              ...ep,
+              published: '',
+              description: '',
+              views: null,
+              sourceKey: '',
+              sourceName: ep.channel,
+            })
+          }
+          onAll={(f) => {
+            series.seenAll(followKey(f));
+            searchTitle(f.name, f.channelId);
+          }}
+          onRemove={series.unfollow}
+        />
+
         {/* 继续观看：在播放器按了标记的影片 */}
         <WatchLaterStrip
           items={marks.map((m) => ({
@@ -1366,6 +1396,41 @@ function AiManjuClient() {
                     找全季／全集
                   </button>
                 )}
+                {playingSeries &&
+                  (series.isFollowed(playingSeries, playingChannelId) ? (
+                    <button
+                      onClick={() =>
+                        series.unfollow(
+                          followKey({
+                            name: playingSeries,
+                            channelId: playingChannelId,
+                          })
+                        )
+                      }
+                      className='rounded-full bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-400'
+                      data-series-toggle
+                    >
+                      🔔 已追剧 · 取消
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (
+                          !series.follow(
+                            playingSeries,
+                            playingChannelId,
+                            playing.channel
+                          )
+                        )
+                          alert('追剧最多 50 部，请先取消不看的');
+                      }}
+                      className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                      title={`出新集时在「追剧」区标「新」：${playingSeries}`}
+                      data-series-toggle
+                    >
+                      🔔 追这部剧
+                    </button>
+                  ))}
                 {playingMarked ? (
                   <button
                     onClick={() => unmark(playing.videoId)}
