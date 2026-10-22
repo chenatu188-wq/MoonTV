@@ -5,6 +5,7 @@ import {
   Clover,
   Film,
   Flame,
+  Headphones,
   Home,
   Menu,
   Music2,
@@ -175,6 +176,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Music2,
       label: 'TikTok 漫剧',
       href: '/tiktok-manju',
+    },
+    {
+      icon: Headphones,
+      label: '音乐',
+      href: '/music',
     },
     {
       icon: Flame,
