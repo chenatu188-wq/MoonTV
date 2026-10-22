@@ -269,11 +269,6 @@
       "name": "闪电推荐R",
       "group": "精選推薦"
     },
-    "api155_korea_b": {
-      "api": "https://155api.com/api.php/provide/vod",
-      "name": "🔞155韩国B",
-      "group": "🔞韓國"
-    },
     "fhapi9.com": {
       "api": "http://fhapi9.com/api.php/provide/vod",
       "name": "🔞番号资源",
@@ -314,11 +309,6 @@
       "name": "🔞量子韩国",
       "group": "🔞韓國"
     },
-    "api155_adult_b": {
-      "api": "https://155api.com/api.php/provide/vod",
-      "name": "🔞155资源B",
-      "group": "🔞"
-    },
     "lziapi.com": {
       "api": "https://cj.lziapi.com/api.php/provide/vod",
       "name": "🔞量子采集2",
@@ -334,25 +324,10 @@
       "name": "飞飞资源",
       "group": "電視劇"
     },
-    "thzy1.me": {
-      "api": "https://thzy1.me/api.php/provide/vod",
-      "name": "🔞桃花资源1",
-      "group": "🔞"
-    },
-    "thzy.me": {
-      "api": "https://thzy.me/api.php/provide/vod",
-      "name": "🔞桃花资源",
-      "group": "🔞"
-    },
     "kuaiche_mix_a": {
       "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
       "name": "快车综合A",
       "group": "綜合影視"
-    },
-    "kuaiche_korea": {
-      "api": "https://caiji.kuaichezy.org/api.php/provide/vod",
-      "name": "🔞快车韩国伦理",
-      "group": "🔞韓國"
     },
     "sdzy_mix_r": {
       "api": "https://sdzyapi.com/api.php/provide/vod",
@@ -389,16 +364,6 @@
       "name": "apilsbzy3",
       "group": "🔞"
     },
-    "apilsbzy5.com": {
-      "api": "https://apilsbzy5.com/api.php/provide/vod",
-      "name": "apilsbzy5",
-      "group": "🔞"
-    },
-    "apilsbzy7.com": {
-      "api": "https://apilsbzy7.com/api.php/provide/vod",
-      "name": "apilsbzy7",
-      "group": "🔞"
-    },
     "maotai_mix_r2": {
       "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
       "name": "茅台综合R2",
@@ -429,11 +394,6 @@
       "name": "🔞爱坤资源（韓國）",
       "group": "🔞韓國"
     },
-    "jkunzy.com": {
-      "api": "https://jkunzy.com/api.php/provide/vod",
-      "name": "🔞爱坤资源2",
-      "group": "🔞"
-    },
     "madouse.la": {
       "api": "https://madouse.la/api.php/provide/vod",
       "name": "🔞麻豆社",
@@ -452,11 +412,6 @@
     "hsckzy.xyz": {
       "api": "https://hsckzy.xyz/api.php/provide/vod",
       "name": "🔞黑丝资源",
-      "group": "🔞"
-    },
-    "hsckzy888.com": {
-      "api": "https://hsckzy888.com/api.php/provide/vod",
-      "name": "🔞黑丝资源2",
       "group": "🔞"
     },
     "jingpinx.com": {
@@ -944,11 +899,6 @@
       "name": "闪电电影",
       "group": "電影"
     },
-    "sdzy_korea": {
-      "api": "https://sdzyapi.com/api.php/provide/vod",
-      "name": "🔞闪电韩国伦理",
-      "group": "🔞韓國"
-    },
     "ckzy_korea": {
       "api": "https://ckzy.me/api.php/provide/vod",
       "name": "🔞CK韩国伦理",
@@ -978,6 +928,16 @@
       "api": "https://caiji.maotaizy.cc/api.php/provide/vod",
       "name": "茅台电影2",
       "group": "電影"
+    },
+    "yutuzy1.com": {
+      "api": "https://yutuzy1.com/api.php/provide/vod",
+      "name": "🔞玉兔资源",
+      "group": "🔞"
+    },
+    "shayuapi.com": {
+      "api": "https://shayuapi.com/api.php/provide/vod",
+      "name": "🔞鲨鱼资源",
+      "group": "🔞"
     }
   }
 }
