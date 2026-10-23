@@ -1096,25 +1096,11 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     id: 'UCceOkLDO4fQqpBxwSimPRDw',
   },
   {
-    key: 'UCp8cPvx_Od76EL66vvCnhRA',
-    name: '浙江卫视音乐频道 ZJSTV Music Channel - 欢迎订阅 -',
-    type: 'channel',
-    group: 'mine',
-    id: 'UCp8cPvx_Od76EL66vvCnhRA',
-  },
-  {
     key: 'UCiX5BVaXmou5Eezh1oqVfKA',
     name: '云端放映室',
     type: 'channel',
     group: 'mine',
     id: 'UCiX5BVaXmou5Eezh1oqVfKA',
-  },
-  {
-    key: 'UC3z5j23KyzvxOg2GyC9hp1Q',
-    name: '拾光音匣MUSIC',
-    type: 'channel',
-    group: 'mine',
-    id: 'UC3z5j23KyzvxOg2GyC9hp1Q',
   },
   {
     key: 'UC20yNzfYZKp4qMIEAriv6wA',
