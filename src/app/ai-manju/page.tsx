@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
+import { dailyChannelKeys, taipeiDay } from '@/lib/ai-manju-rotation';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 import { followKey } from '@/lib/ai-manju-series-follow';
 import { MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
@@ -302,6 +303,11 @@ function AiManjuClient() {
   // 频道筛选列是否展开。预设展开，让所有追踪的频道都看得到
   const [chipsOpen, setChipsOpen] = useState(true);
   // 置顶的频道：排在频道列、各频道热门、最新上架的最前面。新置顶的排最前
+  const [rotationDay, setRotationDay] = useState(() => taipeiDay());
+  useEffect(() => {
+    const timer = window.setInterval(() => setRotationDay(taipeiDay()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [pins, setPins] = useState<string[]>([]);
   useEffect(() => {
     try {
@@ -625,6 +631,9 @@ function AiManjuClient() {
     ...followList.map((f) => ({ key: f.id, name: f.name })),
   ];
   const pinSet = new Set(pins);
+  const dailyKeys = dailyChannelKeys(allChipItems, pins, rotationDay);
+  const dailySet = new Set(dailyKeys);
+  const priorityKeys = [...pins, ...dailyKeys];
   const chipGroups = [
     {
       title: '📌 置顶',
@@ -632,6 +641,10 @@ function AiManjuClient() {
       items: pins
         .map((k) => allChipItems.find((s) => s.key === k))
         .filter((s): s is { key: string; name: string } => !!s),
+    },
+    {
+      title: '🌅 今日轮播 · 每天 20 个频道',
+      items: dailyKeys.flatMap((key) => allChipItems.filter((s) => s.key === key)),
     },
     {
       title: '原有来源',
@@ -651,7 +664,14 @@ function AiManjuClient() {
   ]
     // 置顶的只出现在置顶那一组，不在原本的组里重复
     .map((g, i) =>
-      i === 0 ? g : { ...g, items: g.items.filter((s) => !pinSet.has(s.key)) }
+      i < 2
+        ? g
+        : {
+            ...g,
+            items: g.items.filter(
+              (s) => !pinSet.has(s.key) && !dailySet.has(s.key)
+            ),
+          }
     )
     .filter((g) => g.items.length > 0);
   const chips = [
@@ -697,19 +717,25 @@ function AiManjuClient() {
         (a, b) =>
           // 置顶的排最前面（照置顶先后），其余照最近更新
           Number(b.pinned) - Number(a.pinned) ||
+          Number(dailySet.has(b.key)) - Number(dailySet.has(a.key)) ||
+          (dailySet.has(a.key) && dailySet.has(b.key)
+            ? dailyKeys.indexOf(a.key) - dailyKeys.indexOf(b.key)
+            : 0) ||
           (a.pinned
             ? pins.indexOf(a.key) - pins.indexOf(b.key)
             : (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0))
       );
-  }, [allVideos, data, follows, pins]);
+  }, [allVideos, data, follows, pins, dailyKeys, dailySet]);
   const trackItems = useMemo(() => {
     if (!allVideos) return [];
     if (trackTab === 'latest') {
       const latest = latestPerSource(allVideos);
       // 置顶频道的最新一支排最前面，其余维持新到旧
       return [
-        ...latest.filter((v) => pins.includes(v.sourceKey)),
-        ...latest.filter((v) => !pins.includes(v.sourceKey)),
+        ...priorityKeys.flatMap((key) =>
+          latest.filter((v) => v.sourceKey === key)
+        ),
+        ...latest.filter((v) => !priorityKeys.includes(v.sourceKey)),
       ].map((video) => ({
         video,
         title: video.title,
@@ -723,7 +749,7 @@ function AiManjuClient() {
       views: h.views,
       count: h.count,
     }));
-  }, [allVideos, trackTab, pins]);
+  }, [allVideos, trackTab, priorityKeys]);
   const playingChannelId = playing ? channelIdOf(playing.channelUrl) : null;
   const playingSeries = playing ? seriesNameOf(playing.title) : null;
 
@@ -956,7 +982,9 @@ function AiManjuClient() {
             series.seenAll(followKey(f));
             // 另开红果官网：很多剧要登入红果才能看，嵌在站内没办法登入。
             // 电脑开播放页；手机网页不能播，开剧集页（上面有「打开 App」）
-            const mobile = /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent);
+            const mobile = /Mobi|Android|iPhone|iPod/i.test(
+              navigator.userAgent
+            );
             window.open(
               mobile
                 ? `https://hongguoduanju.com/detail?series_id=${f.hg.id}`

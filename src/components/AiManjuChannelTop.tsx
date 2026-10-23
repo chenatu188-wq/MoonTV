@@ -147,7 +147,9 @@ function ChannelRow({
             <a
               key={v.videoId}
               href={aiManjuHref({ ...v, channel: v.channel || name })}
-              onClick={(e) => takeOverClick(e) && onPlay({ ...v, channel: v.channel || name })}
+              onClick={(e) =>
+                takeOverClick(e) && onPlay({ ...v, channel: v.channel || name })
+              }
               className='group w-44 shrink-0 text-left'
             >
               <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
@@ -199,8 +201,8 @@ export default function AiManjuChannelTop({
           各频道热门 20
         </h2>
         <span className='text-xs text-gray-500 dark:text-gray-400'>
-          每个追踪频道观看数最高的 20 支 ·
-          置顶的频道排最前面，其余最近有更新的在前 · 共 {channels.length} 个频道
+          每个追踪频道观看数最高的 20 支 · 置顶频道最前面，其余每天轮播 20
+          个，再按最近更新排列 · 共 {channels.length} 个频道
         </span>
       </div>
       {channels.slice(0, count).map((c) => (
