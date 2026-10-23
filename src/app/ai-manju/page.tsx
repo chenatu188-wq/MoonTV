@@ -632,8 +632,8 @@ function AiManjuClient() {
   ];
   const pinSet = new Set(pins);
   const dailyKeys = dailyChannelKeys(allChipItems, pins, rotationDay);
-  const dailySet = new Set(dailyKeys);
-  const priorityKeys = [...pins, ...dailyKeys];
+  const dailySet = useMemo(() => new Set(dailyKeys), [dailyKeys]);
+  const priorityKeys = useMemo(() => [...pins, ...dailyKeys], [pins, dailyKeys]);
   const chipGroups = [
     {
       title: '📌 置顶',
