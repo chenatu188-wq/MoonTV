@@ -4,11 +4,16 @@ import { useRouter } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  type CodePick,
   type SavedPick,
+  addCodePicks,
   BUILTIN_PICKS,
+  extractCodes,
+  loadCodePicks,
   loadPicks,
   pickKey,
   removePick,
+  saveCodePicks,
   savePicks,
 } from '@/lib/adult-picks';
 import { takeOverClick } from '@/lib/link-click';
@@ -158,8 +163,41 @@ function AdultClient() {
   // 精選影片：在播放頁存下來的那些。每次切到這個分頁重讀一次（可能剛從播放頁加了新的回來）
   const [savedPicks, setSavedPicks] = useState<SavedPick[]>([]);
   useEffect(() => {
-    if (tab === 'picks') setSavedPicks(loadPicks());
+    if (tab === 'picks') {
+      setSavedPicks(loadPicks());
+      setCodePicks(loadCodePicks());
+    }
   }, [tab]);
+
+  // 批次貼上的番號：別人推薦的一串番號，挑出來存著，點了用番號去搜
+  const [codePicks, setCodePicks] = useState<CodePick[]>([]);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteMsg, setPasteMsg] = useState('');
+  const pasteFound = extractCodes(pasteText);
+  const addPasted = () => {
+    const [next, added] = addCodePicks(codePicks, pasteFound);
+    setCodePicks(next);
+    saveCodePicks(next);
+    setPasteMsg(
+      added > 0
+        ? `加入 ${added} 部${
+            pasteFound.length > added
+              ? `（另外 ${pasteFound.length - added} 部已經在清單裡）`
+              : ''
+          }`
+        : '這些番號都已經在清單裡了'
+    );
+    if (added > 0) setPasteText('');
+  };
+  const removeCode = (code: string) => {
+    const next = codePicks.filter((p) => p.code !== code);
+    setCodePicks(next);
+    saveCodePicks(next);
+  };
+  const searchCode = (code: string) => {
+    handleSearch(code);
+    window.scrollTo({ top: 0 });
+  };
 
   const pickHref = (p: { source: string; id: string; title: string }) =>
     `/play?source=${encodeURIComponent(p.source)}&id=${encodeURIComponent(
@@ -680,6 +718,95 @@ function AdultClient() {
               )}
             </div>
 
+            {/* 批次加入：貼上一段文字，挑出裡面的番號 */}
+            <div data-code-paste>
+              <h2 className='mb-2 text-base font-bold text-gray-800 dark:text-white'>
+                批次加入番號
+                <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
+                  把別人推薦的整段文字貼上來，會自動挑出番號；番號後面的字當作女優名
+                </span>
+              </h2>
+              <textarea
+                value={pasteText}
+                onChange={(e) => {
+                  setPasteText(e.target.value);
+                  setPasteMsg('');
+                }}
+                rows={4}
+                placeholder={'例如：\nSSIS-413 河北\nmidv108 小野六花\nFC2-PPV-1234567'}
+                className='w-full rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100'
+                data-code-paste-input
+              />
+              <div className='mt-2 flex flex-wrap items-center gap-2'>
+                <button
+                  onClick={addPasted}
+                  disabled={pasteFound.length === 0}
+                  className='rounded-full bg-rose-500 px-4 py-1.5 text-sm text-white hover:bg-rose-400 disabled:opacity-40'
+                  data-code-paste-add
+                >
+                  {pasteFound.length > 0
+                    ? `加入 ${pasteFound.length} 個番號`
+                    : '沒有找到番號'}
+                </button>
+                {pasteMsg && (
+                  <span className='text-sm text-green-600 dark:text-green-400' data-code-paste-msg>
+                    {pasteMsg}
+                  </span>
+                )}
+              </div>
+              {pasteFound.length > 0 && (
+                <div className='mt-2 flex flex-wrap gap-1.5 text-xs'>
+                  {pasteFound.map((p) => (
+                    <span
+                      key={p.code}
+                      className='rounded bg-rose-50 px-2 py-0.5 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300'
+                    >
+                      {p.code}
+                      {p.actress && ` ${p.actress}`}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 批次貼上存下來的番號 */}
+            {codePicks.length > 0 && (
+              <div>
+                <h2 className='mb-2 text-base font-bold text-gray-800 dark:text-white'>
+                  我貼上的番號
+                  <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
+                    {codePicks.length} 部 · 點了用番號到各片源搜尋 · 只存在這台裝置
+                  </span>
+                </h2>
+                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
+                  {codePicks.map((p) => (
+                    <div key={p.code} className='group relative'>
+                      <button
+                        onClick={() => searchCode(p.code)}
+                        className='w-full rounded-lg bg-gray-100 p-3 text-left transition-colors hover:bg-rose-100 dark:bg-gray-800 dark:hover:bg-rose-900/30'
+                        data-user-code-pick
+                      >
+                        <div className='text-sm font-bold text-rose-500'>
+                          {p.code}
+                        </div>
+                        <div className='mt-0.5 truncate text-sm text-gray-800 dark:text-gray-200'>
+                          {p.actress || '\u00a0'}
+                        </div>
+                      </button>
+                      <button
+                        aria-label='拿掉這個番號'
+                        title='拿掉這個番號'
+                        onClick={() => removeCode(p.code)}
+                        className='absolute right-1 top-1 h-6 w-6 rounded-full bg-black/60 text-sm leading-none text-white hover:bg-red-600'
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 內建的番號清單：點了用番號去各片源搜 */}
             <div>
               <h2 className='mb-2 text-base font-bold text-gray-800 dark:text-white'>
@@ -692,10 +819,7 @@ function AdultClient() {
                 {BUILTIN_PICKS.map((p) => (
                   <button
                     key={p.code}
-                    onClick={() => {
-                      handleSearch(p.code);
-                      window.scrollTo({ top: 0 });
-                    }}
+                    onClick={() => searchCode(p.code)}
                     className='rounded-lg bg-gray-100 p-3 text-left transition-colors hover:bg-rose-100 dark:bg-gray-800 dark:hover:bg-rose-900/30'
                     data-code-pick
                   >
