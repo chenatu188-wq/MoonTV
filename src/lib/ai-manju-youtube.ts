@@ -42,6 +42,7 @@ async function browse(body: Record<string, unknown>): Promise<any> {
       headers: { ...YT_HEADERS, 'Content-Type': 'application/json' },
       body: JSON.stringify({ context: CONTEXT, ...body }),
       cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
     }
   );
   if (!res.ok) throw new Error(`YouTube 回应 HTTP ${res.status}`);
@@ -65,6 +66,55 @@ const text = (o: any): string =>
   (o?.runs ?? []).map((r: any) => r.text).join('') ??
   '';
 
+/** 频道清单只有相对发布时间，转成近似日期供最新／周月榜排序。 */
+function publishedFrom(parts: string[]): string {
+  for (const part of parts) {
+    const match =
+      /(\d+)\s*(秒|分鐘|分钟|小時|小时|天|日|週|周|個月|个月|月|年|seconds?|minutes?|hours?|days?|weeks?|months?|years?)\s*(前|ago)/i.exec(
+        part
+      );
+    if (!match) continue;
+    const unit = match[2].toLowerCase();
+    const seconds = /^(秒|second)/.test(unit)
+      ? 1
+      : /^(分鐘|分钟|minute)/.test(unit)
+      ? 60
+      : /^(小時|小时|hour)/.test(unit)
+      ? 3600
+      : /^(天|日|day)/.test(unit)
+      ? 86400
+      : /^(週|周|week)/.test(unit)
+      ? 7 * 86400
+      : /^(個月|个月|月|month)/.test(unit)
+      ? 30 * 86400
+      : 365 * 86400;
+    return new Date(
+      Date.now() - Number(match[1]) * seconds * 1000
+    ).toISOString();
+  }
+  return '';
+}
+
+function viewsFrom(parts: string[]): number | null {
+  const part = parts.find((p) => /觀看|观看|次觀看|次观看|views?/i.test(p));
+  if (!part) return null;
+  const match = /([\d,]+(?:\.\d+)?)\s*([萬万億亿KMB])?/i.exec(part);
+  if (!match) return /無|无|no views/i.test(part) ? 0 : null;
+  const unit = (match[2] ?? '').toUpperCase();
+  const scale = /[萬万]/.test(unit)
+    ? 1e4
+    : /[億亿]/.test(unit)
+    ? 1e8
+    : unit === 'K'
+    ? 1e3
+    : unit === 'M'
+    ? 1e6
+    : unit === 'B'
+    ? 1e9
+    : 1;
+  return Math.round(Number(match[1].replace(/,/g, '')) * scale);
+}
+
 function make(
   videoId: string,
   title: string,
@@ -78,10 +128,10 @@ function make(
     channel,
     channelId,
     channelUrl: channelId ? `https://www.youtube.com/channel/${channelId}` : '',
-    published: '',
+    published: publishedFrom(meta),
     thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
     description: '',
-    views: null,
+    views: viewsFrom(meta),
     sourceKey: channelId,
     sourceName: channel,
     meta: meta.filter(Boolean).join(' · '),

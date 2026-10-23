@@ -1,4 +1,5 @@
 import { AiManjuSource, feedUrl } from '@/lib/ai-manju-sources';
+import { listSource } from '@/lib/ai-manju-youtube';
 
 export interface AiManjuVideo {
   videoId: string;
@@ -115,6 +116,7 @@ async function fetchOnce(source: AiManjuSource): Promise<FetchResult> {
       Accept: 'application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
     },
     cache: 'no-store',
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {
@@ -154,6 +156,26 @@ async function fetchWithRetry(source: AiManjuSource): Promise<FetchResult> {
         feedTitle: '',
         error: `${(e as Error).name}: ${(e as Error).message}`,
       };
+    }
+    // RSS 404/500 不代表频道不存在；改用网站播放页同一套清单介面。
+    // 只尝试一次备援，空清单不能把真正失效的来源误判成成功。
+    if (last.error !== null && attempt === 0) {
+      try {
+        const page = await listSource(source.type, source.id, source.name);
+        if (page.videos.length > 0) {
+          last = {
+            videos: page.videos.slice(0, 15).map((v) => ({
+              ...v,
+              sourceKey: source.key,
+              sourceName: source.name,
+            })),
+            feedTitle: source.name,
+            error: null,
+          };
+        }
+      } catch {
+        // 备援也失败就继续 RSS 重试，保留原始错误。
+      }
     }
     if (last.error === null) {
       lastGood.set(source.id, {
