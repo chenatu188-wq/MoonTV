@@ -195,6 +195,7 @@ function AiManjuClient() {
     const v = aiManjuFromSearch(window.location.search);
     if (v) setPlaying(v);
   }, []);
+  const [playerSize, setPlayerSize] = useState(100);
   // 追踪频道榜：各频道最新一支／近期最多人看
   const [trackTab, setTrackTab] = useState<TrackTab>('latest');
   // 推荐榜：还没追踪的频道本周发的漫剧，用来发现新频道
@@ -1399,14 +1400,39 @@ function AiManjuClient() {
       {/* 播放器：YouTube 官方 iframe，播放数与收益仍归原作者 */}
       {playing && (
         <div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4'
+          className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4'
           onClick={close}
         >
           <div
-            className='w-full max-w-4xl'
+            className='flex max-h-[calc(100dvh-2rem)] max-w-full flex-col'
+            style={{
+              width: `min(calc((100vw - 2rem) * ${playerSize / 100}), calc((100dvh - 10rem) * ${16 / 9} * ${playerSize / 100}))`,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className='relative aspect-video overflow-hidden rounded-lg bg-black'>
+            <div className='mb-2 flex shrink-0 flex-wrap items-center gap-2 text-sm text-white'>
+              <label htmlFor='ai-manju-player-size' className='shrink-0'>
+                播放器大小
+              </label>
+              <input
+                id='ai-manju-player-size'
+                type='range'
+                min={50}
+                max={100}
+                step={5}
+                value={playerSize}
+                onChange={(e) => setPlayerSize(Number(e.target.value))}
+                aria-valuetext={`${playerSize}%`}
+                className='min-w-16 flex-1 accent-green-500'
+              />
+              <button
+                onClick={() => setPlayerSize(100)}
+                className='shrink-0 rounded-full bg-white/10 px-3 py-1 hover:bg-white/20'
+              >
+                {playerSize === 100 ? '自动适应' : `${playerSize}% · 恢复自动`}
+              </button>
+            </div>
+            <div className='relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-black'>
               <iframe
                 ref={playerRef}
                 src={`https://www.youtube-nocookie.com/embed/${
@@ -1420,7 +1446,7 @@ function AiManjuClient() {
                 className='h-full w-full'
               />
             </div>
-            <div className='mt-3 flex items-start justify-between gap-4'>
+            <div className='mt-3 flex min-h-0 flex-wrap items-start justify-between gap-3 overflow-y-auto'>
               <div className='min-w-0'>
                 <h2 className='truncate text-base font-medium text-white'>
                   {playing.title}
