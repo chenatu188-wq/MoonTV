@@ -134,6 +134,36 @@ export function useSeriesFollows() {
     [update, checkDue]
   );
 
+  /** 一次追好几部（网友推荐贴上来的剧名，不知道是哪个频道发的）。回传实际加了几部 */
+  const followMany = useCallback(
+    (names: string[], label: string) => {
+      const have = new Set(ref.current.map(followKey));
+      const room = MAX_SERIES_FOLLOWS - ref.current.length;
+      const fresh = names
+        .filter((name) => !have.has(followKey({ name, channelId: null })))
+        .slice(0, Math.max(room, 0));
+      if (!fresh.length) return 0;
+      const now = Date.now();
+      update((list) => [
+        ...fresh.map((name, i) => ({
+          name,
+          channelId: null,
+          channel: label,
+          known: [],
+          newIds: [],
+          latest: null,
+          checkedAt: 0,
+          // 照贴上的顺序排
+          addedAt: now - i,
+        })),
+        ...list,
+      ]);
+      checkDue();
+      return fresh.length;
+    },
+    [update, checkDue]
+  );
+
   const unfollow = useCallback(
     (key: string) => update((list) => list.filter((f) => followKey(f) !== key)),
     [update]
@@ -161,5 +191,14 @@ export function useSeriesFollows() {
     [update]
   );
 
-  return { follows, checking, isFollowed, follow, unfollow, seenAll, seenVideo };
+  return {
+    follows,
+    checking,
+    isFollowed,
+    follow,
+    followMany,
+    unfollow,
+    seenAll,
+    seenVideo,
+  };
 }

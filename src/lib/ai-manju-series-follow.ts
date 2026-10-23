@@ -4,6 +4,7 @@
  * 跟上次看过的比对，多出来的就是新集，在页面上标「新」。
  * 名单只存在这台装置（localStorage）。纯函数，hook 在 use-series-follows.ts。
  */
+import { stripSeason } from '@/lib/ai-manju-series';
 
 export interface SeriesEpisode {
   videoId: string;
@@ -34,7 +35,7 @@ export interface SeriesFollow {
 }
 
 export const SERIES_FOLLOWS_KEY = 'moontv_ai_manju_series_follows';
-export const MAX_SERIES_FOLLOWS = 50;
+export const MAX_SERIES_FOLLOWS = 100;
 const MAX_KNOWN = 400;
 /** 搜寻结果伺服器会缓存一小时，太常查也拿不到新的 */
 export const RECHECK_MS = 30 * 60 * 1000;
@@ -185,4 +186,58 @@ export function episodeLabel(ep: Pick<SeriesEpisode, 'season' | 'episode'>): str
   const s = ep.season !== null ? `第 ${ep.season} 季` : '';
   const e = ep.episode !== null ? `第 ${ep.episode} 集` : '';
   return [s, e].filter(Boolean).join(' ') || '最新一支';
+}
+
+// ── 网友推荐：批次贴上剧名 ───────────────────────────────────────
+
+/** 不是剧名的字：推荐文常见的标题、说明 */
+const NOT_TITLE =
+  /^(网友推荐|網友推薦|推荐|推薦|必看|好看|强推|強推|分享|合集|片单|片單|ai漫剧|ai漫劇|漫剧|漫劇|动漫|動漫|短剧|短劇|更新中|已完结|已完結|完结|完結)$/i;
+
+function cleanTitle(raw: string): string {
+  const t = stripSeason(
+    raw
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/#\S+/g, '')
+      // 括号里的说明：（全80集）（已完结）(推荐)
+      .replace(/[（([【][^）)\]】]{0,20}[）)\]】]/g, '')
+      .replace(/^[\s\d]{1,3}[.、．)）:：\s]+/, '') // 前面的编号 1. 2、 3)
+      .replace(/\p{So}|\p{Sk}|\p{Cs}|\u200d|\ufe0f/gu, '') // 表情符号
+      .replace(/[-—–_·•*~～|｜:：!！?？。，,、;；"'“”‘’「」『』]+/g, ' ')
+      .replace(/(全|共)\s*\d+\s*[集话話]|\d+\s*[集话話]全?|更新至.*$|已?完结|已?完結/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
+  return Array.from(t).slice(0, 30).join('').trim();
+}
+
+/**
+ * 从一段推荐文字挑出剧名（照出现顺序、去重）：
+ * 有《》的只取书名号里的；没有的一行一部（同一行用、，；/ 隔开的拆成多部），
+ * 去掉编号、表情、hashtag、（全80集）这类说明，以及「第二季」这种季数。
+ */
+export function extractTitles(text: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const add = (raw: string) => {
+    const t = cleanTitle(raw);
+    const cjk = (t.match(/[\u3400-\u9fff]/g) ?? []).length;
+    if (cjk < 2 && t.length < 3) return;
+    if (NOT_TITLE.test(t.replace(/\s/g, ''))) return;
+    const key = t.replace(/\s/g, '').toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(t);
+  };
+  for (const raw of text.normalize('NFKC').split(/\r?\n/)) {
+    // 网址先拿掉，免得被下面的「/」拆成好几段
+    const line = raw.replace(/(https?:\/\/|www\.)\S+/g, ' ');
+    const quoted = Array.from(line.matchAll(/《([^》]{1,40})》/g)).map((m) => m[1]);
+    if (quoted.length) {
+      quoted.forEach(add);
+      continue;
+    }
+    line.split(/[、，,；;／/]/).forEach(add);
+  }
+  return out;
 }

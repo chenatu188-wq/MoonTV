@@ -3,6 +3,7 @@ import {
   type SeriesFollow,
   applyCheck,
   episodeLabel,
+  extractTitles,
   latestOf,
   markSeen,
   sanitizeSeriesFollows,
@@ -103,5 +104,35 @@ describe('sanitizeSeriesFollows / sortFollows', () => {
   it('episodeLabel', () => {
     expect(episodeLabel({ season: 2, episode: 5 })).toBe('第 2 季 第 5 集');
     expect(episodeLabel({ season: null, episode: null })).toBe('最新一支');
+  });
+});
+
+describe('extractTitles', () => {
+  it('从推荐文字挑出剧名', () => {
+    const text = [
+      '🔥网友推荐🔥',
+      '1. 仙尊归来（全80集）',
+      '2、《重生之都市修仙》第二季 强推！',
+      '3) 万古神帝 #AI漫剧 #推荐',
+      '《斗破苍穹》《凡人修仙传》',
+      '逆天邪神、武动乾坤 / 完美世界',
+      '仙尊归来',
+      'https://youtu.be/abc',
+      '必看',
+    ].join('\n');
+    expect(extractTitles(text)).toEqual([
+      '仙尊归来',
+      '重生之都市修仙',
+      '万古神帝',
+      '斗破苍穹',
+      '凡人修仙传',
+      '逆天邪神',
+      '武动乾坤',
+      '完美世界',
+    ]);
+  });
+
+  it('空白或全是说明回空', () => {
+    expect(extractTitles('\n推荐\n😀😀\n')).toEqual([]);
   });
 });

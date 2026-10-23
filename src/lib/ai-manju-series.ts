@@ -46,7 +46,7 @@ export function seasonOf(title: string): number | null {
 }
 
 /** 去掉片名尾巴上的季数、完结篇之类的字样 */
-function stripSeason(name: string): string {
+export function stripSeason(name: string): string {
   return name
     .replace(new RegExp(`[:：\\s]*第\\s*${NUM}\\s*[季部].*$`), '')
     .replace(/[:：\s]*(完结篇|完結篇|大结局|大結局|全集|合集).*$/, '')

@@ -26,6 +26,7 @@ import {
 import { resumeFrom } from '@/lib/watch-marks';
 
 import AiManjuChannelTop from '@/components/AiManjuChannelTop';
+import AiManjuRecommendPaste from '@/components/AiManjuRecommendPaste';
 import AiManjuSeriesStrip from '@/components/AiManjuSeriesStrip';
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
@@ -924,6 +925,12 @@ function AiManjuClient() {
             )}
           </div>
         )}
+
+        {/* 网友推荐：整段贴上剧名，加进追剧 */}
+        <AiManjuRecommendPaste
+          followed={series.follows.length}
+          onAdd={(names) => series.followMany(names, '网友推荐')}
+        />
 
         {/* 追剧：出了新集标「新」 */}
         <AiManjuSeriesStrip
