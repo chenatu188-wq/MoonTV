@@ -32,7 +32,27 @@ export interface SeriesFollow {
   checkedAt: number;
   /** 追剧的时间（Unix 毫秒） */
   addedAt: number;
+  /**
+   * 红果的剧（网友推荐贴上来、在红果查到的）：不在 YouTube 上，改看红果的总集数，
+   * 集数变多就算有新集。seen 是上次看过时的总集数。
+   */
+  hg?: HongguoInfo;
 }
+
+export interface HongguoInfo {
+  id: string;
+  cover: string;
+  total: number;
+  seen: number;
+}
+
+/** 红果剧的新集数 */
+export const hongguoNew = (f: SeriesFollow) =>
+  f.hg ? Math.max(f.hg.total - f.hg.seen, 0) : 0;
+
+/** 有没有新集（YouTube 的看 newIds，红果的看总集数） */
+export const newCount = (f: SeriesFollow) =>
+  f.hg ? hongguoNew(f) : f.newIds.length;
 
 export const SERIES_FOLLOWS_KEY = 'moontv_ai_manju_series_follows';
 export const MAX_SERIES_FOLLOWS = 100;
@@ -40,8 +60,9 @@ const MAX_KNOWN = 400;
 /** 搜寻结果伺服器会缓存一小时，太常查也拿不到新的 */
 export const RECHECK_MS = 30 * 60 * 1000;
 
-export const followKey = (f: Pick<SeriesFollow, 'name' | 'channelId'>) =>
-  `${f.name}|${f.channelId ?? ''}`;
+export const followKey = (
+  f: Pick<SeriesFollow, 'name' | 'channelId'> & { hg?: { id: string } }
+) => (f.hg ? `hg:${f.hg.id}` : `${f.name}|${f.channelId ?? ''}`);
 
 const VIDEO_ID = /^[\w-]{11}$/;
 const CHANNEL_ID = /^UC[\w-]{22}$/;
@@ -95,7 +116,22 @@ export function sanitizeSeriesFollow(raw: unknown): SeriesFollow | null {
       ? r.channelId
       : null;
   const known = ids(r.known);
+  const hgRaw = (r.hg ?? null) as Record<string, unknown> | null;
+  const hgId = String(hgRaw?.id ?? '');
+  const hg =
+    hgRaw && /^\d{5,25}$/.test(hgId)
+      ? {
+          id: hgId,
+          cover:
+            typeof hgRaw.cover === 'string' && /^https:\/\//.test(hgRaw.cover)
+              ? hgRaw.cover
+              : '',
+          total: Math.max(0, Math.floor(Number(hgRaw.total) || 0)),
+          seen: Math.max(0, Math.floor(Number(hgRaw.seen) || 0)),
+        }
+      : undefined;
   return {
+    ...(hg ? { hg } : {}),
     name,
     channelId,
     channel: text(r.channel, 80),
@@ -164,6 +200,7 @@ export function applyCheck(
 
 /** 看过了：指定的几集（没给就是全部新集）收进 known */
 export function markSeen(f: SeriesFollow, videoIds?: string[]): SeriesFollow {
+  if (f.hg) return { ...f, hg: { ...f.hg, seen: f.hg.total } };
   const seen = videoIds ?? f.newIds;
   if (!seen.length) return f;
   return {
@@ -177,7 +214,7 @@ export function markSeen(f: SeriesFollow, videoIds?: string[]): SeriesFollow {
 export function sortFollows(list: SeriesFollow[]): SeriesFollow[] {
   return [...list].sort(
     (a, b) =>
-      Number(b.newIds.length > 0) - Number(a.newIds.length > 0) ||
+      Number(newCount(b) > 0) - Number(newCount(a) > 0) ||
       b.addedAt - a.addedAt
   );
 }
@@ -232,6 +269,8 @@ export function extractTitles(text: string): string[] {
   for (const raw of text.normalize('NFKC').split(/\r?\n/)) {
     // 网址先拿掉，免得被下面的「/」拆成好几段
     const line = raw.replace(/(https?:\/\/|www\.)\S+/g, ' ');
+    // 「网友推荐红果好剧：」这种冒号结尾的是标题行，不是剧名
+    if (/[:：]\s*$/.test(line) && !/《/.test(line)) continue;
     const quoted = Array.from(line.matchAll(/《([^》]{1,40})》/g)).map((m) => m[1]);
     if (quoted.length) {
       quoted.forEach(add);
@@ -240,4 +279,52 @@ export function extractTitles(text: string): string[] {
     line.split(/[、，,；;／/]/).forEach(add);
   }
   return out;
+}
+
+/** 红果搜寻结果的一部 */
+export interface HongguoHit {
+  seriesId: string;
+  title: string;
+  cover: string;
+  episodes: number;
+}
+
+const normTitle = (s: string) =>
+  s.normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+
+/**
+ * 在红果的搜寻结果里挑出就是这部剧的那一个：片名一样的优先，
+ * 其次是片名开头一样的（「xxx第一季」）；都没有就当没找到（红果的搜寻很宽松，第一个常常不是）。
+ */
+export function pickHongguo(name: string, hits: HongguoHit[]): HongguoHit | null {
+  const n = normTitle(stripSeason(name));
+  if (n.length < 2) return null;
+  const exact = hits.find((h) => normTitle(stripSeason(h.title)) === n);
+  if (exact) return exact;
+  return (
+    hits.find((h) => {
+      const t = normTitle(h.title);
+      return t.startsWith(n) || (t.length >= 4 && n.startsWith(t));
+    }) ?? null
+  );
+}
+
+/** 红果的检查结果：更新总集数；第一次查只建立基准 */
+export function applyHongguoCheck(
+  f: SeriesFollow,
+  hit: HongguoHit | null,
+  now = Date.now()
+): SeriesFollow {
+  if (!f.hg || !hit) return { ...f, checkedAt: now };
+  const first = f.checkedAt === 0;
+  return {
+    ...f,
+    hg: {
+      id: f.hg.id,
+      cover: hit.cover || f.hg.cover,
+      total: hit.episodes,
+      seen: first ? hit.episodes : Math.min(f.hg.seen, hit.episodes),
+    },
+    checkedAt: now,
+  };
 }

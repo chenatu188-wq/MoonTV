@@ -15,7 +15,8 @@ export const dynamic = 'force-dynamic';
  */
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
-const FRESH_MS = 6 * 60 * 60 * 1000;
+// 追剧要靠总集数判断有没有新集，别存太久
+const FRESH_MS = 60 * 60 * 1000;
 const cache = new Map<string, { items: HongguoSearchItem[]; at: number }>();
 
 export async function GET(request: NextRequest) {

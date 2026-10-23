@@ -2,12 +2,32 @@
 
 import { useState } from 'react';
 
-import { extractTitles, MAX_SERIES_FOLLOWS } from '@/lib/ai-manju-series-follow';
+import {
+  type HongguoHit,
+  extractTitles,
+  MAX_SERIES_FOLLOWS,
+  pickHongguo,
+} from '@/lib/ai-manju-series-follow';
+import type { RecommendEntry } from '@/lib/use-series-follows';
 
 /**
  * 网友推荐：把别人推荐的一串剧名整段贴上来，挑出剧名后一次加进「追剧」。
- * 追剧区会自己去找每部剧的集数，出了新集标「新」。
+ * 推荐的多半是红果的剧（不在 YouTube 上），所以先去红果查；
+ * 红果查不到的才改在 YouTube 找。出了新集标「新」。
  */
+async function lookup(name: string): Promise<RecommendEntry> {
+  try {
+    const r = await fetch(
+      `/api/ai-manju/hongguo/search?q=${encodeURIComponent(name.slice(0, 30))}`
+    );
+    if (!r.ok) return { name };
+    const d = await r.json();
+    const hit = pickHongguo(name, (d.items ?? []) as HongguoHit[]);
+    return hit ? { name, hg: hit } : { name };
+  } catch {
+    return { name };
+  }
+}
 export default function AiManjuRecommendPaste({
   followed,
   onAdd,
@@ -15,20 +35,38 @@ export default function AiManjuRecommendPaste({
   /** 目前追剧的部数 */
   followed: number;
   /** 回传实际加了几部 */
-  onAdd: (names: string[]) => number;
+  onAdd: (entries: RecommendEntry[]) => number;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [msg, setMsg] = useState('');
   const titles = extractTitles(text);
 
-  const add = () => {
-    const added = onAdd(titles);
-    const skipped = titles.length - added;
+  const [busy, setBusy] = useState('');
+
+  const add = async () => {
+    const entries: RecommendEntry[] = [];
+    for (let i = 0; i < titles.length; i++) {
+      setBusy(`到红果查剧名 ${i + 1} / ${titles.length}…`);
+      entries.push(await lookup(titles[i]));
+    }
+    setBusy('');
+    const added = onAdd(entries);
+    const hg = entries.filter((e) => e.hg).length;
+    const yt = entries.length - hg;
+    const skipped = entries.length - added;
     setMsg(
       added > 0
-        ? `加入追剧 ${added} 部${skipped > 0 ? `（${skipped} 部已经在追或超过 ${MAX_SERIES_FOLLOWS} 部上限）` : ''}，正在找集数…`
-        : `这些剧都已经在追了${followed >= MAX_SERIES_FOLLOWS ? `（或已达 ${MAX_SERIES_FOLLOWS} 部上限）` : ''}`
+        ? `加入追剧 ${added} 部：红果找到 ${hg} 部${
+            yt ? `，${yt} 部红果没有、改在 YouTube 找` : ''
+          }${
+            skipped > 0
+              ? `（${skipped} 部已经在追或超过 ${MAX_SERIES_FOLLOWS} 部上限）`
+              : ''
+          }`
+        : `这些剧都已经在追了${
+            followed >= MAX_SERIES_FOLLOWS ? `（或已达 ${MAX_SERIES_FOLLOWS} 部上限）` : ''
+          }`
     );
     if (added > 0) setText('');
   };
@@ -66,11 +104,14 @@ export default function AiManjuRecommendPaste({
           <div className='mt-2 flex flex-wrap items-center gap-2'>
             <button
               onClick={add}
-              disabled={titles.length === 0}
+              disabled={titles.length === 0 || busy !== ''}
               className='rounded-full bg-green-600 px-4 py-1.5 text-sm text-white hover:bg-green-500 disabled:opacity-40'
               data-recommend-add
             >
-              {titles.length > 0 ? `加入追剧（${titles.length} 部）` : '还没认出剧名'}
+              {busy ||
+                (titles.length > 0
+                  ? `加入追剧（${titles.length} 部）`
+                  : '还没认出剧名')}
             </button>
             {msg && (
               <span className='text-sm text-green-600 dark:text-green-400' data-recommend-msg>
