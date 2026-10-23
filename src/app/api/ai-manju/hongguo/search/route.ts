@@ -27,16 +27,26 @@ export async function GET(request: NextRequest) {
   let hit = cache.get(q);
   if (!hit || Date.now() - hit.at > FRESH_MS) {
     try {
+      // 2026-10 起官网的搜寻页不再把结果写进 HTML，改由这支 API 给（回传一样有 searchList）
       const res = await fetch(
-        `https://hongguoduanju.com/search/${encodeURIComponent(q)}`,
+        `https://hongguoduanju.com/api/search/result?aid=8662&query=${encodeURIComponent(
+          q
+        )}`,
         {
-          headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
+          headers: {
+            'User-Agent': UA,
+            'Accept-Language': 'zh-CN,zh;q=0.9',
+            Referer: `https://hongguoduanju.com/search/${encodeURIComponent(
+              q
+            )}`,
+          },
           signal: AbortSignal.timeout(15000),
           cache: 'no-store',
         }
       );
       if (!res.ok) throw new Error(`红果回应 HTTP ${res.status}`);
-      hit = { items: parseHongguoSearch(await res.text()), at: Date.now() };
+      const items = parseHongguoSearch(await res.text());
+      hit = { items, at: Date.now() };
       cache.set(q, hit);
       if (cache.size > 300) cache.delete(cache.keys().next().value as string);
     } catch (e) {
