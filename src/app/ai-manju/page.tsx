@@ -643,7 +643,7 @@ function AiManjuClient() {
         .filter((s): s is { key: string; name: string } => !!s),
     },
     {
-      title: '🌅 今日轮播 · 每天 20 个频道',
+      title: `🌅 今日轮播 · ${dailyKeys.length} 个 · 每周全部轮一遍`,
       items: dailyKeys.flatMap((key) => allChipItems.filter((s) => s.key === key)),
     },
     {
