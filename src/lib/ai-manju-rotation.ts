@@ -14,10 +14,10 @@ export function dailyChannelKeys(
     .filter((key) => !pinned.has(key))
     .sort();
   if (!keys.length) return [];
-  const size = Math.min(20, keys.length);
-  const start = (((day * 20) % keys.length) + keys.length) % keys.length;
-  return Array.from(
-    { length: size },
-    (_, i) => keys[(start + i) % keys.length]
-  );
+  // 1970-01-01 是星期四；台北时间周一到周日均分，每周完整轮一遍。
+  const weekday = (((day + 3) % 7) + 7) % 7;
+  if (keys.length < 7) return [keys[weekday % keys.length]];
+  const start = Math.floor((weekday * keys.length) / 7);
+  const end = Math.floor(((weekday + 1) * keys.length) / 7);
+  return keys.slice(start, end);
 }

@@ -1,24 +1,38 @@
 import { dailyChannelKeys, taipeiDay } from './ai-manju-rotation';
 
-const channels = Array.from({ length: 65 }, (_, i) => ({ key: `c${i}` }));
-test('daily batches exclude pins, stay stable and cover every eligible channel', () => {
-  const pins = ['c0', 'c1'];
-  const first = dailyChannelKeys(channels, pins, 0);
-  expect(first).toHaveLength(20);
-  expect(first).toEqual(dailyChannelKeys([...channels].reverse(), pins, 0));
-  expect(first).not.toContain('c0');
-  expect(first).not.toContain('c1');
-  expect(dailyChannelKeys(channels, pins, 1)).not.toEqual(first);
-  const cycle = Array.from({ length: 4 }, (_, day) =>
-    dailyChannelKeys(channels, pins, day)
-  ).flat();
-  expect(new Set(cycle).size).toBe(63);
+test('all eligible channels appear exactly once every week, excluding pins', () => {
+  for (const total of [7, 20, 63, 183, 186, 201]) {
+    const channels = Array.from({ length: total + 2 }, (_, i) => ({
+      key: `c${i}`,
+    }));
+    const pins = ['c0', 'c1'];
+    for (let start = 0; start < 7; start++) {
+      const batches = Array.from({ length: 7 }, (_, i) =>
+        dailyChannelKeys(channels, pins, start + i)
+      );
+      const week = batches.flat();
+      expect(week).toHaveLength(total);
+      expect(new Set(week).size).toBe(total);
+      expect(week).not.toContain('c0');
+      expect(week).not.toContain('c1');
+      expect(
+        Math.max(...batches.map((b) => b.length)) -
+          Math.min(...batches.map((b) => b.length))
+      ).toBeLessThanOrEqual(1);
+      expect(batches[0]).toEqual(
+        dailyChannelKeys([...channels].reverse(), pins, start)
+      );
+    }
+  }
 });
-test('small and empty lists have no duplicates', () => {
-  expect(dailyChannelKeys(channels.slice(0, 3), ['c0'], 10).sort()).toEqual([
-    'c1',
-    'c2',
-  ]);
+test('small lists rotate without empty days and empty lists stay empty', () => {
+  const channels = [{ key: 'a' }, { key: 'b' }];
+  const week = Array.from({ length: 7 }, (_, day) =>
+    dailyChannelKeys(channels, [], day)
+  );
+  expect(week.every((batch) => batch.length === 1)).toBe(true);
+  expect(new Set(week.flat()).size).toBe(2);
+  expect(dailyChannelKeys(channels, ['a', 'b'], 0)).toEqual([]);
   expect(dailyChannelKeys([], [], 0)).toEqual([]);
 });
 test('rotation changes at Taipei midnight', () => {
