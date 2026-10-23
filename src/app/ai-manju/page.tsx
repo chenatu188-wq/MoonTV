@@ -154,6 +154,7 @@ function AiManjuClient() {
   const [playing, setPlaying] = useState<AiManjuVideo | null>(null);
   // 追剧：追的剧出了新集就标「新」
   const series = useSeriesFollows();
+
   const seenVideo = series.seenVideo;
   useEffect(() => {
     if (playing) seenVideo(playing.videoId);
@@ -929,7 +930,7 @@ function AiManjuClient() {
         {/* 网友推荐：整段贴上剧名，加进追剧 */}
         <AiManjuRecommendPaste
           followed={series.follows.length}
-          onAdd={(names) => series.followMany(names, '网友推荐')}
+          onAdd={(entries) => series.followMany(entries, '网友推荐')}
         />
 
         {/* 追剧：出了新集标「新」 */}
@@ -947,8 +948,22 @@ function AiManjuClient() {
             })
           }
           onAll={(f) => {
-            series.seenAll(followKey(f));
+            if (!f.hg) series.seenAll(followKey(f));
             searchTitle(f.name, f.channelId);
+          }}
+          onHongguo={(f) => {
+            if (!f.hg) return;
+            series.seenAll(followKey(f));
+            // 另开红果官网：很多剧要登入红果才能看，嵌在站内没办法登入。
+            // 电脑开播放页；手机网页不能播，开剧集页（上面有「打开 App」）
+            const mobile = /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent);
+            window.open(
+              mobile
+                ? `https://hongguoduanju.com/detail?series_id=${f.hg.id}`
+                : `https://hongguoduanju.com/player/${f.hg.id}`,
+              '_blank',
+              'noopener'
+            );
           }}
           onRemove={series.unfollow}
         />
