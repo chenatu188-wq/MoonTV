@@ -4,6 +4,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { YtVideo } from '@/lib/ai-manju-youtube';
+import {
+  type FavoriteSong,
+  favoritesAsVideos,
+  MUSIC_FAVORITES_KEY,
+  sanitizeFavorites,
+  toggleFavorite,
+} from '@/lib/music-favorites';
 import { musicEmbedUrl, parseYtMessage } from '@/lib/music-player';
 
 import HScroll from '@/components/HScroll';
@@ -167,6 +174,59 @@ function ChannelRow({
   );
 }
 
+/** 我的最爱歌单：播放器按 ☆ 加进来的歌，存在这台装置 */
+function FavoritesRow({
+  favorites,
+  playingId,
+  onPlay,
+  onRemove,
+}: {
+  favorites: FavoriteSong[];
+  playingId: string | null;
+  onPlay: (videos: YtVideo[], index: number, from: string) => void;
+  onRemove: (videoId: string) => void;
+}) {
+  if (favorites.length === 0) return null;
+  const videos = favoritesAsVideos(favorites);
+  return (
+    <div className='mb-6' data-music-favorites>
+      <div className='mb-2 flex flex-wrap items-center gap-2'>
+        <h2 className='text-sm font-bold text-gray-900 dark:text-gray-100'>
+          ⭐ 我的最爱（{favorites.length} 首）
+        </h2>
+        <button
+          onClick={() => onPlay(videos, 0, '我的最爱')}
+          className='rounded-full bg-green-600 px-3 py-0.5 text-xs text-white hover:bg-green-500'
+          data-play-favorites
+        >
+          ▶ 全部播放
+        </button>
+        <span className='text-xs text-gray-500 dark:text-gray-400'>
+          播放器按 ☆ 加入 · 只存在这台装置
+        </span>
+      </div>
+      <HScroll resetKey={`fav:${favorites.length}`} arrowTop='2.75rem'>
+        {videos.map((v, i) => (
+          <div key={v.videoId} className='w-44 shrink-0'>
+            <VideoCard
+              v={v}
+              wide
+              playing={v.videoId === playingId}
+              onClick={() => onPlay(videos, i, '我的最爱')}
+            />
+            <button
+              onClick={() => onRemove(v.videoId)}
+              className='mt-0.5 text-xs text-gray-400 hover:text-red-500'
+            >
+              移出最爱
+            </button>
+          </div>
+        ))}
+      </HScroll>
+    </div>
+  );
+}
+
 /** 点进某个频道：全部的歌，可以一直往下载 */
 function ChannelView({
   follow,
@@ -233,7 +293,9 @@ function ChannelView({
           </button>
         )}
       </div>
-      {error && <div className='mb-2 text-sm text-red-500'>读取失败：{error}</div>}
+      {error && (
+        <div className='mb-2 text-sm text-red-500'>读取失败：{error}</div>
+      )}
       <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
         {videos.map((v, i) => (
           <VideoCard
@@ -273,6 +335,7 @@ function MusicClient() {
   const [queue, setQueue] = useState<Queue | null>(null);
   const [loop, setLoop] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteSong[]>([]);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const applyState = (d: {
@@ -292,6 +355,11 @@ function MusicClient() {
       .catch((e) => setError((e as Error).message));
     try {
       setLoop(localStorage.getItem(LOOP_KEY) === '1');
+      setFavorites(
+        sanitizeFavorites(
+          JSON.parse(localStorage.getItem(MUSIC_FAVORITES_KEY) || '[]')
+        )
+      );
     } catch {
       // 读不到就用预设
     }
@@ -338,7 +406,12 @@ function MusicClient() {
       return;
     }
     if (
-      await post({ op: 'add', type: found.type, id: found.id, name: found.name })
+      await post({
+        op: 'add',
+        type: found.type,
+        id: found.id,
+        name: found.name,
+      })
     ) {
       setInput('');
       setMsg({
@@ -347,6 +420,17 @@ function MusicClient() {
       });
     }
   };
+
+  const updateFavorites = (fn: (list: FavoriteSong[]) => FavoriteSong[]) =>
+    setFavorites((cur) => {
+      const next = fn(cur);
+      try {
+        localStorage.setItem(MUSIC_FAVORITES_KEY, JSON.stringify(next));
+      } catch {
+        // 存不了就算了
+      }
+      return next;
+    });
 
   // ── 播放 ──
   const play = (videos: YtVideo[], index: number, from: string) => {
@@ -385,7 +469,8 @@ function MusicClient() {
       heard = true;
       if (m.videoId) {
         const i = queueVideos.findIndex((v) => v.videoId === m.videoId);
-        if (i >= 0) setQueue((q) => (q && q.index !== i ? { ...q, index: i } : q));
+        if (i >= 0)
+          setQueue((q) => (q && q.index !== i ? { ...q, index: i } : q));
       }
     };
     window.addEventListener('message', onMessage);
@@ -412,6 +497,9 @@ function MusicClient() {
         loop
       )
     : '';
+
+  const isFavorite =
+    !!current && favorites.some((f) => f.videoId === current.videoId);
 
   const isPending = (id: string, op: string) =>
     pending.some((p) => p.id === id && p.op === op);
@@ -441,7 +529,8 @@ function MusicClient() {
 
         {follows && follows.length === 0 && (
           <div className='rounded-lg bg-gray-50 p-6 text-sm text-gray-600 dark:bg-gray-800/50 dark:text-gray-300'>
-            还没有追踪任何音乐频道。按右上角「管理追踪」，贴上 YouTube 频道网址、@帐号或播放列表网址。
+            还没有追踪任何音乐频道。按右上角「管理追踪」，贴上 YouTube
+            频道网址、@帐号或播放列表网址。
           </div>
         )}
 
@@ -453,6 +542,17 @@ function MusicClient() {
             onBack={() => setOpened(null)}
           />
         ) : (
+          <FavoritesRow
+            favorites={favorites}
+            playingId={current?.videoId ?? null}
+            onPlay={play}
+            onRemove={(id) =>
+              updateFavorites((list) => list.filter((f) => f.videoId !== id))
+            }
+          />
+        )}
+
+        {!opened &&
           follows?.map((f) => (
             <ChannelRow
               key={f.id}
@@ -464,8 +564,7 @@ function MusicClient() {
                 window.scrollTo({ top: 0 });
               }}
             />
-          ))
-        )}
+          ))}
       </div>
 
       {/* 播放器：贴在下方，可以边听边逛 */}
@@ -474,7 +573,13 @@ function MusicClient() {
           className='fixed bottom-16 left-2 right-2 z-40 rounded-xl bg-gray-900/95 p-2 text-white shadow-2xl md:bottom-4 md:left-auto md:right-4 md:w-[420px]'
           data-music-player
         >
-          <div className={minimized ? 'hidden' : 'aspect-video overflow-hidden rounded-lg bg-black'}>
+          <div
+            className={
+              minimized
+                ? 'hidden'
+                : 'aspect-video overflow-hidden rounded-lg bg-black'
+            }
+          >
             <iframe
               ref={iframeRef}
               key={embed}
@@ -495,6 +600,20 @@ function MusicClient() {
               </div>
             </div>
             <button
+              onClick={() =>
+                updateFavorites((list) => toggleFavorite(list, current))
+              }
+              className={`rounded-full px-3 py-1.5 text-sm ${
+                isFavorite
+                  ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
+                  : 'bg-white/10 hover:bg-white/20'
+              }`}
+              title={isFavorite ? '移出我的最爱' : '加入我的最爱'}
+              data-music-fav
+            >
+              {isFavorite ? '★' : '☆'}
+            </button>
+            <button
               onClick={() => jump(queue.index - 1)}
               disabled={queue.index === 0}
               className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20 disabled:opacity-40'
@@ -514,7 +633,9 @@ function MusicClient() {
             <button
               onClick={toggleLoop}
               className={`rounded-full px-3 py-1.5 text-sm ${
-                loop ? 'bg-green-600 hover:bg-green-500' : 'bg-white/10 hover:bg-white/20'
+                loop
+                  ? 'bg-green-600 hover:bg-green-500'
+                  : 'bg-white/10 hover:bg-white/20'
               }`}
               title={loop ? '整份清单循环播放中' : '播完就停'}
             >
@@ -584,7 +705,9 @@ function MusicClient() {
             {msg && (
               <p
                 className={`mb-2 text-sm ${
-                  msg.error ? 'text-red-500' : 'text-green-600 dark:text-green-400'
+                  msg.error
+                    ? 'text-red-500'
+                    : 'text-green-600 dark:text-green-400'
                 }`}
                 data-music-msg
               >
@@ -596,14 +719,21 @@ function MusicClient() {
             </p>
             <ul className='divide-y divide-gray-100 dark:divide-gray-800'>
               {follows?.map((f) => (
-                <li key={f.id} className='flex items-center justify-between py-2'>
+                <li
+                  key={f.id}
+                  className='flex items-center justify-between py-2'
+                >
                   <span className='min-w-0 truncate text-sm text-gray-900 dark:text-gray-100'>
                     {f.name}
                     {f.type === 'playlist' && (
-                      <span className='ml-1 text-xs text-gray-400'>播放列表</span>
+                      <span className='ml-1 text-xs text-gray-400'>
+                        播放列表
+                      </span>
                     )}
                     {isPending(f.id, 'add') && (
-                      <span className='ml-1 text-xs text-amber-500'>同步中</span>
+                      <span className='ml-1 text-xs text-amber-500'>
+                        同步中
+                      </span>
                     )}
                   </span>
                   <button
