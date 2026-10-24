@@ -204,6 +204,16 @@ function AiManjuClient() {
     if (v) setPlaying(v);
   }, []);
   const [playerSize, setPlayerSize] = useState(100);
+  // 视窗比宽还高（手机直拿、浏览器只占半个萤幕）：播放器撑满剩下的高度，
+  // 直式影片才不会缩在 16:9 的框里变很小（横式影片照样置中，上下补黑边）
+  const [tallWindow, setTallWindow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-aspect-ratio: 1/1)');
+    const update = () => setTallWindow(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
   // 追踪频道榜：各频道最新一支／近期最多人看
   const [trackTab, setTrackTab] = useState<TrackTab>('latest');
   // 推荐榜：还没追踪的频道本周发的漫剧，用来发现新频道
@@ -1498,9 +1508,13 @@ function AiManjuClient() {
           <div
             className='flex max-h-[calc(100dvh-2rem)] max-w-full flex-col'
             style={{
-              width: `min(calc((100vw - 2rem) * ${
-                playerSize / 100
-              }), calc((100dvh - 10rem) * ${16 / 9} * ${playerSize / 100}))`,
+              width: tallWindow
+                ? `calc((100vw - 2rem) * ${playerSize / 100})`
+                : `min(calc((100vw - 2rem) * ${
+                    playerSize / 100
+                  }), calc((100dvh - 10rem) * ${16 / 9} * ${
+                    playerSize / 100
+                  }))`,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1526,7 +1540,16 @@ function AiManjuClient() {
                 {playerSize === 100 ? '自动适应' : `${playerSize}% · 恢复自动`}
               </button>
             </div>
-            <div className='relative aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-black'>
+            <div
+              className={`relative w-full shrink-0 overflow-hidden rounded-lg bg-black ${
+                tallWindow ? '' : 'aspect-video'
+              }`}
+              style={
+                tallWindow
+                  ? { height: `calc((100dvh - 10rem) * ${playerSize / 100})` }
+                  : undefined
+              }
+            >
               <iframe
                 ref={playerRef}
                 src={`https://www.youtube-nocookie.com/embed/${
