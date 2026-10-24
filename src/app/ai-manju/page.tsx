@@ -545,21 +545,30 @@ function AiManjuClient() {
     [mark, position]
   );
 
+  // 网页全屏：影片撑满整个浏览器视窗（不是系统全屏，可以切去别的视窗）
+  const [webFull, setWebFull] = useState(false);
+
   const close = useCallback(() => {
     // 已经标记的影片，关掉时把进度更新到最新
     if (playing && marksRef.current.some((m) => m.id === playing.videoId)) {
       saveMark(playing);
     }
     setPlaying(null);
+    setWebFull(false);
     setManageOpen(false);
     clearVideoParams(['v', 't', 'c', 'ch']);
   }, [playing, saveMark]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    // 网页全屏时按 Esc 先退出全屏，再按一次才关播放器
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (webFull) setWebFull(false);
+      else close();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [close]);
+  }, [close, webFull]);
 
   const loadChannel = useCallback(
     (key: string, cont?: string) => {
@@ -1555,11 +1564,15 @@ function AiManjuClient() {
               }}
             >
               <div
-                className={`relative w-full shrink-0 overflow-hidden rounded-lg bg-black ${
-                  tallWindow ? '' : 'aspect-video'
-                }`}
+                className={
+                  webFull
+                    ? 'fixed inset-0 z-[700] bg-black'
+                    : `relative w-full shrink-0 overflow-hidden rounded-lg bg-black ${
+                        tallWindow ? '' : 'aspect-video'
+                      }`
+                }
                 style={
-                  tallWindow
+                  !webFull && tallWindow
                     ? {
                         height: `calc((100dvh - 7.5rem - var(--nav)) * ${
                           playerSize / 100
@@ -1580,6 +1593,15 @@ function AiManjuClient() {
                   allowFullScreen
                   className='h-full w-full'
                 />
+                {webFull && (
+                  <button
+                    onClick={() => setWebFull(false)}
+                    className='absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm text-white opacity-60 hover:bg-black/80 hover:opacity-100'
+                    data-web-full-exit
+                  >
+                    ✕ 退出网页全屏（Esc）
+                  </button>
+                )}
               </div>
               {/* 标题一行、按钮一行（太多就左右滑），高度固定，不会把影片挤小 */}
               <div className='mt-2 shrink-0'>
@@ -1597,6 +1619,14 @@ function AiManjuClient() {
                   </a>
                 </div>
                 <div className='mt-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [&>*]:shrink-0'>
+                  <button
+                    onClick={() => setWebFull(true)}
+                    className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
+                    title='影片撑满整个浏览器视窗'
+                    data-web-full
+                  >
+                    ⛶ 网页全屏
+                  </button>
                   {playingSeries && (
                     <>
                       <button
