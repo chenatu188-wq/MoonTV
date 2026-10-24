@@ -11,7 +11,13 @@ import {
 } from 'react';
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
-import { AUTO_NEXT_KEY, nextEpisodeOf } from '@/lib/ai-manju-next-episode';
+import {
+  AUTO_NEXT_KEY,
+  nextEpisodeOf,
+  nextQuery,
+  spanLabel,
+  spanOf,
+} from '@/lib/ai-manju-next-episode';
 import { dailyChannelKeys, taipeiDay } from '@/lib/ai-manju-rotation';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 import { type SearchHit, followKey } from '@/lib/ai-manju-series-follow';
@@ -783,10 +789,9 @@ function AiManjuClient() {
     of: string;
     ep: (SearchHit & AiManjuVideo) | null;
   } | null>(null);
-  const playingEpisode = playing ? episodeOf(playing.title) : null;
   useEffect(() => {
     setNextEp(null);
-    if (!playing || !playingSeries || playingEpisode === null) return;
+    if (!playing || !playingSeries) return;
     const cur = playing;
     let cancelled = false;
     const find = async (q: string) => {
@@ -803,11 +808,10 @@ function AiManjuClient() {
       ) as (SearchHit & AiManjuVideo) | null;
     };
     (async () => {
-      // 先直接搜「剧名 第19集」，集数多的剧整部搜寻常常搜不到后面的集
+      // 先直接搜「剧名 第19集」「剧名 第3季」，集数多的剧整部搜寻常常搜不到后面的
       const ep =
-        (await find(`${playingSeries} 第${playingEpisode + 1}集`).catch(
-          () => null
-        )) ?? (await find(playingSeries).catch(() => null));
+        (await find(nextQuery(playingSeries, cur.title)).catch(() => null)) ??
+        (await find(playingSeries).catch(() => null));
       if (!cancelled) setNextEp({ of: cur.videoId, ep });
     })();
     return () => {
@@ -1551,7 +1555,7 @@ function AiManjuClient() {
                 </a>
               </div>
               <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
-                {playingEpisode !== null && (
+                {playingSeries && (
                   <>
                     <button
                       onClick={playNext}
@@ -1563,7 +1567,7 @@ function AiManjuClient() {
                       {nextEp?.of !== playing.videoId
                         ? '找下一集…'
                         : upNext
-                        ? `下一集：第 ${upNext.episode} 集 ⏭`
+                        ? `下一集：${spanLabel(spanOf(upNext.title))} ⏭`
                         : '没找到下一集'}
                     </button>
                     <button
