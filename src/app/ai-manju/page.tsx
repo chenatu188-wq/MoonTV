@@ -1566,7 +1566,7 @@ function AiManjuClient() {
               <div
                 className={
                   webFull
-                    ? 'fixed inset-0 z-[700] bg-black'
+                    ? 'fixed inset-0 z-[700] flex flex-col bg-black'
                     : `relative w-full shrink-0 overflow-hidden rounded-lg bg-black ${
                         tallWindow ? '' : 'aspect-video'
                       }`
@@ -1591,16 +1591,33 @@ function AiManjuClient() {
                   title={playing.title}
                   allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                   allowFullScreen
-                  className='h-full w-full'
+                  className={
+                    webFull ? 'min-h-0 w-full flex-1' : 'h-full w-full'
+                  }
                 />
+                {/* 网页全屏的上方工具列：不盖在影片上。写在 iframe 后面再用 order 排到上面，
+                    iframe 才不会被搬动而重新载入 */}
                 {webFull && (
-                  <button
-                    onClick={() => setWebFull(false)}
-                    className='absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm text-white opacity-60 hover:bg-black/80 hover:opacity-100'
-                    data-web-full-exit
-                  >
-                    ✕ 退出网页全屏（Esc）
-                  </button>
+                  <div className='order-first flex shrink-0 items-center gap-2 bg-gray-900 px-3 py-1.5 text-sm text-white'>
+                    <span className='min-w-0 flex-1 truncate text-gray-300'>
+                      {playing.title}
+                    </span>
+                    {upNext && (
+                      <button
+                        onClick={playNext}
+                        className='shrink-0 rounded-full bg-white/10 px-3 py-1 hover:bg-white/20'
+                      >
+                        下一集 ⏭
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setWebFull(false)}
+                      className='shrink-0 rounded-full bg-green-600 px-4 py-1 font-medium hover:bg-green-500'
+                      data-web-full-exit
+                    >
+                      ✕ 退出网页全屏
+                    </button>
+                  </div>
                 )}
               </div>
               {/* 标题一行、按钮一行（太多就左右滑），高度固定，不会把影片挤小 */}
