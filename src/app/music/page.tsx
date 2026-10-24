@@ -249,6 +249,63 @@ function FavoritesRow({
   );
 }
 
+/** YouTube 搜寻结果：放在我的最爱下面 */
+function SearchResults({
+  result,
+  playingId,
+  onPlay,
+  onClear,
+}: {
+  result: { q: string; videos: YtVideo[]; loading: boolean; error: string };
+  playingId: string | null;
+  onPlay: (videos: YtVideo[], index: number, from: string) => void;
+  onClear: () => void;
+}) {
+  const from = `搜寻：${result.q}`;
+  return (
+    <div className='mb-6' data-music-search-results>
+      <div className='mb-2 flex flex-wrap items-center gap-2'>
+        <h2 className='text-sm font-bold text-gray-900 dark:text-gray-100'>
+          🔍 搜寻「{result.q}」
+          {!result.loading && !result.error && `（${result.videos.length} 首）`}
+        </h2>
+        {result.videos.length > 0 && (
+          <button
+            onClick={() => onPlay(result.videos, 0, from)}
+            className='rounded-full bg-green-600 px-3 py-0.5 text-xs text-white hover:bg-green-500'
+          >
+            ▶ 全部播放
+          </button>
+        )}
+        <button
+          onClick={onClear}
+          className='text-xs text-gray-400 hover:text-red-500'
+        >
+          ✕ 清除
+        </button>
+      </div>
+      {result.loading ? (
+        <div className='h-36 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800' />
+      ) : result.error ? (
+        <div className='text-xs text-red-500'>{result.error}</div>
+      ) : result.videos.length === 0 ? (
+        <div className='text-xs text-gray-500'>没有找到</div>
+      ) : (
+        <HScroll resetKey={`search:${result.q}`} arrowTop='2.75rem'>
+          {result.videos.map((v, i) => (
+            <VideoCard
+              key={v.videoId}
+              v={v}
+              playing={v.videoId === playingId}
+              onClick={() => onPlay(result.videos, i, from)}
+            />
+          ))}
+        </HScroll>
+      )}
+    </div>
+  );
+}
+
 /** 点进某个频道：全部的歌，可以一直往下载 */
 function ChannelView({
   follow,
@@ -358,6 +415,36 @@ function MusicClient() {
   const [loop, setLoop] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteSong[]>([]);
+  const [query, setQuery] = useState('');
+  const [searchResult, setSearchResult] = useState<{
+    q: string;
+    videos: YtVideo[];
+    loading: boolean;
+    error: string;
+  } | null>(null);
+
+  const search = async () => {
+    const q = query.trim();
+    if (!q) return;
+    setOpened(null);
+    setSearchResult({ q, videos: [], loading: true, error: '' });
+    try {
+      const d = await fetchJson<{ videos: YtVideo[] }>(
+        `/api/music/search?q=${encodeURIComponent(q.slice(0, 80))}`
+      );
+      setSearchResult((cur) =>
+        cur?.q === q
+          ? { q, videos: d.videos ?? [], loading: false, error: '' }
+          : cur
+      );
+    } catch (e) {
+      setSearchResult((cur) =>
+        cur?.q === q
+          ? { q, videos: [], loading: false, error: (e as Error).message }
+          : cur
+      );
+    }
+  };
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const applyState = (d: {
@@ -553,6 +640,29 @@ function MusicClient() {
             </button>
           </div>
 
+          <form
+            className='mb-6 flex gap-2'
+            onSubmit={(e) => {
+              e.preventDefault();
+              search();
+            }}
+          >
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder='在 YouTube 搜寻歌名、歌手'
+              className='min-w-0 flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
+              data-music-search
+            />
+            <button
+              type='submit'
+              disabled={!query.trim()}
+              className='shrink-0 rounded-full bg-green-600 px-5 py-2 text-sm text-white hover:bg-green-500 disabled:opacity-50'
+            >
+              搜寻
+            </button>
+          </form>
+
           {error && <div className='text-red-500'>载入失败：{error}</div>}
 
           {follows && follows.length === 0 && (
@@ -574,6 +684,15 @@ function MusicClient() {
               favorites={favorites}
               playingId={current?.videoId ?? null}
               onPlay={play}
+            />
+          )}
+
+          {!opened && searchResult && (
+            <SearchResults
+              result={searchResult}
+              playingId={current?.videoId ?? null}
+              onPlay={play}
+              onClear={() => setSearchResult(null)}
             />
           )}
 
