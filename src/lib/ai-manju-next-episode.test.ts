@@ -67,6 +67,18 @@ describe('nextEpisodeOf', () => {
     ];
     expect(nextEpisodeOf(cur('意外荒岛 第18集'), hits)?.videoId).toBe('e19');
   });
+  it('《剧名》18集 这种没写「第」的', () => {
+    const hits = [
+      hit('b', '《如初情深》19集: 老媽把她閨蜜介紹給我，竟然是我女領導'),
+      hit('c', '《如初情深》20集: 老媽把她閨蜜介紹給我，竟然是我女領導'),
+    ];
+    expect(
+      nextEpisodeOf(
+        cur('《如初情深》18集: 老媽把她閨蜜介紹給我，竟然是我女領導'),
+        hits
+      )?.videoId
+    ).toBe('b');
+  });
   it('缺集就跳到下一个有的', () => {
     const hits = [hit('e25', '意外荒岛 第25集'), hit('e21', '意外荒岛 第21集')];
     expect(nextEpisodeOf(cur('意外荒岛 第18集'), hits)?.videoId).toBe('e21');

@@ -55,9 +55,12 @@ export function stripSeason(name: string): string {
 }
 
 const EP_NUM = '[一二两兩三四五六七八九十百\\d]{1,4}';
-/** 单一集数：第8集、第八话、EP12、E05。「第1~110集」「1-19集」这种范围不算 */
+/**
+ * 单一集数：第8集、第八话、EP12、E05、《剧名》18集。「第1~110集」「1-19集」这种范围不算，
+ * 「全69集」「共80集」「更新至18集」是总集数也不算
+ */
 const EPISODE_RE = new RegExp(
-  `第\\s*(${EP_NUM})\\s*[集话話回](?!\\s*[~～\\-—至到])|\\bEP?\\.?\\s*(\\d{1,4})\\b(?!\\s*[~～\\-—])`,
+  `第\\s*(${EP_NUM})\\s*[集话話回](?!\\s*[~～\\-—至到])|\\bEP?\\.?\\s*(\\d{1,4})\\b(?!\\s*[~～\\-—])|(?<![\\d全共至到~～\\-—])(\\d{1,4})\\s*[集话話](?!\\s*[~～\\-—至到])`,
   'i'
 );
 
@@ -68,7 +71,7 @@ export function episodeOf(title: string): number | null {
   // 「第1~110集」里的 110 前面是范围符号，不算单集
   const before = title.slice(Math.max(0, m.index - 4), m.index);
   if (/\d\s*[~～\-—至到]\s*$/.test(before)) return null;
-  if (m[2]) return Number(m[2]);
+  if (m[2] ?? m[3]) return Number(m[2] ?? m[3]);
   if (/^\d+$/.test(m[1])) return Number(m[1]);
   return parseNumber(m[1]);
 }
