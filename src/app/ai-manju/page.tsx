@@ -11,12 +11,14 @@ import {
 } from 'react';
 
 import { hotRank, latestPerSource } from '@/lib/ai-manju-hot';
+import { AUTO_NEXT_KEY, nextEpisodeOf } from '@/lib/ai-manju-next-episode';
 import { dailyChannelKeys, taipeiDay } from '@/lib/ai-manju-rotation';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
-import { followKey } from '@/lib/ai-manju-series-follow';
+import { type SearchHit, followKey } from '@/lib/ai-manju-series-follow';
 import { MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
 import type { HongguoSearchItem } from '@/lib/hongguo-search';
 import { takeOverClick } from '@/lib/link-click';
+import { parseYtMessage } from '@/lib/music-player';
 import { useSeriesFollows } from '@/lib/use-series-follows';
 import { usePlayerSeconds, useWatchMarks } from '@/lib/use-watch-marks';
 import {
@@ -634,7 +636,10 @@ function AiManjuClient() {
   const pinSet = new Set(pins);
   const dailyKeys = dailyChannelKeys(allChipItems, pins, rotationDay);
   const dailySet = useMemo(() => new Set(dailyKeys), [dailyKeys]);
-  const priorityKeys = useMemo(() => [...pins, ...dailyKeys], [pins, dailyKeys]);
+  const priorityKeys = useMemo(
+    () => [...pins, ...dailyKeys],
+    [pins, dailyKeys]
+  );
   const chipGroups = [
     {
       title: '📌 置顶',
@@ -645,7 +650,9 @@ function AiManjuClient() {
     },
     {
       title: `🌅 今日轮播 · ${dailyKeys.length} 个 · 每周全部轮一遍`,
-      items: dailyKeys.flatMap((key) => allChipItems.filter((s) => s.key === key)),
+      items: dailyKeys.flatMap((key) =>
+        allChipItems.filter((s) => s.key === key)
+      ),
     },
     {
       title: '原有来源',
@@ -753,6 +760,87 @@ function AiManjuClient() {
   }, [allVideos, trackTab, priorityKeys]);
   const playingChannelId = playing ? channelIdOf(playing.channelUrl) : null;
   const playingSeries = playing ? seriesNameOf(playing.title) : null;
+
+  // ── 播完自动接下一集：同频道、同片名、集数下一个 ──
+  const [autoNext, setAutoNext] = useState(true);
+  useEffect(() => {
+    try {
+      setAutoNext(localStorage.getItem(AUTO_NEXT_KEY) !== '0');
+    } catch {
+      // 读不到就用预设（开）
+    }
+  }, []);
+  const toggleAutoNext = () =>
+    setAutoNext((v) => {
+      try {
+        localStorage.setItem(AUTO_NEXT_KEY, v ? '0' : '1');
+      } catch {
+        // 存不了就算了
+      }
+      return !v;
+    });
+  const [nextEp, setNextEp] = useState<{
+    of: string;
+    ep: (SearchHit & AiManjuVideo) | null;
+  } | null>(null);
+  const playingEpisode = playing ? episodeOf(playing.title) : null;
+  useEffect(() => {
+    setNextEp(null);
+    if (!playing || !playingSeries || playingEpisode === null) return;
+    const cur = playing;
+    let cancelled = false;
+    const find = async (q: string) => {
+      const r = await fetch(
+        `/api/ai-manju/search?q=${encodeURIComponent(q.slice(0, 80))}${
+          playingChannelId ? `&channel=${playingChannelId}` : ''
+        }`
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      return nextEpisodeOf(
+        cur,
+        (Array.isArray(d.videos) ? d.videos : []) as SearchHit[]
+      ) as (SearchHit & AiManjuVideo) | null;
+    };
+    (async () => {
+      // 先直接搜「剧名 第19集」，集数多的剧整部搜寻常常搜不到后面的集
+      const ep =
+        (await find(`${playingSeries} 第${playingEpisode + 1}集`).catch(
+          () => null
+        )) ?? (await find(playingSeries).catch(() => null));
+      if (!cancelled) setNextEp({ of: cur.videoId, ep });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // 只在换影片时找
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing?.videoId]);
+  const upNext = nextEp && nextEp.of === playing?.videoId ? nextEp.ep : null;
+  const playNext = useCallback(() => {
+    if (!upNext) return;
+    if (playing && marksRef.current.some((m) => m.id === playing.videoId)) {
+      saveMark(playing);
+    }
+    setPlaying({
+      ...upNext,
+      published: upNext.published ?? '',
+      description: '',
+      views: upNext.views ?? null,
+      sourceKey: upNext.sourceKey ?? '',
+      sourceName: upNext.sourceName ?? upNext.channel,
+    });
+  }, [upNext, playing, saveMark]);
+  // YouTube 播放器回报「播完了」（状态 0）就换下一集
+  useEffect(() => {
+    if (!autoNext || !upNext) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.source !== playerRef.current?.contentWindow) return;
+      if (parseYtMessage(e.data)?.state === 0) playNext();
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [autoNext, upNext, playNext]);
 
   return (
     <PageLayout activePath='/ai-manju'>
@@ -1406,7 +1494,9 @@ function AiManjuClient() {
           <div
             className='flex max-h-[calc(100dvh-2rem)] max-w-full flex-col'
             style={{
-              width: `min(calc((100vw - 2rem) * ${playerSize / 100}), calc((100dvh - 10rem) * ${16 / 9} * ${playerSize / 100}))`,
+              width: `min(calc((100vw - 2rem) * ${
+                playerSize / 100
+              }), calc((100dvh - 10rem) * ${16 / 9} * ${playerSize / 100}))`,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1461,6 +1551,35 @@ function AiManjuClient() {
                 </a>
               </div>
               <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
+                {playingEpisode !== null && (
+                  <>
+                    <button
+                      onClick={playNext}
+                      disabled={!upNext}
+                      className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 disabled:opacity-50'
+                      title={upNext?.title}
+                      data-next-episode
+                    >
+                      {nextEp?.of !== playing.videoId
+                        ? '找下一集…'
+                        : upNext
+                        ? `下一集：第 ${upNext.episode} 集 ⏭`
+                        : '没找到下一集'}
+                    </button>
+                    <button
+                      onClick={toggleAutoNext}
+                      className={`rounded-full px-4 py-2 text-sm text-white ${
+                        autoNext
+                          ? 'bg-green-600 hover:bg-green-500'
+                          : 'bg-white/10 hover:bg-white/20'
+                      }`}
+                      title='这集播完自动播下一集'
+                      data-auto-next
+                    >
+                      {autoNext ? '自动下一集：开' : '自动下一集：关'}
+                    </button>
+                  </>
+                )}
                 {playingSeries && (
                   <button
                     onClick={() => {
