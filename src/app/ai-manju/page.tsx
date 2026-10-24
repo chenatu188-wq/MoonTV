@@ -1502,24 +1502,21 @@ function AiManjuClient() {
       {/* 播放器：YouTube 官方 iframe，播放数与收益仍归原作者 */}
       {playing && (
         <div
-          className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4'
+          // 手机底下有导览列（约 4rem），播放器要让开，按钮才不会被盖住
+          className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 pb-[calc(1rem+var(--nav))] [--nav:4rem] md:[--nav:0rem]'
           onClick={close}
         >
+          {/* 播放器大小放左边直立，不占上方空间 */}
           <div
-            className='flex max-h-[calc(100dvh-2rem)] max-w-full flex-col'
-            style={{
-              width: tallWindow
-                ? `calc((100vw - 2rem) * ${playerSize / 100})`
-                : `min(calc((100vw - 2rem) * ${
-                    playerSize / 100
-                  }), calc((100dvh - 10rem) * ${16 / 9} * ${
-                    playerSize / 100
-                  }))`,
-            }}
+            className='flex max-h-[calc(100dvh-2rem-var(--nav))] max-w-full items-center gap-2'
             onClick={(e) => e.stopPropagation()}
           >
-            <div className='mb-2 flex shrink-0 flex-wrap items-center gap-2 text-sm text-white'>
-              <label htmlFor='ai-manju-player-size' className='shrink-0'>
+            <div className='flex h-[min(24rem,calc(100dvh-4rem))] w-8 shrink-0 flex-col items-center gap-2 text-xs text-white'>
+              <label
+                htmlFor='ai-manju-player-size'
+                className='shrink-0'
+                style={{ writingMode: 'vertical-rl' }}
+              >
                 播放器大小
               </label>
               <input
@@ -1531,171 +1528,193 @@ function AiManjuClient() {
                 value={playerSize}
                 onChange={(e) => setPlayerSize(Number(e.target.value))}
                 aria-valuetext={`${playerSize}%`}
-                className='min-w-16 flex-1 accent-green-500'
+                aria-orientation='vertical'
+                className='min-h-16 w-6 flex-1 accent-green-500'
+                // 直立：上面是大、下面是小
+                style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
               />
               <button
                 onClick={() => setPlayerSize(100)}
-                className='shrink-0 rounded-full bg-white/10 px-3 py-1 hover:bg-white/20'
+                className='shrink-0 rounded-full bg-white/10 px-1 py-2 hover:bg-white/20'
+                style={{ writingMode: 'vertical-rl' }}
+                title='恢复自动适应视窗'
               >
-                {playerSize === 100 ? '自动适应' : `${playerSize}% · 恢复自动`}
+                {playerSize === 100 ? '自动适应' : `${playerSize}%·恢复`}
               </button>
             </div>
             <div
-              className={`relative w-full shrink-0 overflow-hidden rounded-lg bg-black ${
-                tallWindow ? '' : 'aspect-video'
-              }`}
-              style={
-                tallWindow
-                  ? { height: `calc((100dvh - 10rem) * ${playerSize / 100})` }
-                  : undefined
-              }
+              className='flex max-h-[calc(100dvh-2rem-var(--nav))] min-w-0 flex-col'
+              style={{
+                width: tallWindow
+                  ? `calc((100vw - 4.5rem) * ${playerSize / 100})`
+                  : `min(calc((100vw - 4.5rem) * ${
+                      playerSize / 100
+                    }), calc((100dvh - 7.5rem - var(--nav)) * ${16 / 9} * ${
+                      playerSize / 100
+                    }))`,
+              }}
             >
-              <iframe
-                ref={playerRef}
-                src={`https://www.youtube-nocookie.com/embed/${
-                  playing.videoId
-                }?autoplay=1&rel=0&enablejsapi=1${
-                  startAt > 0 ? `&start=${startAt}` : ''
+              <div
+                className={`relative w-full shrink-0 overflow-hidden rounded-lg bg-black ${
+                  tallWindow ? '' : 'aspect-video'
                 }`}
-                title={playing.title}
-                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-                allowFullScreen
-                className='h-full w-full'
-              />
-            </div>
-            {/* 标题一行、按钮一行（太多就左右滑），高度固定，不会把影片挤小 */}
-            <div className='mt-2 shrink-0'>
-              <div className='flex min-w-0 items-baseline gap-2'>
-                <h2 className='min-w-0 truncate text-base font-medium text-white'>
-                  {playing.title}
-                </h2>
-                <a
-                  href={playing.channelUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='shrink-0 text-sm text-gray-300 hover:text-white'
-                >
-                  {playing.channel} ↗
-                </a>
-              </div>
-              <div className='mt-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [&>*]:shrink-0'>
-                {playingSeries && (
-                  <>
-                    <button
-                      onClick={playNext}
-                      disabled={!upNext}
-                      className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 disabled:opacity-50'
-                      title={upNext?.title}
-                      data-next-episode
-                    >
-                      {nextEp?.of !== playing.videoId
-                        ? '找下一集…'
-                        : upNext
-                        ? `下一集：${spanLabel(spanOf(upNext.title))} ⏭`
-                        : '没找到下一集'}
-                    </button>
-                    <button
-                      onClick={toggleAutoNext}
-                      className={`rounded-full px-3 py-1.5 text-sm text-white ${
-                        autoNext
-                          ? 'bg-green-600 hover:bg-green-500'
-                          : 'bg-white/10 hover:bg-white/20'
-                      }`}
-                      title='这集播完自动播下一集'
-                      data-auto-next
-                    >
-                      {autoNext ? '自动下一集：开' : '自动下一集：关'}
-                    </button>
-                  </>
-                )}
-                {playingSeries && (
-                  <button
-                    onClick={() => {
-                      setPlaying(null);
-                      searchTitle(playingSeries, playingChannelId);
-                    }}
-                    className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
-                  >
-                    找全季／全集
-                  </button>
-                )}
-                {playingSeries &&
-                  (series.isFollowed(playingSeries, playingChannelId) ? (
-                    <button
-                      onClick={() =>
-                        series.unfollow(
-                          followKey({
-                            name: playingSeries,
-                            channelId: playingChannelId,
-                          })
-                        )
+                style={
+                  tallWindow
+                    ? {
+                        height: `calc((100dvh - 7.5rem - var(--nav)) * ${
+                          playerSize / 100
+                        })`,
                       }
-                      className='rounded-full bg-red-500 px-3 py-1.5 text-sm text-white hover:bg-red-400'
-                      data-series-toggle
-                    >
-                      🔔 已追剧 · 取消
-                    </button>
-                  ) : (
+                    : undefined
+                }
+              >
+                <iframe
+                  ref={playerRef}
+                  src={`https://www.youtube-nocookie.com/embed/${
+                    playing.videoId
+                  }?autoplay=1&rel=0&enablejsapi=1${
+                    startAt > 0 ? `&start=${startAt}` : ''
+                  }`}
+                  title={playing.title}
+                  allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                  allowFullScreen
+                  className='h-full w-full'
+                />
+              </div>
+              {/* 标题一行、按钮一行（太多就左右滑），高度固定，不会把影片挤小 */}
+              <div className='mt-2 shrink-0'>
+                <div className='flex min-w-0 items-baseline gap-2'>
+                  <h2 className='min-w-0 truncate text-base font-medium text-white'>
+                    {playing.title}
+                  </h2>
+                  <a
+                    href={playing.channelUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='shrink-0 text-sm text-gray-300 hover:text-white'
+                  >
+                    {playing.channel} ↗
+                  </a>
+                </div>
+                <div className='mt-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [&>*]:shrink-0'>
+                  {playingSeries && (
+                    <>
+                      <button
+                        onClick={playNext}
+                        disabled={!upNext}
+                        className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 disabled:opacity-50'
+                        title={upNext?.title}
+                        data-next-episode
+                      >
+                        {nextEp?.of !== playing.videoId
+                          ? '找下一集…'
+                          : upNext
+                          ? `下一集：${spanLabel(spanOf(upNext.title))} ⏭`
+                          : '没找到下一集'}
+                      </button>
+                      <button
+                        onClick={toggleAutoNext}
+                        className={`rounded-full px-3 py-1.5 text-sm text-white ${
+                          autoNext
+                            ? 'bg-green-600 hover:bg-green-500'
+                            : 'bg-white/10 hover:bg-white/20'
+                        }`}
+                        title='这集播完自动播下一集'
+                        data-auto-next
+                      >
+                        {autoNext ? '自动下一集：开' : '自动下一集：关'}
+                      </button>
+                    </>
+                  )}
+                  {playingSeries && (
                     <button
                       onClick={() => {
-                        if (
-                          !series.follow(
-                            playingSeries,
-                            playingChannelId,
-                            playing.channel
-                          )
-                        )
-                          alert('追剧最多 50 部，请先取消不看的');
+                        setPlaying(null);
+                        searchTitle(playingSeries, playingChannelId);
                       }}
                       className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
-                      title={`出新集时在「追剧」区标「新」：${playingSeries}`}
-                      data-series-toggle
                     >
-                      🔔 追这部剧
+                      找全季／全集
                     </button>
-                  ))}
-                {playingMarked ? (
-                  <button
-                    onClick={() => unmark(playing.videoId)}
-                    className='rounded-full bg-amber-500 px-3 py-1.5 text-sm text-white hover:bg-amber-400'
-                    data-mark
-                  >
-                    ★ 已标记 · 取消
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => saveMark(playing)}
-                    className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
-                    data-mark
-                  >
-                    ☆ 标记，下次继续看
-                  </button>
-                )}
-                {playingChannelId &&
-                  (isTracked(playingChannelId) ? (
-                    <span className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-gray-300'>
-                      已追踪此频道
-                    </span>
+                  )}
+                  {playingSeries &&
+                    (series.isFollowed(playingSeries, playingChannelId) ? (
+                      <button
+                        onClick={() =>
+                          series.unfollow(
+                            followKey({
+                              name: playingSeries,
+                              channelId: playingChannelId,
+                            })
+                          )
+                        }
+                        className='rounded-full bg-red-500 px-3 py-1.5 text-sm text-white hover:bg-red-400'
+                        data-series-toggle
+                      >
+                        🔔 已追剧 · 取消
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (
+                            !series.follow(
+                              playingSeries,
+                              playingChannelId,
+                              playing.channel
+                            )
+                          )
+                            alert('追剧最多 50 部，请先取消不看的');
+                        }}
+                        className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
+                        title={`出新集时在「追剧」区标「新」：${playingSeries}`}
+                        data-series-toggle
+                      >
+                        🔔 追这部剧
+                      </button>
+                    ))}
+                  {playingMarked ? (
+                    <button
+                      onClick={() => unmark(playing.videoId)}
+                      className='rounded-full bg-amber-500 px-3 py-1.5 text-sm text-white hover:bg-amber-400'
+                      data-mark
+                    >
+                      ★ 已标记 · 取消
+                    </button>
                   ) : (
                     <button
-                      onClick={() =>
-                        addFollow({
-                          type: 'channel',
-                          id: playingChannelId,
-                          name: playing.channel || playingChannelId,
-                        })
-                      }
-                      className='rounded-full bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-500'
+                      onClick={() => saveMark(playing)}
+                      className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
+                      data-mark
                     >
-                      ＋ 追踪此频道
+                      ☆ 标记，下次继续看
                     </button>
-                  ))}
-                <button
-                  onClick={close}
-                  className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
-                >
-                  关闭
-                </button>
+                  )}
+                  {playingChannelId &&
+                    (isTracked(playingChannelId) ? (
+                      <span className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-gray-300'>
+                        已追踪此频道
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          addFollow({
+                            type: 'channel',
+                            id: playingChannelId,
+                            name: playing.channel || playingChannelId,
+                          })
+                        }
+                        className='rounded-full bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-500'
+                      >
+                        ＋ 追踪此频道
+                      </button>
+                    ))}
+                  <button
+                    onClick={close}
+                    className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
+                  >
+                    关闭
+                  </button>
+                </div>
               </div>
             </div>
           </div>
