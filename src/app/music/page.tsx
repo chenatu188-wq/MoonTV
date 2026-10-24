@@ -1,7 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import type { YtVideo } from '@/lib/ai-manju-youtube';
 import {
@@ -46,6 +53,12 @@ const listUrl = (f: Follow, cont?: string | null) =>
     f.name
   )}${cont ? `&cont=${encodeURIComponent(cont)}` : ''}`;
 
+/** 每张卡片旁的 ☆：不用进播放器就能加进最爱 */
+const FavoritesContext = createContext<{
+  isFavorite: (videoId: string) => boolean;
+  toggle: (v: YtVideo) => void;
+}>({ isFavorite: () => false, toggle: () => undefined });
+
 function VideoCard({
   v,
   playing,
@@ -57,38 +70,57 @@ function VideoCard({
   onClick: () => void;
   wide?: boolean;
 }) {
+  const fav = useContext(FavoritesContext);
+  const starred = fav.isFavorite(v.videoId);
   return (
-    <button
-      onClick={onClick}
-      className={`group text-left ${wide ? 'w-full' : 'w-44 shrink-0'}`}
+    <div
+      className={`group ${wide ? 'w-full' : 'w-44 shrink-0'}`}
       data-music-video={v.videoId}
     >
-      <div
-        className={`relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
-          playing ? 'ring-2 ring-green-500' : ''
-        }`}
-      >
-        <img
-          src={v.thumbnail}
-          alt={v.title}
-          loading='lazy'
-          className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-        />
-        {playing && (
-          <span className='absolute left-0 top-0 rounded-br-lg bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white'>
-            ♪ 播放中
-          </span>
-        )}
-      </div>
-      <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
-        {v.title}
-      </div>
-      {v.meta && (
-        <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
-          {v.meta}
+      <button onClick={onClick} className='block w-full text-left'>
+        <div
+          className={`relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800 ${
+            playing ? 'ring-2 ring-green-500' : ''
+          }`}
+        >
+          <img
+            src={v.thumbnail}
+            alt={v.title}
+            loading='lazy'
+            className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+          />
+          {playing && (
+            <span className='absolute left-0 top-0 rounded-br-lg bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white'>
+              ♪ 播放中
+            </span>
+          )}
         </div>
-      )}
-    </button>
+      </button>
+      <div className='mt-1 flex items-start gap-1'>
+        <button onClick={onClick} className='min-w-0 flex-1 text-left'>
+          <div className='line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
+            {v.title}
+          </div>
+          {v.meta && (
+            <div className='truncate text-xs text-gray-500 dark:text-gray-400'>
+              {v.meta}
+            </div>
+          )}
+        </button>
+        <button
+          onClick={() => fav.toggle(v)}
+          className={`shrink-0 text-lg leading-none ${
+            starred
+              ? 'text-yellow-500 hover:text-yellow-400'
+              : 'text-gray-400 hover:text-yellow-500'
+          }`}
+          title={starred ? '移出我的最爱' : '加入我的最爱'}
+          data-card-fav
+        >
+          {starred ? '★' : '☆'}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -179,12 +211,10 @@ function FavoritesRow({
   favorites,
   playingId,
   onPlay,
-  onRemove,
 }: {
   favorites: FavoriteSong[];
   playingId: string | null;
   onPlay: (videos: YtVideo[], index: number, from: string) => void;
-  onRemove: (videoId: string) => void;
 }) {
   if (favorites.length === 0) return null;
   const videos = favoritesAsVideos(favorites);
@@ -202,25 +232,17 @@ function FavoritesRow({
           ▶ 全部播放
         </button>
         <span className='text-xs text-gray-500 dark:text-gray-400'>
-          播放器按 ☆ 加入 · 只存在这台装置
+          按歌名旁或播放器的 ☆ 加入 · 只存在这台装置
         </span>
       </div>
       <HScroll resetKey={`fav:${favorites.length}`} arrowTop='2.75rem'>
         {videos.map((v, i) => (
-          <div key={v.videoId} className='w-44 shrink-0'>
-            <VideoCard
-              v={v}
-              wide
-              playing={v.videoId === playingId}
-              onClick={() => onPlay(videos, i, '我的最爱')}
-            />
-            <button
-              onClick={() => onRemove(v.videoId)}
-              className='mt-0.5 text-xs text-gray-400 hover:text-red-500'
-            >
-              移出最爱
-            </button>
-          </div>
+          <VideoCard
+            key={v.videoId}
+            v={v}
+            playing={v.videoId === playingId}
+            onClick={() => onPlay(videos, i, '我的最爱')}
+          />
         ))}
       </HScroll>
     </div>
@@ -504,255 +526,259 @@ function MusicClient() {
   const isPending = (id: string, op: string) =>
     pending.some((p) => p.id === id && p.op === op);
 
+  const favContext = {
+    isFavorite: (id: string) => favorites.some((f) => f.videoId === id),
+    toggle: (v: YtVideo) => updateFavorites((list) => toggleFavorite(list, v)),
+  };
+
   return (
-    <PageLayout activePath='/music'>
-      <div className={`px-4 sm:px-10 py-4 sm:py-8 ${queue ? 'pb-72' : ''}`}>
-        <div className='mb-6 flex flex-wrap items-end justify-between gap-2'>
-          <div>
-            <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
-              音乐
-            </h1>
-            <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
-              追踪 YouTube 音乐频道，点一首就从那首开始一首接一首播
-            </p>
+    <FavoritesContext.Provider value={favContext}>
+      <PageLayout activePath='/music'>
+        <div className={`px-4 sm:px-10 py-4 sm:py-8 ${queue ? 'pb-72' : ''}`}>
+          <div className='mb-6 flex flex-wrap items-end justify-between gap-2'>
+            <div>
+              <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
+                音乐
+              </h1>
+              <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
+                追踪 YouTube 音乐频道，点一首就从那首开始一首接一首播
+              </p>
+            </div>
+            <button
+              onClick={() => setManageOpen(true)}
+              className='rounded-full bg-gray-900 px-4 py-1.5 text-sm text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200'
+              data-music-manage
+            >
+              管理追踪（{follows?.length ?? 0}）
+            </button>
           </div>
-          <button
-            onClick={() => setManageOpen(true)}
-            className='rounded-full bg-gray-900 px-4 py-1.5 text-sm text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200'
-            data-music-manage
-          >
-            管理追踪（{follows?.length ?? 0}）
-          </button>
-        </div>
 
-        {error && <div className='text-red-500'>载入失败：{error}</div>}
+          {error && <div className='text-red-500'>载入失败：{error}</div>}
 
-        {follows && follows.length === 0 && (
-          <div className='rounded-lg bg-gray-50 p-6 text-sm text-gray-600 dark:bg-gray-800/50 dark:text-gray-300'>
-            还没有追踪任何音乐频道。按右上角「管理追踪」，贴上 YouTube
-            频道网址、@帐号或播放列表网址。
-          </div>
-        )}
+          {follows && follows.length === 0 && (
+            <div className='rounded-lg bg-gray-50 p-6 text-sm text-gray-600 dark:bg-gray-800/50 dark:text-gray-300'>
+              还没有追踪任何音乐频道。按右上角「管理追踪」，贴上 YouTube
+              频道网址、@帐号或播放列表网址。
+            </div>
+          )}
 
-        {opened ? (
-          <ChannelView
-            follow={opened}
-            playingId={current?.videoId ?? null}
-            onPlay={play}
-            onBack={() => setOpened(null)}
-          />
-        ) : (
-          <FavoritesRow
-            favorites={favorites}
-            playingId={current?.videoId ?? null}
-            onPlay={play}
-            onRemove={(id) =>
-              updateFavorites((list) => list.filter((f) => f.videoId !== id))
-            }
-          />
-        )}
-
-        {!opened &&
-          follows?.map((f) => (
-            <ChannelRow
-              key={f.id}
-              follow={f}
+          {opened ? (
+            <ChannelView
+              follow={opened}
               playingId={current?.videoId ?? null}
               onPlay={play}
-              onOpen={() => {
-                setOpened(f);
-                window.scrollTo({ top: 0 });
-              }}
+              onBack={() => setOpened(null)}
             />
-          ))}
-      </div>
-
-      {/* 播放器：贴在下方，可以边听边逛 */}
-      {queue && current && (
-        <div
-          className='fixed bottom-16 left-2 right-2 z-40 rounded-xl bg-gray-900/95 p-2 text-white shadow-2xl md:bottom-4 md:left-auto md:right-4 md:w-[420px]'
-          data-music-player
-        >
-          <div
-            className={
-              minimized
-                ? 'hidden'
-                : 'aspect-video overflow-hidden rounded-lg bg-black'
-            }
-          >
-            <iframe
-              ref={iframeRef}
-              key={embed}
-              src={embed}
-              title={current.title}
-              allow='autoplay; encrypted-media; picture-in-picture; fullscreen'
-              allowFullScreen
-              className='h-full w-full'
+          ) : (
+            <FavoritesRow
+              favorites={favorites}
+              playingId={current?.videoId ?? null}
+              onPlay={play}
             />
-          </div>
-          <div className='mt-2 flex items-center gap-2'>
-            <div className='min-w-0 flex-1'>
-              <div className='truncate text-sm font-medium' data-music-now>
-                {current.title}
-              </div>
-              <div className='truncate text-xs text-gray-400'>
-                {queue.from} · 第 {queue.index + 1} / {queue.videos.length} 首
-              </div>
-            </div>
-            <button
-              onClick={() =>
-                updateFavorites((list) => toggleFavorite(list, current))
-              }
-              className={`rounded-full px-3 py-1.5 text-sm ${
-                isFavorite
-                  ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
-                  : 'bg-white/10 hover:bg-white/20'
-              }`}
-              title={isFavorite ? '移出我的最爱' : '加入我的最爱'}
-              data-music-fav
-            >
-              {isFavorite ? '★' : '☆'}
-            </button>
-            <button
-              onClick={() => jump(queue.index - 1)}
-              disabled={queue.index === 0}
-              className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20 disabled:opacity-40'
-              title='上一首'
-            >
-              ⏮
-            </button>
-            <button
-              onClick={() => jump(queue.index + 1)}
-              disabled={queue.index >= queue.videos.length - 1}
-              className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20 disabled:opacity-40'
-              title='下一首'
-              data-music-next
-            >
-              ⏭
-            </button>
-            <button
-              onClick={toggleLoop}
-              className={`rounded-full px-3 py-1.5 text-sm ${
-                loop
-                  ? 'bg-green-600 hover:bg-green-500'
-                  : 'bg-white/10 hover:bg-white/20'
-              }`}
-              title={loop ? '整份清单循环播放中' : '播完就停'}
-            >
-              🔁
-            </button>
-            <button
-              onClick={() => setMinimized((m) => !m)}
-              className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20'
-              title={minimized ? '显示画面' : '只留控制列'}
-            >
-              {minimized ? '▢' : '—'}
-            </button>
-            <button
-              onClick={() => setQueue(null)}
-              className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20'
-              title='关闭'
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* 管理追踪 */}
-      {manageOpen && (
-        <div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'
-          onClick={() => setManageOpen(false)}
-        >
-          <div
-            className='max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 dark:bg-gray-900'
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className='mb-3 flex items-center justify-between'>
-              <h2 className='text-lg font-bold text-gray-900 dark:text-gray-100'>
-                管理追踪（{follows?.length ?? 0}）
-              </h2>
-              <button
-                onClick={() => setManageOpen(false)}
-                className='text-xl text-gray-400 hover:text-gray-700'
-              >
-                ×
-              </button>
-            </div>
-            <form
-              className='mb-2 flex gap-2'
-              onSubmit={(e) => {
-                e.preventDefault();
-                addFollow();
-              }}
-            >
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder='频道网址、@帐号、播放列表或影片网址'
-                className='min-w-0 flex-1 rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
-                data-music-input
+          {!opened &&
+            follows?.map((f) => (
+              <ChannelRow
+                key={f.id}
+                follow={f}
+                playingId={current?.videoId ?? null}
+                onPlay={play}
+                onOpen={() => {
+                  setOpened(f);
+                  window.scrollTo({ top: 0 });
+                }}
               />
-              <button
-                type='submit'
-                disabled={busy || !input.trim()}
-                className='shrink-0 rounded-full bg-green-600 px-4 py-1.5 text-sm text-white hover:bg-green-500 disabled:opacity-50'
-              >
-                追踪
-              </button>
-            </form>
-            {msg && (
-              <p
-                className={`mb-2 text-sm ${
-                  msg.error
-                    ? 'text-red-500'
-                    : 'text-green-600 dark:text-green-400'
-                }`}
-                data-music-msg
-              >
-                {msg.text}
-              </p>
-            )}
-            <p className='mb-3 text-xs text-gray-500 dark:text-gray-400'>
-              追踪名单全站共用，所有人、所有装置看到的都一样。贴影片网址会追踪发这支影片的频道。
-            </p>
-            <ul className='divide-y divide-gray-100 dark:divide-gray-800'>
-              {follows?.map((f) => (
-                <li
-                  key={f.id}
-                  className='flex items-center justify-between py-2'
-                >
-                  <span className='min-w-0 truncate text-sm text-gray-900 dark:text-gray-100'>
-                    {f.name}
-                    {f.type === 'playlist' && (
-                      <span className='ml-1 text-xs text-gray-400'>
-                        播放列表
-                      </span>
-                    )}
-                    {isPending(f.id, 'add') && (
-                      <span className='ml-1 text-xs text-amber-500'>
-                        同步中
-                      </span>
-                    )}
-                  </span>
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      if (confirm(`不再追踪「${f.name}」？全站都会看不到。`))
-                        post({ op: 'rm', ...f });
-                    }}
-                    className='shrink-0 text-sm text-gray-400 hover:text-red-500'
-                  >
-                    移除
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+            ))}
         </div>
-      )}
-    </PageLayout>
+
+        {/* 播放器：贴在下方，可以边听边逛 */}
+        {queue && current && (
+          <div
+            className='fixed bottom-16 left-2 right-2 z-40 rounded-xl bg-gray-900/95 p-2 text-white shadow-2xl md:bottom-4 md:left-auto md:right-4 md:w-[420px]'
+            data-music-player
+          >
+            <div
+              className={
+                minimized
+                  ? 'hidden'
+                  : 'aspect-video overflow-hidden rounded-lg bg-black'
+              }
+            >
+              <iframe
+                ref={iframeRef}
+                key={embed}
+                src={embed}
+                title={current.title}
+                allow='autoplay; encrypted-media; picture-in-picture; fullscreen'
+                allowFullScreen
+                className='h-full w-full'
+              />
+            </div>
+            <div className='mt-2 flex items-center gap-2'>
+              <div className='min-w-0 flex-1'>
+                <div className='truncate text-sm font-medium' data-music-now>
+                  {current.title}
+                </div>
+                <div className='truncate text-xs text-gray-400'>
+                  {queue.from} · 第 {queue.index + 1} / {queue.videos.length} 首
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  updateFavorites((list) => toggleFavorite(list, current))
+                }
+                className={`rounded-full px-3 py-1.5 text-sm ${
+                  isFavorite
+                    ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+                title={isFavorite ? '移出我的最爱' : '加入我的最爱'}
+                data-music-fav
+              >
+                {isFavorite ? '★' : '☆'}
+              </button>
+              <button
+                onClick={() => jump(queue.index - 1)}
+                disabled={queue.index === 0}
+                className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20 disabled:opacity-40'
+                title='上一首'
+              >
+                ⏮
+              </button>
+              <button
+                onClick={() => jump(queue.index + 1)}
+                disabled={queue.index >= queue.videos.length - 1}
+                className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20 disabled:opacity-40'
+                title='下一首'
+                data-music-next
+              >
+                ⏭
+              </button>
+              <button
+                onClick={toggleLoop}
+                className={`rounded-full px-3 py-1.5 text-sm ${
+                  loop
+                    ? 'bg-green-600 hover:bg-green-500'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+                title={loop ? '整份清单循环播放中' : '播完就停'}
+              >
+                🔁
+              </button>
+              <button
+                onClick={() => setMinimized((m) => !m)}
+                className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20'
+                title={minimized ? '显示画面' : '只留控制列'}
+              >
+                {minimized ? '▢' : '—'}
+              </button>
+              <button
+                onClick={() => setQueue(null)}
+                className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20'
+                title='关闭'
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 管理追踪 */}
+        {manageOpen && (
+          <div
+            className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'
+            onClick={() => setManageOpen(false)}
+          >
+            <div
+              className='max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 dark:bg-gray-900'
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className='mb-3 flex items-center justify-between'>
+                <h2 className='text-lg font-bold text-gray-900 dark:text-gray-100'>
+                  管理追踪（{follows?.length ?? 0}）
+                </h2>
+                <button
+                  onClick={() => setManageOpen(false)}
+                  className='text-xl text-gray-400 hover:text-gray-700'
+                >
+                  ×
+                </button>
+              </div>
+              <form
+                className='mb-2 flex gap-2'
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  addFollow();
+                }}
+              >
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder='频道网址、@帐号、播放列表或影片网址'
+                  className='min-w-0 flex-1 rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
+                  data-music-input
+                />
+                <button
+                  type='submit'
+                  disabled={busy || !input.trim()}
+                  className='shrink-0 rounded-full bg-green-600 px-4 py-1.5 text-sm text-white hover:bg-green-500 disabled:opacity-50'
+                >
+                  追踪
+                </button>
+              </form>
+              {msg && (
+                <p
+                  className={`mb-2 text-sm ${
+                    msg.error
+                      ? 'text-red-500'
+                      : 'text-green-600 dark:text-green-400'
+                  }`}
+                  data-music-msg
+                >
+                  {msg.text}
+                </p>
+              )}
+              <p className='mb-3 text-xs text-gray-500 dark:text-gray-400'>
+                追踪名单全站共用，所有人、所有装置看到的都一样。贴影片网址会追踪发这支影片的频道。
+              </p>
+              <ul className='divide-y divide-gray-100 dark:divide-gray-800'>
+                {follows?.map((f) => (
+                  <li
+                    key={f.id}
+                    className='flex items-center justify-between py-2'
+                  >
+                    <span className='min-w-0 truncate text-sm text-gray-900 dark:text-gray-100'>
+                      {f.name}
+                      {f.type === 'playlist' && (
+                        <span className='ml-1 text-xs text-gray-400'>
+                          播放列表
+                        </span>
+                      )}
+                      {isPending(f.id, 'add') && (
+                        <span className='ml-1 text-xs text-amber-500'>
+                          同步中
+                        </span>
+                      )}
+                    </span>
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        if (confirm(`不再追踪「${f.name}」？全站都会看不到。`))
+                          post({ op: 'rm', ...f });
+                      }}
+                      className='shrink-0 text-sm text-gray-400 hover:text-red-500'
+                    >
+                      移除
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </PageLayout>
+    </FavoritesContext.Provider>
   );
 }
 
