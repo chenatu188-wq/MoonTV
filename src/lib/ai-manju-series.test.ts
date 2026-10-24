@@ -86,6 +86,11 @@ describe('seasonOf', () => {
 describe('episodeOf', () => {
   it('认单集', () => {
     expect(episodeOf('雲上雙花第8集')).toBe(8);
+    expect(episodeOf('《如初情深》18集: 老媽把她閨蜜介紹給我')).toBe(18);
+    expect(episodeOf('【短剧】天道榜 | 全69集完整版')).toBeNull();
+    expect(episodeOf('《亡国危局》1-23合集')).toBeNull();
+    expect(episodeOf('重生 1-19集')).toBeNull();
+    expect(episodeOf('更新至18集')).toBeNull();
     expect(episodeOf('云上双花 第十二集')).toBe(12);
     expect(episodeOf('【归墟】第一季 - 第17集 神药')).toBe(17);
     expect(episodeOf('兽世小人类 EP109')).toBe(109);
