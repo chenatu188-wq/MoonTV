@@ -1319,6 +1319,42 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     group: 'mine',
     id: 'UCgcMvwqnigspMLmAfL4VTrw',
   },
+  // 2026-10-25 每週自動收進：使用者在網頁「管理追蹤」加的頻道（promote_ai.py）
+  {
+    key: 'UCmC7_qzDNONGbNBqHpc5Fbg',
+    name: '江湖創作團隊',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCmC7_qzDNONGbNBqHpc5Fbg',
+  },
+  {
+    key: 'UCpPCQobrRU2uZ9TJbBxtmPA',
+    name: 'UCpPCQobrRU2uZ9TJbBxtmPA',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCpPCQobrRU2uZ9TJbBxtmPA',
+  },
+  {
+    key: 'UCUDyBoicj1v4-RhBEq-LUlA',
+    name: 'PlaynLife 玩活小劇場',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCUDyBoicj1v4-RhBEq-LUlA',
+  },
+  {
+    key: 'UCAaUj9MrAHBVca_yDCm6OFQ',
+    name: '云汐剧场',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCAaUj9MrAHBVca_yDCm6OFQ',
+  },
+  {
+    key: 'UCTRtGkC5kcJqDmkcSKDJEAw',
+    name: '玫瑰剧场',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCTRtGkC5kcJqDmkcSKDJEAw',
+  },
 ];
 
 export function feedUrl(source: AiManjuSource): string {
