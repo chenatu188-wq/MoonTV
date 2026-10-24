@@ -1540,27 +1540,28 @@ function AiManjuClient() {
                 className='h-full w-full'
               />
             </div>
-            <div className='mt-3 flex min-h-0 flex-wrap items-start justify-between gap-3 overflow-y-auto'>
-              <div className='min-w-0'>
-                <h2 className='truncate text-base font-medium text-white'>
+            {/* 标题一行、按钮一行（太多就左右滑），高度固定，不会把影片挤小 */}
+            <div className='mt-2 shrink-0'>
+              <div className='flex min-w-0 items-baseline gap-2'>
+                <h2 className='min-w-0 truncate text-base font-medium text-white'>
                   {playing.title}
                 </h2>
                 <a
                   href={playing.channelUrl}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='text-sm text-gray-300 hover:text-white'
+                  className='shrink-0 text-sm text-gray-300 hover:text-white'
                 >
                   {playing.channel} ↗
                 </a>
               </div>
-              <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
+              <div className='mt-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [&>*]:shrink-0'>
                 {playingSeries && (
                   <>
                     <button
                       onClick={playNext}
                       disabled={!upNext}
-                      className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 disabled:opacity-50'
+                      className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 disabled:opacity-50'
                       title={upNext?.title}
                       data-next-episode
                     >
@@ -1572,7 +1573,7 @@ function AiManjuClient() {
                     </button>
                     <button
                       onClick={toggleAutoNext}
-                      className={`rounded-full px-4 py-2 text-sm text-white ${
+                      className={`rounded-full px-3 py-1.5 text-sm text-white ${
                         autoNext
                           ? 'bg-green-600 hover:bg-green-500'
                           : 'bg-white/10 hover:bg-white/20'
@@ -1590,7 +1591,7 @@ function AiManjuClient() {
                       setPlaying(null);
                       searchTitle(playingSeries, playingChannelId);
                     }}
-                    className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                    className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
                   >
                     找全季／全集
                   </button>
@@ -1606,7 +1607,7 @@ function AiManjuClient() {
                           })
                         )
                       }
-                      className='rounded-full bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-400'
+                      className='rounded-full bg-red-500 px-3 py-1.5 text-sm text-white hover:bg-red-400'
                       data-series-toggle
                     >
                       🔔 已追剧 · 取消
@@ -1623,7 +1624,7 @@ function AiManjuClient() {
                         )
                           alert('追剧最多 50 部，请先取消不看的');
                       }}
-                      className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                      className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
                       title={`出新集时在「追剧」区标「新」：${playingSeries}`}
                       data-series-toggle
                     >
@@ -1633,7 +1634,7 @@ function AiManjuClient() {
                 {playingMarked ? (
                   <button
                     onClick={() => unmark(playing.videoId)}
-                    className='rounded-full bg-amber-500 px-4 py-2 text-sm text-white hover:bg-amber-400'
+                    className='rounded-full bg-amber-500 px-3 py-1.5 text-sm text-white hover:bg-amber-400'
                     data-mark
                   >
                     ★ 已标记 · 取消
@@ -1641,7 +1642,7 @@ function AiManjuClient() {
                 ) : (
                   <button
                     onClick={() => saveMark(playing)}
-                    className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                    className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
                     data-mark
                   >
                     ☆ 标记，下次继续看
@@ -1649,7 +1650,7 @@ function AiManjuClient() {
                 )}
                 {playingChannelId &&
                   (isTracked(playingChannelId) ? (
-                    <span className='rounded-full bg-white/10 px-4 py-2 text-sm text-gray-300'>
+                    <span className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-gray-300'>
                       已追踪此频道
                     </span>
                   ) : (
@@ -1661,14 +1662,14 @@ function AiManjuClient() {
                           name: playing.channel || playingChannelId,
                         })
                       }
-                      className='rounded-full bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-500'
+                      className='rounded-full bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-500'
                     >
                       ＋ 追踪此频道
                     </button>
                   ))}
                 <button
                   onClick={close}
-                  className='rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
+                  className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
                 >
                   关闭
                 </button>
