@@ -868,13 +868,26 @@ function AiManjuClient() {
   return (
     <PageLayout activePath='/ai-manju'>
       <div className='px-4 sm:px-10 py-4 sm:py-8'>
-        <div className='mb-6'>
-          <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
-            AI 漫剧
-          </h1>
-          <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
-            聚合 YouTube 上的 AI 漫剧频道，用官方播放器播放
-          </p>
+        <div className='mb-6 flex flex-wrap items-end justify-between gap-2'>
+          <div>
+            <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
+              AI 漫剧
+            </h1>
+            <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
+              聚合 YouTube 上的 AI 漫剧频道，用官方播放器播放
+            </p>
+          </div>
+          {/* 放在最上面，不用卷到频道列表才找得到 */}
+          <button
+            onClick={() => {
+              setAddMsg(null);
+              setManageOpen(true);
+            }}
+            className='rounded-full bg-green-600 px-4 py-1.5 text-sm text-white hover:bg-green-500'
+            data-manage-follows
+          >
+            ＋ 管理追踪
+          </button>
         </div>
 
         {/* 搜寻：直接搜整个 YouTube，不限于已追踪的频道 */}
@@ -1257,15 +1270,6 @@ function AiManjuClient() {
         {data && (
           <div className='mb-6'>
             <div className='mb-2 flex flex-wrap items-center gap-2'>
-              <button
-                onClick={() => {
-                  setAddMsg(null);
-                  setManageOpen(true);
-                }}
-                className='px-3 py-1.5 rounded-full text-sm border border-dashed border-green-600 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20'
-              >
-                ＋ 管理追踪
-              </button>
               <button
                 onClick={toggleChips}
                 className='px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
