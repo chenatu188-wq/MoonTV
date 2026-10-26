@@ -40,7 +40,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     { icon: Headphones, label: '音乐', href: '/music' },
     { icon: Film, label: '电影', href: '/browse?category=movie' },
     { icon: Tv, label: '剧集', href: '/browse?category=tv' },
-    { icon: Clover, label: '综艺', href: '/douban?type=show' },
+    { icon: Clover, label: '综艺', href: '/browse?category=variety' },
     { icon: Clapperboard, label: '短剧', href: '/browse?category=duanju' },
     { icon: Sparkles, label: '动漫', href: '/browse?category=anime3d' },
   ];

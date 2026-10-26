@@ -6,6 +6,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { LatestItem } from '@/lib/browse-latest';
 import { takeOverClick } from '@/lib/link-click';
 import { SearchResult } from '@/lib/types';
+import { VARIETY_CHANNELS } from '@/lib/variety-channels';
 
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
@@ -19,6 +20,7 @@ type Category =
   | 'duanju'
   | 'tv'
   | 'tv_korean'
+  | 'variety'
   | 'anime3d';
 const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'movie', label: '電影' },
@@ -26,6 +28,7 @@ const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'duanju', label: '短劇' },
   { key: 'tv', label: '電視劇' },
   { key: 'tv_korean', label: '🇰🇷 韓劇' },
+  { key: 'variety', label: '綜藝' },
   { key: 'anime3d', label: '3D動漫' },
 ];
 
@@ -36,6 +39,7 @@ function isCategory(value: string | null): value is Category {
     value === 'duanju' ||
     value === 'tv' ||
     value === 'tv_korean' ||
+    value === 'variety' ||
     value === 'anime3d'
   );
 }
@@ -115,6 +119,12 @@ const HOT_SOURCES: Record<
     stype: 'tv',
     label: '豆瓣近期熱門韓劇',
   },
+  variety: {
+    kind: 'douban',
+    query: 'kind=tv&category=show&type=show',
+    stype: 'tv',
+    label: '豆瓣近期熱門綜藝',
+  },
   anime3d: {
     kind: 'douban',
     query: 'kind=tv&category=tv&type=tv_animation',
@@ -145,6 +155,8 @@ function BrowseClient() {
   const [loading, setLoading] = useState(false);
   // 每個分區上方的榜單：最新上架（各來源合併）／熱門（豆瓣或紅果）
   const [rankTab, setRankTab] = useState<RankTab>('latest');
+  // 綜藝分區點開的衛視／平台
+  const [varietyChannel, setVarietyChannel] = useState('');
   const [latestRank, setLatestRank] = useState<RankCard[]>([]);
   const [hotRank, setHotRank] = useState<RankCard[]>([]);
 
@@ -421,11 +433,13 @@ function BrowseClient() {
             ? '短劇瀏覽'
             : category === 'anime3d'
             ? '3D動漫瀏覽'
+            : category === 'variety'
+            ? '綜藝瀏覽'
             : '電視劇瀏覽'}
         </h1>
 
         {/* Category tabs */}
-        <div className='flex gap-2'>
+        <div className='flex flex-wrap gap-2'>
           {CATEGORIES.map((cat) => (
             <button
               key={cat.key}
@@ -447,6 +461,55 @@ function BrowseClient() {
             </button>
           ))}
         </div>
+
+        {/* 綜藝：各衛視／平台的招牌節目，點了搜片源 */}
+        {category === 'variety' && (
+          <div data-variety-channels>
+            <div className='mb-2 flex flex-wrap items-baseline gap-2'>
+              <h2 className='text-base font-bold text-gray-800 dark:text-white'>
+                衛視／平台招牌綜藝
+              </h2>
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                點了搜片源播放（愛奇藝、騰訊等平台要會員且不給外站嵌入，改找資源站收錄的同一檔）
+              </span>
+            </div>
+            <div className='flex flex-wrap gap-2'>
+              {VARIETY_CHANNELS.map((ch) => (
+                <button
+                  key={ch.name}
+                  onClick={() =>
+                    setVarietyChannel((cur) => (cur === ch.name ? '' : ch.name))
+                  }
+                  className={`${btnBase} ${
+                    varietyChannel === ch.name ? btnActive : btnInactive
+                  }`}
+                >
+                  {ch.name}
+                </button>
+              ))}
+            </div>
+            {varietyChannel && (
+              <div className='mt-2 flex flex-wrap gap-2'>
+                {VARIETY_CHANNELS.find(
+                  (ch) => ch.name === varietyChannel
+                )?.shows.map((show) => (
+                  <a
+                    key={show}
+                    href={`/search?q=${encodeURIComponent(show)}`}
+                    onClick={(e) =>
+                      takeOverClick(e) &&
+                      router.push(`/search?q=${encodeURIComponent(show)}`)
+                    }
+                    className='rounded-lg bg-gray-100 px-3 py-1 text-sm text-gray-800 hover:bg-green-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-green-900/30'
+                    data-variety-show
+                  >
+                    {show}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 分區榜：最新上架／熱門 */}
         {(latestRank.length > 0 || hotRank.length > 0) && (

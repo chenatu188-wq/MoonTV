@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { firstNonEmpty, matchCategories } from '@/lib/browse-category';
+import {
+  firstNonEmpty,
+  matchCategories,
+  VARIETY_KEYWORDS,
+} from '@/lib/browse-category';
 import { API_CONFIG, getAvailableApiSites, getCacheTime } from '@/lib/config';
 
 export const runtime = 'edge';
@@ -147,6 +151,8 @@ export async function GET(request: Request) {
           ? HOLLYWOOD_KEYWORDS
           : category === 'movie'
           ? MOVIE_KEYWORDS
+          : category === 'variety'
+          ? VARIETY_KEYWORDS
           : category === 'anime3d'
           ? ANIME_3D_REGION_KEYWORDS[site.group || ''] || ANIME_3D_KEYWORDS
           : DJ_KEYWORDS;
