@@ -276,7 +276,12 @@ function AiManjuClient() {
       error: null,
     });
     setLimit(PAGE_SIZE);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 结果显示在红果榜下面，卷过去
+    requestAnimationFrame(() =>
+      document
+        .getElementById('ai-manju-list')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    );
     fetch(
       `/api/ai-manju/search?q=${encodeURIComponent(q)}${
         channel ? `&channel=${channel}` : ''
@@ -865,6 +870,168 @@ function AiManjuClient() {
     return () => window.removeEventListener('message', onMessage);
   }, [autoNext, upNext, playNext]);
 
+  // 影片清单（含搜寻某部剧的标题列）：搜寻时放在红果榜下面，平常放在最底
+  const listBlock = (
+    <div id='ai-manju-list' className='scroll-mt-4'>
+      {/* 搜寻某部剧时的标题列 */}
+      {search && (
+        <div className='mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-green-50 p-3 text-sm dark:bg-green-900/20'>
+          <span className='text-gray-900 dark:text-gray-100'>
+            《{search.q}》在 YouTube 的结果
+            {search.loading
+              ? '：搜寻中…'
+              : search.error
+              ? ''
+              : search.matched > 0
+              ? `：${search.matched} 支片名吻合${
+                  search.episodes.length > 1
+                    ? `，找到第 ${search.episodes[0]}～${
+                        search.episodes[search.episodes.length - 1]
+                      } 集中的 ${search.episodes.length} 集，已照集数排好`
+                    : search.seasons.length > 1
+                    ? `，找到第 ${search.seasons.join('、')} 季，已照季数排好`
+                    : '，排在最前面'
+                }`
+              : '：没有片名完全吻合的，可能 YouTube 上还没有人上传；以下是相近结果'}
+          </span>
+          <button
+            onClick={() => {
+              setSearch(null);
+              setQuery('');
+            }}
+            className='rounded-full bg-white px-3 py-1 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+          >
+            ← 回到追踪列表
+          </button>
+          {search.error && (
+            <span className='text-red-600 dark:text-red-400'>
+              {search.error}
+            </span>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className='text-red-600 dark:text-red-400'>载入失败：{error}</div>
+      )}
+
+      {!data && !error && (
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className='animate-pulse'>
+              <div className='aspect-video rounded-lg bg-gray-200 dark:bg-gray-800' />
+              <div className='mt-2 h-4 rounded bg-gray-200 dark:bg-gray-800' />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data && data.failed.length > 0 && (
+        <div className='mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'>
+          <div className='font-medium'>这些来源暂时抓不到：</div>
+          <ul className='mt-1 space-y-0.5'>
+            {data.failed.map((f) => (
+              <li key={f.key}>
+                {followName(f.key) ?? f.name} —{' '}
+                <span className='opacity-80'>{f.error}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {data && videos.length === 0 && !search?.loading && (
+        <div className='text-gray-500 dark:text-gray-400'>暂无内容</div>
+      )}
+
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+        {shown.map((v) => (
+          <a
+            key={v.videoId}
+            href={aiManjuHref(v)}
+            onClick={(e) => takeOverClick(e) && setPlaying(v)}
+            className='group text-left'
+          >
+            <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
+              <img
+                src={v.thumbnail}
+                alt={v.title}
+                loading='lazy'
+                className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+              />
+              {badgeOf(v.title) && (
+                <span className='absolute left-1.5 top-1.5 rounded bg-green-600 px-1.5 py-0.5 text-xs font-medium text-white'>
+                  {badgeOf(v.title)}
+                </span>
+              )}
+              <div className='absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30'>
+                <div className='opacity-0 transition-opacity group-hover:opacity-100 rounded-full bg-white/90 p-3'>
+                  <svg
+                    className='h-6 w-6 text-gray-900'
+                    viewBox='0 0 24 24'
+                    fill='currentColor'
+                  >
+                    <path d='M8 5v14l11-7z' />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <h3 className='mt-2 line-clamp-2 text-sm font-medium text-gray-900 dark:text-gray-100'>
+              {v.title}
+            </h3>
+            <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+              {v.channel}
+              {v.meta
+                ? ` · ${v.meta}`
+                : `${v.views != null ? ` · ${formatViews(v.views)}` : ''}${
+                    v.published ? ` · ${timeAgo(v.published)}` : ''
+                  }`}
+            </p>
+          </a>
+        ))}
+      </div>
+
+      {videos.length > shown.length ? (
+        <div className='mt-6 flex justify-center'>
+          <button
+            onClick={() => setLimit((n) => n + PAGE_SIZE)}
+            className='rounded-full bg-gray-100 px-6 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+          >
+            显示更多（还有 {videos.length - shown.length} 支）
+          </button>
+        </div>
+      ) : (
+        // 单一频道：已载入的都显示完了，再跟 YouTube 要下一页
+        !search &&
+        chan &&
+        chan.key === active &&
+        (chan.next || chan.loading || chan.error) && (
+          <div className='mt-6 flex flex-col items-center gap-2'>
+            {chan.error && (
+              <span className='text-sm text-amber-600 dark:text-amber-400'>
+                完整清单载入失败（{chan.error}），目前只显示最新的几支
+              </span>
+            )}
+            {(chan.next || chan.loading) && (
+              <button
+                disabled={chan.loading}
+                onClick={() => {
+                  setLimit((n) => n + PAGE_SIZE);
+                  if (chan.next) loadChannel(active, chan.next);
+                }}
+                className='rounded-full bg-gray-100 px-6 py-2 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+              >
+                {chan.loading
+                  ? '载入中…'
+                  : `载入更早的影片（已显示 ${videos.length} 支）`}
+              </button>
+            )}
+          </div>
+        )
+      )}
+    </div>
+  );
+
   return (
     <PageLayout activePath='/ai-manju'>
       <div className='px-4 sm:px-10 py-4 sm:py-8'>
@@ -1077,6 +1244,9 @@ function AiManjuClient() {
             )}
           </div>
         )}
+
+        {/* 搜寻结果（YouTube 搜寻列、红果榜点片名）：紧接在红果榜下面，不用卷到最底 */}
+        {search && listBlock}
 
         {/* 网友推荐：整段贴上剧名，加进追剧 */}
         <AiManjuRecommendPaste
@@ -1352,164 +1522,7 @@ function AiManjuClient() {
           </div>
         )}
 
-        {/* 搜寻某部剧时的标题列 */}
-        {search && (
-          <div className='mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-green-50 p-3 text-sm dark:bg-green-900/20'>
-            <span className='text-gray-900 dark:text-gray-100'>
-              《{search.q}》在 YouTube 的结果
-              {search.loading
-                ? '：搜寻中…'
-                : search.error
-                ? ''
-                : search.matched > 0
-                ? `：${search.matched} 支片名吻合${
-                    search.episodes.length > 1
-                      ? `，找到第 ${search.episodes[0]}～${
-                          search.episodes[search.episodes.length - 1]
-                        } 集中的 ${search.episodes.length} 集，已照集数排好`
-                      : search.seasons.length > 1
-                      ? `，找到第 ${search.seasons.join('、')} 季，已照季数排好`
-                      : '，排在最前面'
-                  }`
-                : '：没有片名完全吻合的，可能 YouTube 上还没有人上传；以下是相近结果'}
-            </span>
-            <button
-              onClick={() => {
-                setSearch(null);
-                setQuery('');
-              }}
-              className='rounded-full bg-white px-3 py-1 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-            >
-              ← 回到追踪列表
-            </button>
-            {search.error && (
-              <span className='text-red-600 dark:text-red-400'>
-                {search.error}
-              </span>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <div className='text-red-600 dark:text-red-400'>
-            载入失败：{error}
-          </div>
-        )}
-
-        {!data && !error && (
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className='animate-pulse'>
-                <div className='aspect-video rounded-lg bg-gray-200 dark:bg-gray-800' />
-                <div className='mt-2 h-4 rounded bg-gray-200 dark:bg-gray-800' />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {data && data.failed.length > 0 && (
-          <div className='mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'>
-            <div className='font-medium'>这些来源暂时抓不到：</div>
-            <ul className='mt-1 space-y-0.5'>
-              {data.failed.map((f) => (
-                <li key={f.key}>
-                  {followName(f.key) ?? f.name} —{' '}
-                  <span className='opacity-80'>{f.error}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {data && videos.length === 0 && !search?.loading && (
-          <div className='text-gray-500 dark:text-gray-400'>暂无内容</div>
-        )}
-
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-          {shown.map((v) => (
-            <a
-              key={v.videoId}
-              href={aiManjuHref(v)}
-              onClick={(e) => takeOverClick(e) && setPlaying(v)}
-              className='group text-left'
-            >
-              <div className='relative aspect-video overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-800'>
-                <img
-                  src={v.thumbnail}
-                  alt={v.title}
-                  loading='lazy'
-                  className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                />
-                {badgeOf(v.title) && (
-                  <span className='absolute left-1.5 top-1.5 rounded bg-green-600 px-1.5 py-0.5 text-xs font-medium text-white'>
-                    {badgeOf(v.title)}
-                  </span>
-                )}
-                <div className='absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30'>
-                  <div className='opacity-0 transition-opacity group-hover:opacity-100 rounded-full bg-white/90 p-3'>
-                    <svg
-                      className='h-6 w-6 text-gray-900'
-                      viewBox='0 0 24 24'
-                      fill='currentColor'
-                    >
-                      <path d='M8 5v14l11-7z' />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <h3 className='mt-2 line-clamp-2 text-sm font-medium text-gray-900 dark:text-gray-100'>
-                {v.title}
-              </h3>
-              <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                {v.channel}
-                {v.meta
-                  ? ` · ${v.meta}`
-                  : `${v.views != null ? ` · ${formatViews(v.views)}` : ''}${
-                      v.published ? ` · ${timeAgo(v.published)}` : ''
-                    }`}
-              </p>
-            </a>
-          ))}
-        </div>
-
-        {videos.length > shown.length ? (
-          <div className='mt-6 flex justify-center'>
-            <button
-              onClick={() => setLimit((n) => n + PAGE_SIZE)}
-              className='rounded-full bg-gray-100 px-6 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-            >
-              显示更多（还有 {videos.length - shown.length} 支）
-            </button>
-          </div>
-        ) : (
-          // 单一频道：已载入的都显示完了，再跟 YouTube 要下一页
-          !search &&
-          chan &&
-          chan.key === active &&
-          (chan.next || chan.loading || chan.error) && (
-            <div className='mt-6 flex flex-col items-center gap-2'>
-              {chan.error && (
-                <span className='text-sm text-amber-600 dark:text-amber-400'>
-                  完整清单载入失败（{chan.error}），目前只显示最新的几支
-                </span>
-              )}
-              {(chan.next || chan.loading) && (
-                <button
-                  disabled={chan.loading}
-                  onClick={() => {
-                    setLimit((n) => n + PAGE_SIZE);
-                    if (chan.next) loadChannel(active, chan.next);
-                  }}
-                  className='rounded-full bg-gray-100 px-6 py-2 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                >
-                  {chan.loading
-                    ? '载入中…'
-                    : `载入更早的影片（已显示 ${videos.length} 支）`}
-                </button>
-              )}
-            </div>
-          )
-        )}
+        {!search && listBlock}
       </div>
 
       {/* 播放器：YouTube 官方 iframe，播放数与收益仍归原作者 */}
