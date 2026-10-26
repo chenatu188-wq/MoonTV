@@ -39,6 +39,18 @@ export async function firstNonEmpty<TCandidate, TResult>(
   return { candidate: null, result: lastResult };
 }
 
+/** 综艺：影视资源站的综艺分类（大陆／港台／日韩优先，欧美放最后） */
+export const VARIETY_KEYWORDS = [
+  '大陆综艺',
+  '港台综艺',
+  '日韩综艺',
+  '综艺片',
+  '综艺',
+  '綜藝',
+  '真人秀',
+  '欧美综艺',
+];
+
 export const ANIME_3D_KEYWORDS = ['3D动漫', '3D動畫', '动漫', '動畫', '动画'];
 export const ANIME_3D_REGION_KEYWORDS: Record<string, string[]> = {
   '3D動漫-中國': [
@@ -111,6 +123,11 @@ export const BROWSE_RANK_CONFIG: Record<string, BrowseRankConfig> = {
       '电影',
       '電影',
     ],
+  },
+  variety: {
+    // 综艺没有专用来源，用电视剧那批资源站的综艺分类
+    matchGroup: (g) => g === '電視劇',
+    keywords: () => VARIETY_KEYWORDS,
   },
   duanju: {
     matchGroup: (g) => g === '短劇',

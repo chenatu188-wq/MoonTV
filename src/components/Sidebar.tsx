@@ -155,7 +155,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
     {
       icon: Clover,
       label: '综艺',
-      href: '/douban?type=show',
+      href: '/browse?category=variety',
     },
     {
       icon: Clapperboard,

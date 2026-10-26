@@ -6,6 +6,7 @@ import {
   ANIME_3D_REGION_KEYWORDS,
   firstNonEmpty,
   matchCategories,
+  VARIETY_KEYWORDS,
 } from '@/lib/browse-category';
 import {
   API_CONFIG,
@@ -106,7 +107,7 @@ export async function GET(request: Request) {
   const sourceKey = searchParams.get('source');
   const year = searchParams.get('year') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const category = searchParams.get('category') || 'duanju'; // movie | hollywood | duanju | tv | anime3d | adult
+  const category = searchParams.get('category') || 'duanju'; // movie | hollywood | duanju | tv | variety | anime3d | adult
 
   const config = await getConfig();
   const site = (config.SourceConfig || []).find((s) => s.key === sourceKey);
@@ -168,6 +169,8 @@ export async function GET(request: Request) {
           ? HOLLYWOOD_KEYWORDS
           : category === 'movie'
           ? MOVIE_KEYWORDS
+          : category === 'variety'
+          ? VARIETY_KEYWORDS
           : category === 'anime3d'
           ? ANIME_3D_REGION_KEYWORDS[site.group || ''] || ANIME_3D_KEYWORDS
           : DJ_KEYWORDS;
