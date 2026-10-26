@@ -21,7 +21,7 @@ import {
 import { dailyChannelKeys, taipeiDay } from '@/lib/ai-manju-rotation';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 import { type SearchHit, followKey } from '@/lib/ai-manju-series-follow';
-import { MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
+import { AI_MANJU_SOURCES, MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
 import type { HongguoSearchItem } from '@/lib/hongguo-search';
 import { takeOverClick } from '@/lib/link-click';
 import { parseYtMessage } from '@/lib/music-player';
@@ -742,9 +742,13 @@ function AiManjuClient() {
     }
     const seen = new Set<string>();
     return [
-      ...(data?.sources ?? [])
-        .filter((s) => s.type === 'channel')
-        .map((s) => ({ id: s.id, name: s.name, key: s.key })),
+      // 内建频道直接用程式里的清单，不用等整份影片资料（要抓近 200 个频道）载完；
+      // 不然在那之前只有自己追踪的几个，「显示更多频道」的数字会错
+      ...AI_MANJU_SOURCES.filter((s) => s.type === 'channel').map((s) => ({
+        id: s.id,
+        name: s.name,
+        key: s.key,
+      })),
       ...(follows ?? [])
         .filter((f) => f.type === 'channel')
         .map((f) => ({ id: f.id, name: f.name, key: f.id })),
@@ -763,7 +767,7 @@ function AiManjuClient() {
             ? pins.indexOf(a.key) - pins.indexOf(b.key)
             : (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0))
       );
-  }, [allVideos, data, follows, pins, dailyKeys, dailySet]);
+  }, [allVideos, follows, pins, dailyKeys, dailySet]);
   const trackItems = useMemo(() => {
     if (!allVideos) return [];
     if (trackTab === 'latest') {
