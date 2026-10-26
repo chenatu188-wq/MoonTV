@@ -40,6 +40,8 @@ interface Queue {
 }
 
 const LOOP_KEY = 'moontv_music_loop';
+/** 存 sessionStorage：只跟着这个分页 */
+const VOLUME_KEY = 'moontv_music_volume';
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);
@@ -413,6 +415,33 @@ function MusicClient() {
   const [opened, setOpened] = useState<Follow | null>(null);
   const [queue, setQueue] = useState<Queue | null>(null);
   const [loop, setLoop] = useState(false);
+  // 音量：每个分页（视窗）各自一份，开好几个视窗听歌时可以分别调
+  const [volume, setVolume] = useState(100);
+  const volumeRef = useRef(100);
+  volumeRef.current = volume;
+  useEffect(() => {
+    try {
+      const v = Number(sessionStorage.getItem(VOLUME_KEY));
+      if (sessionStorage.getItem(VOLUME_KEY) !== null && v >= 0 && v <= 100)
+        setVolume(v);
+    } catch {
+      // 读不到就用预设
+    }
+  }, []);
+  const sendVolume = (v: number) =>
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func: 'setVolume', args: [v] }),
+      '*'
+    );
+  const changeVolume = (v: number) => {
+    setVolume(v);
+    sendVolume(v);
+    try {
+      sessionStorage.setItem(VOLUME_KEY, String(v));
+    } catch {
+      // 存不了就算了
+    }
+  };
   const [minimized, setMinimized] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteSong[]>([]);
   const [query, setQuery] = useState('');
@@ -571,10 +600,15 @@ function MusicClient() {
   useEffect(() => {
     if (!queueVideos) return;
     let heard = false;
+    let lastId: string | null = null;
     const onMessage = (e: MessageEvent) => {
       if (e.source !== iframeRef.current?.contentWindow) return;
       const m = parseYtMessage(e.data);
       if (!m) return;
+      // 播放器刚连上、换下一首时都再设一次音量（新的播放器预设是 100）
+      if (!heard || (m.videoId && m.videoId !== lastId))
+        sendVolume(volumeRef.current);
+      if (m.videoId) lastId = m.videoId;
       heard = true;
       if (m.videoId) {
         const i = queueVideos.findIndex((v) => v.videoId === m.videoId);
@@ -799,6 +833,27 @@ function MusicClient() {
               >
                 ✕
               </button>
+            </div>
+            <div className='mt-2 flex items-center gap-2 text-xs text-gray-300'>
+              <button
+                onClick={() => changeVolume(volume === 0 ? 50 : 0)}
+                className='shrink-0 text-base leading-none'
+                title={volume === 0 ? '取消静音' : '静音'}
+              >
+                {volume === 0 ? '🔇' : volume < 50 ? '🔉' : '🔊'}
+              </button>
+              <input
+                type='range'
+                min={0}
+                max={100}
+                step={5}
+                value={volume}
+                onChange={(e) => changeVolume(Number(e.target.value))}
+                aria-label='这个视窗的音量'
+                className='min-w-0 flex-1 accent-green-500'
+                data-music-volume
+              />
+              <span className='w-14 shrink-0 text-right'>{volume}%</span>
             </div>
           </div>
         )}
