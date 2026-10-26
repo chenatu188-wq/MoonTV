@@ -100,8 +100,18 @@ function ChannelRow({
     }
   };
 
-  // 抓不到或频道没影片就整排不显示
-  if (failed || (page === 0 && videos?.length === 0)) return null;
+  // 抓不到或频道没影片：留一行灰字，不要整排消失（不然按「显示更多」像没反应）
+  if (failed || (page === 0 && videos?.length === 0))
+    return (
+      <div
+        ref={ref}
+        className='mb-2 text-xs text-gray-400 dark:text-gray-500'
+        data-channel-top={id}
+      >
+        {pinned && '📌 '}
+        {name} · {failed ? '暂时读不到热门影片' : '没有影片'}
+      </div>
+    );
 
   return (
     <div ref={ref} className='mb-4' data-channel-top={id}>
@@ -221,7 +231,8 @@ export default function AiManjuChannelTop({
           onClick={() => setCount((n) => n + STEP)}
           className='w-full rounded-lg bg-gray-100 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
         >
-          显示更多频道（还有 {channels.length - count} 个）
+          显示更多频道（已显示 {Math.min(count, channels.length)} / 共{' '}
+          {channels.length} 个）
         </button>
       )}
     </div>
