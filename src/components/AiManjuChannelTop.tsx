@@ -7,6 +7,7 @@ import type { AiManjuVideo } from '@/lib/ai-manju-feed';
 import { takeOverClick } from '@/lib/link-click';
 import { aiManjuHref } from '@/lib/video-links';
 
+import CardFavStar from '@/components/CardFavStar';
 import HScroll from '@/components/HScroll';
 
 type TopVideo = AiManjuVideo & { channelId: string };
@@ -169,6 +170,7 @@ function ChannelRow({
                   loading='lazy'
                   className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                 />
+                <CardFavStar video={{ ...v, channel: v.channel || name }} />
                 <span className='absolute left-0 top-0 rounded-br-lg bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white'>
                   {page * 20 + i + 1}
                 </span>
