@@ -12,7 +12,7 @@ export interface WatchMark<T> {
   at: number;
 }
 
-export const MAX_MARKS = 50;
+export const MAX_MARKS = 200;
 
 /** 从 localStorage 读回来的东西不可信，格式不对的丢掉 */
 export function sanitizeMarks<T>(raw: unknown): WatchMark<T>[] {

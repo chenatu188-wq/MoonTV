@@ -24,10 +24,17 @@ export interface WatchLaterCard {
 export default function WatchLaterStrip({
   items,
   portrait = false,
+  title = '继续观看',
+  hint = '你标记的影片，点了从上次的位置接着播 · 只存在这台装置',
+  zeroBadge = '已标记',
   onPlay,
   onRemove,
 }: {
   items: WatchLaterCard[];
+  title?: string;
+  hint?: string;
+  /** 还没开始看（秒数 0）时缩图左下角的字 */
+  zeroBadge?: string;
   /** TikTok 的缩图是直的 */
   portrait?: boolean;
   onPlay: (id: string) => void;
@@ -39,11 +46,12 @@ export default function WatchLaterStrip({
     <div className='mb-6' data-watch-later>
       <div className='mb-2 flex flex-wrap items-center gap-2'>
         <h2 className='text-base font-bold text-gray-900 dark:text-gray-100'>
-          继续观看
+          {title}
+          <span className='ml-1 text-xs font-normal text-gray-500 dark:text-gray-400'>
+            {items.length}
+          </span>
         </h2>
-        <span className='text-xs text-gray-500 dark:text-gray-400'>
-          你标记的影片，点了从上次的位置接着播 · 只存在这台装置
-        </span>
+        <span className='text-xs text-gray-500 dark:text-gray-400'>{hint}</span>
       </div>
       <HScroll
         resetKey={`marks:${items.length}`}
@@ -77,7 +85,7 @@ export default function WatchLaterStrip({
                 <span className='absolute bottom-0 left-0 rounded-tr-lg bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white'>
                   {it.seconds > 0
                     ? `看到 ${formatPosition(it.seconds)}`
-                    : '已标记'}
+                    : zeroBadge}
                 </span>
               </div>
               <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>

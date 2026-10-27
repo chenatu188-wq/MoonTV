@@ -37,6 +37,7 @@ import { resumeFrom } from '@/lib/watch-marks';
 import AiManjuChannelTop from '@/components/AiManjuChannelTop';
 import AiManjuRecommendPaste from '@/components/AiManjuRecommendPaste';
 import AiManjuSeriesStrip from '@/components/AiManjuSeriesStrip';
+import CardFavStar, { CardFavContext } from '@/components/CardFavStar';
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
 import WatchLaterStrip from '@/components/WatchLaterStrip';
@@ -544,6 +545,15 @@ function AiManjuClient() {
   );
   const position = usePlayerSeconds('youtube', playerRef, playingId, startAt);
   const playingMarked = marks.some((m) => m.id === playingId);
+  // 卡片上的 ☆ 跟播放器的「标记」是同一份清单：先收藏，看过的会记住看到哪
+  const favCtx = useMemo(() => {
+    const ids = new Set(marks.map((m) => m.id));
+    return {
+      isFav: (id: string) => ids.has(id),
+      toggle: (v: AiManjuVideo) =>
+        ids.has(v.videoId) ? unmark(v.videoId) : mark(v.videoId, v, 0),
+    };
+  }, [marks, mark, unmark]);
   const saveMark = useCallback(
     (v: AiManjuVideo) =>
       mark(v.videoId, { ...v, description: '' }, position.current),
@@ -963,6 +973,7 @@ function AiManjuClient() {
                 loading='lazy'
                 className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
               />
+              <CardFavStar video={v} />
               {badgeOf(v.title) && (
                 <span className='absolute left-1.5 top-1.5 rounded bg-green-600 px-1.5 py-0.5 text-xs font-medium text-white'>
                   {badgeOf(v.title)}
@@ -1036,7 +1047,7 @@ function AiManjuClient() {
     </div>
   );
 
-  return (
+  const page = (
     <PageLayout activePath='/ai-manju'>
       <div className='px-4 sm:px-10 py-4 sm:py-8'>
         <div className='mb-6 flex flex-wrap items-end justify-between gap-2'>
@@ -1295,8 +1306,11 @@ function AiManjuClient() {
           onRemove={series.unfollow}
         />
 
-        {/* 继续观看：在播放器按了标记的影片 */}
+        {/* 我的收藏：卡片按 ☆ 或播放器按标记的影片 */}
         <WatchLaterStrip
+          title='我的收藏'
+          hint='影片右上角按 ☆ 收藏，有空再看 · 看过的会记住看到哪 · 只存在这台装置'
+          zeroBadge='还没看'
           items={marks.map((m) => ({
             id: m.id,
             title: m.video.title,
@@ -1357,6 +1371,7 @@ function AiManjuClient() {
                       loading='lazy'
                       className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                     />
+                    <CardFavStar video={it.video} />
                     <span className='absolute left-0 top-0 rounded-br-lg bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white'>
                       {trackTab === 'latest'
                         ? timeAgo(it.video.published)
@@ -1412,6 +1427,7 @@ function AiManjuClient() {
                       loading='lazy'
                       className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                     />
+                    <CardFavStar video={v} />
                     <span className='absolute left-0 top-0 rounded-br-lg bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white'>
                       新频道
                     </span>
@@ -1617,7 +1633,7 @@ function AiManjuClient() {
                   }
                 />
                 {/* 网页全屏的上方工具列：不盖在影片上。写在 iframe 后面再用 order 排到上面，
-                    iframe 才不会被搬动而重新载入 */}
+                  iframe 才不会被搬动而重新载入 */}
                 {webFull && (
                   <div className='order-first flex shrink-0 items-center gap-2 bg-gray-900 px-3 py-1.5 text-sm text-white'>
                     <span className='min-w-0 flex-1 truncate text-gray-300'>
@@ -1905,6 +1921,9 @@ function AiManjuClient() {
         </div>
       )}
     </PageLayout>
+  );
+  return (
+    <CardFavContext.Provider value={favCtx}>{page}</CardFavContext.Provider>
   );
 }
 
