@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { AiManjuVideo } from '@/lib/ai-manju-feed';
+import { type TopSort, sortTop } from '@/lib/ai-manju-top-sort';
 import { takeOverClick } from '@/lib/link-click';
 import { aiManjuHref } from '@/lib/video-links';
 
@@ -39,6 +40,8 @@ function ChannelRow({
   const [pages, setPages] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState('');
+  /** 只排目前这一批 20 支；再按一次同一颗回到热门顺序 */
+  const [sortBy, setSortBy] = useState<TopSort>('hot');
 
   useEffect(() => {
     const el = ref.current;
@@ -146,6 +149,34 @@ function ChannelRow({
                 }`}
           </button>
         )}
+        {videos &&
+          (
+            [
+              ['long', '⏱ 片长'],
+              ['date', '📅 日期'],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setSortBy((s) => (s === k ? 'hot' : k))}
+              className={`rounded-full px-2 py-0.5 text-xs font-normal ${
+                sortBy === k
+                  ? 'bg-green-600 text-white hover:bg-green-500'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+              }`}
+              title={
+                sortBy === k
+                  ? '再按一次回到热门排序'
+                  : k === 'long'
+                  ? '这一批依片长排序，长的在前'
+                  : '这一批依上传日期排序，新的在前'
+              }
+              data-top-sort={k}
+            >
+              {label}
+              {sortBy === k && ' ✓'}
+            </button>
+          ))}
         {note && (
           <span className='text-xs font-normal text-gray-500 dark:text-gray-400'>
             {note}
@@ -153,8 +184,8 @@ function ChannelRow({
         )}
       </h3>
       {videos ? (
-        <HScroll resetKey={`top:${id}:${page}`} arrowTop='2.75rem'>
-          {videos.map((v, i) => (
+        <HScroll resetKey={`top:${id}:${page}:${sortBy}`} arrowTop='2.75rem'>
+          {sortTop(videos, sortBy).map((v) => (
             <a
               key={v.videoId}
               href={aiManjuHref({ ...v, channel: v.channel || name })}
@@ -172,7 +203,7 @@ function ChannelRow({
                 />
                 <CardFavStar video={{ ...v, channel: v.channel || name }} />
                 <span className='absolute left-0 top-0 rounded-br-lg bg-green-600 px-1.5 py-0.5 text-xs font-bold text-white'>
-                  {page * 20 + i + 1}
+                  {page * 20 + videos.indexOf(v) + 1}
                 </span>
               </div>
               <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
