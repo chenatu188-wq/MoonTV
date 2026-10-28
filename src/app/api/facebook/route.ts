@@ -19,6 +19,9 @@ export interface FbVideo {
   name: string;
   /** 在粉专影片页的顺序，0 是最新 */
   order: number;
+  /** 片长秒数、上传时间（Unix 秒）：Mac 用 yt-dlp 补的，可能没有 */
+  duration?: number;
+  published?: number;
   /**
    * 影片档直连（Mac 用 yt-dlp 拿的，约 4 天过期）。很多重新上传的短剧 FB 不准嵌入，
    * 有这个就用网页自己的播放器播，不靠 FB 嵌入播放器
@@ -63,6 +66,8 @@ function sanitize(raw: FbData): FbData {
       )
       .map((v) => ({
         ...v,
+        duration: Number(v.duration) > 0 ? Number(v.duration) : undefined,
+        published: Number(v.published) > 0 ? Number(v.published) : undefined,
         mp4:
           typeof v.mp4 === 'string' &&
           /^https:\/\/[\w.-]+\.fbcdn\.net\//.test(v.mp4)

@@ -8,6 +8,7 @@ import {
   FB_PENDING_TTL_MS,
   MAX_FB_PAGES,
 } from '@/lib/fb-follows';
+import { nextFbVideo } from '@/lib/fb-next';
 
 import PageLayout from '@/components/PageLayout';
 
@@ -18,6 +19,15 @@ import type { FbData, FbVideo } from '@/app/api/facebook/route';
  * （跟 TikTok 漫剧同一招）
  */
 const PENDING_KEY = 'moontv_fb_pending';
+const AUTO_NEXT_KEY = 'moontv_fb_auto_next';
+
+function formatDuration(sec?: number): string {
+  if (!sec) return '';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = String(sec % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
 
 function readLocalPending(): PendingFbFollow[] {
   try {
@@ -77,6 +87,24 @@ function FacebookClient() {
   /** 影片档播不了（网址过期之类）就退回 FB 嵌入播放器 */
   const [useEmbed, setUseEmbed] = useState(false);
   useEffect(() => setUseEmbed(false), [playing]);
+  /** 播完自动接下一支（同一部剧优先接下一季） */
+  const [autoNext, setAutoNext] = useState(true);
+  useEffect(() => {
+    try {
+      setAutoNext(localStorage.getItem(AUTO_NEXT_KEY) !== '0');
+    } catch {
+      // 读不到就用预设
+    }
+  }, []);
+  const toggleAutoNext = () =>
+    setAutoNext((on) => {
+      try {
+        localStorage.setItem(AUTO_NEXT_KEY, on ? '0' : '1');
+      } catch {
+        // 无痕模式就只记这一次
+      }
+      return !on;
+    });
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -165,8 +193,12 @@ function FacebookClient() {
     const list = (data?.videos ?? []).filter(
       (v) => !filter || v.page === filter
     );
-    return [...list].sort((a, b) => a.order - b.order);
+    // 有上传时间就新的在前；没有的照粉专页上的顺序
+    return [...list].sort(
+      (a, b) => (b.published ?? 0) - (a.published ?? 0) || a.order - b.order
+    );
   }, [data, filter]);
+  const upNext = playing ? nextFbVideo(playing, videos) : null;
 
   const pending = data?.pending ?? [];
   const nameOf = (page: string) =>
@@ -303,7 +335,7 @@ function FacebookClient() {
 
         {data && data.pages.length === 0 && pending.length === 0 && (
           <div className='rounded-lg bg-gray-50 p-6 text-center text-sm text-gray-500 dark:bg-gray-900 dark:text-gray-400'>
-            还没追踪任何粉专。在右上角贴上 Facebook 粉专的网址，按「＋
+            还没追踪任何粉专。在上方贴上 Facebook 粉专的网址，按「＋
             追踪粉专」。
           </div>
         )}
@@ -330,6 +362,11 @@ function FacebookClient() {
                   referrerPolicy='no-referrer'
                   className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                 />
+                {v.duration && (
+                  <span className='absolute bottom-1 right-1 rounded bg-black/75 px-1.5 py-0.5 text-xs text-white'>
+                    {formatDuration(v.duration)}
+                  </span>
+                )}
                 <div className='absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30'>
                   <div className='rounded-full bg-white/90 p-3 opacity-0 transition-opacity group-hover:opacity-100'>
                     <svg
@@ -347,6 +384,7 @@ function FacebookClient() {
               </h3>
               <p className='mt-1 truncate text-xs text-gray-500 dark:text-gray-400'>
                 {v.name}
+                {v.published ? ` · ${timeAgo(v.published)}` : ''}
               </p>
             </a>
           ))}
@@ -363,10 +401,34 @@ function FacebookClient() {
             className='flex w-[min(100%,calc((100dvh-8rem)*16/9))] flex-col gap-2'
             onClick={(e) => e.stopPropagation()}
           >
-            <div className='flex items-center gap-2'>
-              <div className='min-w-0 flex-1 truncate text-sm text-white'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <div className='min-w-0 flex-1 basis-full truncate text-sm text-white sm:basis-0'>
                 {playing.title}
               </div>
+              {playing.mp4 && !useEmbed && (
+                <button
+                  onClick={toggleAutoNext}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-sm text-white ${
+                    autoNext
+                      ? 'bg-green-600 hover:bg-green-500'
+                      : 'bg-white/10 hover:bg-white/20'
+                  }`}
+                  title='播完自动接下一支；同一部剧会先接下一季'
+                  data-fb-auto-next
+                >
+                  {autoNext ? '✓ 自动连播' : '自动连播：关'}
+                </button>
+              )}
+              {upNext && (
+                <button
+                  onClick={() => setPlaying(upNext)}
+                  className='shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
+                  title={upNext.title}
+                  data-fb-next
+                >
+                  下一支 ⏭
+                </button>
+              )}
               <a
                 href={playing.href}
                 target='_blank'
@@ -391,6 +453,7 @@ function FacebookClient() {
                 autoPlay
                 playsInline
                 onError={() => setUseEmbed(true)}
+                onEnded={() => autoNext && upNext && setPlaying(upNext)}
                 className='max-h-[calc(100dvh-8rem)] w-full rounded-lg bg-black'
                 data-fb-mp4
               />
