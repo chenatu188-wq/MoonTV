@@ -1,9 +1,10 @@
 'use client';
 
 import {
-  Clapperboard,
   ChevronRight,
+  Clapperboard,
   Clover,
+  Facebook,
   Film,
   Headphones,
   Home,
@@ -37,6 +38,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     { icon: Search, label: '搜索', href: '/search' },
     { icon: Wand2, label: 'AI 漫剧', href: '/ai-manju' },
     { icon: Music2, label: 'TikTok', href: '/tiktok-manju' },
+    { icon: Facebook, label: 'FB', href: '/facebook' },
     { icon: Headphones, label: '音乐', href: '/music' },
     { icon: Film, label: '电影', href: '/browse?category=movie' },
     { icon: Tv, label: '剧集', href: '/browse?category=tv' },

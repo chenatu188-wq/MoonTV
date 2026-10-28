@@ -3,6 +3,7 @@
 import {
   Clapperboard,
   Clover,
+  Facebook,
   Film,
   Headphones,
   Home,
@@ -180,6 +181,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Music2,
       label: 'TikTok 漫剧',
       href: '/tiktok-manju',
+    },
+    {
+      icon: Facebook,
+      label: 'FB 影片',
+      href: '/facebook',
     },
     {
       icon: Headphones,
