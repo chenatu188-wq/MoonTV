@@ -20,6 +20,32 @@ import type { FbData, FbVideo } from '@/app/api/facebook/route';
  */
 const PENDING_KEY = 'moontv_fb_pending';
 const AUTO_NEXT_KEY = 'moontv_fb_auto_next';
+// 音量跟静音记在本机，换下一支影片时套回去，不会又变回最大声
+const VOLUME_KEY = 'moontv_fb_volume';
+
+function restoreVolume(el: HTMLVideoElement) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(VOLUME_KEY) || 'null');
+    if (!saved) return;
+    if (typeof saved.volume === 'number') {
+      el.volume = Math.min(1, Math.max(0, saved.volume));
+    }
+    el.muted = !!saved.muted;
+  } catch {
+    // 读不到就用预设音量
+  }
+}
+
+function saveVolume(el: HTMLVideoElement) {
+  try {
+    localStorage.setItem(
+      VOLUME_KEY,
+      JSON.stringify({ volume: el.volume, muted: el.muted })
+    );
+  } catch {
+    // 存不了就算了
+  }
+}
 
 function formatDuration(sec?: number): string {
   if (!sec) return '';
@@ -453,6 +479,8 @@ function FacebookClient() {
                 autoPlay
                 playsInline
                 onError={() => setUseEmbed(true)}
+                onLoadedMetadata={(e) => restoreVolume(e.currentTarget)}
+                onVolumeChange={(e) => saveVolume(e.currentTarget)}
                 onEnded={() => autoNext && upNext && setPlaying(upNext)}
                 className='max-h-[calc(100dvh-8rem)] w-full rounded-lg bg-black'
                 data-fb-mp4
