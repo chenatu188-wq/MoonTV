@@ -74,6 +74,9 @@ function FacebookClient() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<string | null>(null);
   const [playing, setPlaying] = useState<FbVideo | null>(null);
+  /** 影片档播不了（网址过期之类）就退回 FB 嵌入播放器 */
+  const [useEmbed, setUseEmbed] = useState(false);
+  useEffect(() => setUseEmbed(false), [playing]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -178,7 +181,7 @@ function FacebookClient() {
               FB 影片
             </h1>
             <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>
-              追踪的 Facebook 粉专最新影片，用 FB 官方播放器播放
+              追踪的 Facebook 粉专最新影片，直接在这里播
               {data?.updated
                 ? ` · ${timeAgo(data.updated)}更新（每 6 小时）`
                 : ''}
@@ -379,16 +382,30 @@ function FacebookClient() {
                 ✕ 关闭
               </button>
             </div>
-            <div className='aspect-video w-full overflow-hidden rounded-lg bg-black'>
-              <iframe
+            {playing.mp4 && !useEmbed ? (
+              <video
                 key={playing.id}
-                src={embedSrc(playing)}
-                className='h-full w-full'
-                allow='autoplay; encrypted-media; picture-in-picture; web-share'
-                allowFullScreen
-                title={playing.title}
+                src={playing.mp4}
+                poster={playing.thumbnail}
+                controls
+                autoPlay
+                playsInline
+                onError={() => setUseEmbed(true)}
+                className='max-h-[calc(100dvh-8rem)] w-full rounded-lg bg-black'
+                data-fb-mp4
               />
-            </div>
+            ) : (
+              <div className='aspect-video w-full overflow-hidden rounded-lg bg-black'>
+                <iframe
+                  key={playing.id}
+                  src={embedSrc(playing)}
+                  className='h-full w-full'
+                  allow='autoplay; encrypted-media; picture-in-picture; web-share'
+                  allowFullScreen
+                  title={playing.title}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
