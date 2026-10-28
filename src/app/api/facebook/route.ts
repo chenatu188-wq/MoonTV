@@ -19,6 +19,11 @@ export interface FbVideo {
   name: string;
   /** 在粉专影片页的顺序，0 是最新 */
   order: number;
+  /**
+   * 影片档直连（Mac 用 yt-dlp 拿的，约 4 天过期）。很多重新上传的短剧 FB 不准嵌入，
+   * 有这个就用网页自己的播放器播，不靠 FB 嵌入播放器
+   */
+  mp4?: string;
 }
 
 export interface FbData {
@@ -51,10 +56,19 @@ function sanitize(raw: FbData): FbData {
   return {
     updated: Number(raw.updated) || 0,
     pages: (raw.pages ?? []).filter((p) => p && typeof p.page === 'string'),
-    videos: (raw.videos ?? []).filter(
-      (v) =>
-        v && /^\d{8,25}$/.test(String(v.id)) && fb(v.href) && fb(v.thumbnail)
-    ),
+    videos: (raw.videos ?? [])
+      .filter(
+        (v) =>
+          v && /^\d{8,25}$/.test(String(v.id)) && fb(v.href) && fb(v.thumbnail)
+      )
+      .map((v) => ({
+        ...v,
+        mp4:
+          typeof v.mp4 === 'string' &&
+          /^https:\/\/[\w.-]+\.fbcdn\.net\//.test(v.mp4)
+            ? v.mp4
+            : undefined,
+      })),
     failed: raw.failed ?? [],
   };
 }
