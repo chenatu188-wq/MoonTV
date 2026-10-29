@@ -1557,17 +1557,22 @@ function AiManjuClient() {
           className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 pb-[calc(1rem+var(--nav))] [--nav:4rem] md:[--nav:0rem]'
           onClick={close}
         >
-          {/* 播放器大小放左边直立，不占上方空间 */}
+          {/* 播放器大小放在影片上方一行（放左边直立在手机上会挡掉一整条） */}
           <div
-            className='flex max-h-[calc(100dvh-2rem-var(--nav))] max-w-full items-center gap-2'
+            className='flex max-h-[calc(100dvh-2rem-var(--nav))] max-w-full flex-col'
+            style={{
+              width: tallWindow
+                ? `calc((100vw - 2rem) * ${playerSize / 100})`
+                : `min(calc((100vw - 2rem) * ${
+                    playerSize / 100
+                  }), calc((100dvh - 9.5rem - var(--nav)) * ${16 / 9} * ${
+                    playerSize / 100
+                  }))`,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className='flex h-[min(24rem,calc(100dvh-4rem))] w-8 shrink-0 flex-col items-center gap-2 text-xs text-white'>
-              <label
-                htmlFor='ai-manju-player-size'
-                className='shrink-0'
-                style={{ writingMode: 'vertical-rl' }}
-              >
+            <div className='mb-2 flex shrink-0 items-center gap-2 text-sm text-white'>
+              <label htmlFor='ai-manju-player-size' className='shrink-0'>
                 播放器大小
               </label>
               <input
@@ -1579,32 +1584,17 @@ function AiManjuClient() {
                 value={playerSize}
                 onChange={(e) => setPlayerSize(Number(e.target.value))}
                 aria-valuetext={`${playerSize}%`}
-                aria-orientation='vertical'
-                className='min-h-16 w-6 flex-1 accent-green-500'
-                // 直立：上面是大、下面是小
-                style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
+                className='min-w-16 flex-1 accent-green-500'
               />
               <button
                 onClick={() => setPlayerSize(100)}
-                className='shrink-0 rounded-full bg-white/10 px-1 py-2 hover:bg-white/20'
-                style={{ writingMode: 'vertical-rl' }}
+                className='shrink-0 rounded-full bg-white/10 px-3 py-1 hover:bg-white/20'
                 title='恢复自动适应视窗'
               >
-                {playerSize === 100 ? '自动适应' : `${playerSize}%·恢复`}
+                {playerSize === 100 ? '自动适应' : `${playerSize}% · 恢复`}
               </button>
             </div>
-            <div
-              className='flex max-h-[calc(100dvh-2rem-var(--nav))] min-w-0 flex-col'
-              style={{
-                width: tallWindow
-                  ? `calc((100vw - 4.5rem) * ${playerSize / 100})`
-                  : `min(calc((100vw - 4.5rem) * ${
-                      playerSize / 100
-                    }), calc((100dvh - 7.5rem - var(--nav)) * ${16 / 9} * ${
-                      playerSize / 100
-                    }))`,
-              }}
-            >
+            <div className='flex min-h-0 w-full flex-col'>
               <div
                 className={
                   webFull
@@ -1616,7 +1606,7 @@ function AiManjuClient() {
                 style={
                   !webFull && tallWindow
                     ? {
-                        height: `calc((100dvh - 7.5rem - var(--nav)) * ${
+                        height: `calc((100dvh - 9.5rem - var(--nav)) * ${
                           playerSize / 100
                         })`,
                       }
