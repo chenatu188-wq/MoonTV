@@ -23,6 +23,8 @@ import ScrollableRow from '@/components/ScrollableRow';
 import { useSite } from '@/components/SiteProvider';
 import VideoCard from '@/components/VideoCard';
 
+import type { WeekHotItem } from '@/app/api/ai-manju/week-hot/route';
+
 /** 首页每一排热门榜，最多显示几部 */
 const HOME_ROW_LIMIT = 20;
 
@@ -70,11 +72,8 @@ async function loadDouban(
   }));
 }
 
-/** 红果短剧的热播榜：real＝真人短剧，ai＝AI 剧 */
-async function loadHongguo(
-  listKey: 'real' | 'ai',
-  toHref?: (title: string) => string
-): Promise<HomeCard[]> {
+/** 红果短剧的真人剧热播榜 */
+async function loadHongguo(): Promise<HomeCard[]> {
   const r = await fetch('/api/ai-manju/hongguo?v=3');
   if (!r.ok) return [];
   const d: {
@@ -83,14 +82,33 @@ async function loadHongguo(
       items: { seriesId: string; title: string; cover: string; heat: string }[];
     }[];
   } = await r.json();
-  const list = d.lists?.find((l) => l.key === listKey);
+  const list = d.lists?.find((l) => l.key === 'real');
   return (list?.items ?? []).slice(0, HOME_ROW_LIMIT).map((it) => ({
     key: `hongguo-${it.seriesId}`,
     title: it.title,
     poster: it.cover,
     note: it.heat ? `${it.heat}热度` : '',
-    href: toHref?.(it.title),
   }));
+}
+
+/** AI 漫剧追踪频道的本周热门（伺服器算好前 20），点了直接在 AI 漫剧页播 */
+async function loadAiManjuWeekHot(): Promise<HomeCard[]> {
+  const r = await fetch('/api/ai-manju/week-hot');
+  if (!r.ok) return [];
+  const d: { items?: WeekHotItem[] } = await r.json();
+  return (d.items ?? []).slice(0, HOME_ROW_LIMIT).map((it) => ({
+    key: `ai-${it.key}`,
+    title: it.title,
+    poster: it.thumbnail,
+    note: [formatViews(it.views), it.count > 1 ? `本周${it.count}集` : '']
+      .filter(Boolean)
+      .join(' · '),
+    href: it.href,
+  }));
+}
+
+function formatViews(n: number): string {
+  return n >= 10000 ? `${(n / 10000).toFixed(1)}万次观看` : `${n}次观看`;
 }
 
 const HOME_ROWS: HomeRowDef[] = [
@@ -123,7 +141,7 @@ const HOME_ROWS: HomeRowDef[] = [
     key: 'duanju',
     title: '热门短剧',
     more: '/browse?category=duanju',
-    load: () => loadHongguo('real'),
+    load: loadHongguo,
   },
   {
     key: 'anime3d',
@@ -135,9 +153,7 @@ const HOME_ROWS: HomeRowDef[] = [
     key: 'ai-manju',
     title: '热门AI漫剧',
     more: '/ai-manju',
-    // AI 漫剧在 YouTube 上，带剧名去 AI 漫剧页找
-    load: () =>
-      loadHongguo('ai', (title) => `/ai-manju?q=${encodeURIComponent(title)}`),
+    load: loadAiManjuWeekHot,
   },
 ];
 
