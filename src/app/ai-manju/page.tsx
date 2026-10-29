@@ -324,6 +324,11 @@ function AiManjuClient() {
         )
       );
   }, []);
+  // 从首页「热门 AI 漫剧」点过来时，网址带 ?q=剧名，直接找这部剧
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) searchTitle(q);
+  }, [searchTitle]);
 
   // 频道筛选列是否展开。预设展开，让所有追踪的频道都看得到
   const [chipsOpen, setChipsOpen] = useState(true);
