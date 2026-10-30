@@ -9,6 +9,7 @@ import {
   getAllPlayRecords,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+import { useGeneralSources } from '@/lib/use-general-sources';
 
 import ScrollableRow from '@/components/ScrollableRow';
 import VideoCard from '@/components/VideoCard';
@@ -27,20 +28,7 @@ export default function ContinueWatching({
     (PlayRecord & { key: string })[]
   >([]);
   const [loading, setLoading] = useState(true);
-  /** 一般片源的 key；还没拿到就不列，免得彩虹频道的片先闪过首页 */
-  const [generalKeys, setGeneralKeys] = useState<Set<string> | null>(null);
-  const [keysLoading, setKeysLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/playrecords/general-sources')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((keys: string[]) => setGeneralKeys(new Set(keys)))
-      .catch((error) => console.error('获取片源分类失败:', error))
-      .finally(() => setKeysLoading(false));
-  }, []);
+  const { keys: generalKeys, loading: keysLoading } = useGeneralSources();
 
   const playRecords = useMemo(
     () =>

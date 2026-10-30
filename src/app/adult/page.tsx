@@ -21,13 +21,14 @@ import { SearchResult } from '@/lib/types';
 
 import ActressesPanel from '@/components/ActressesPanel';
 import ContinueWatching from '@/components/ContinueWatching';
+import FavoritesSection from '@/components/FavoritesSection';
 import PageLayout from '@/components/PageLayout';
 import SourceRankStrip, { type RankItem } from '@/components/SourceRankStrip';
 import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
 import VideoCard from '@/components/VideoCard';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
-type Tab = 'browse' | 'search' | 'actresses' | 'picks';
+type Tab = 'browse' | 'search' | 'actresses' | 'picks' | 'favorites';
 
 const SESSION_KEY = 'adult_unlocked';
 /** 各片源一列的榜單，一開始顯示幾個片源 */
@@ -370,6 +371,7 @@ function AdultClient() {
               { key: 'search', label: '搜索' },
               { key: 'actresses', label: '演員' },
               { key: 'picks', label: '精選影片' },
+              { key: 'favorites', label: '收藏夾' },
             ] as { key: Tab; label: string }[]
           ).map((t) => (
             <button
@@ -659,6 +661,9 @@ function AdultClient() {
         {tab === 'actresses' && (
           <ActressesPanel onSearch={(name) => handleSearch(name)} />
         )}
+
+        {/* ── 收藏夾 tab ── */}
+        {tab === 'favorites' && unlocked && <FavoritesSection adult />}
 
         {/* ── 精選影片 tab ── */}
         {tab === 'picks' && (
