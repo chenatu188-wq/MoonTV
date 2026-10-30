@@ -390,6 +390,15 @@ export async function getAvailableApiSites(): Promise<ApiSite[]> {
   }));
 }
 
+// 播放記錄分區用：一般片源的 key（含停用的）。不在這裡面的都當彩虹頻道的片，
+// 🔞 源每週清查會移除死源，寧可把認不出來的記錄收進彩虹頻道，也不要露在首頁
+export async function getGeneralSourceKeys(): Promise<string[]> {
+  const config = await getConfig();
+  return config.SourceConfig.filter(
+    (s) => !isAdultGroup(s.group) && !isExplicitAdultApi(s.api)
+  ).map((s) => s.key);
+}
+
 // detail API / 彩虹頻道用：所有非停用的源（含 🔞）
 export async function getAllSources(): Promise<ApiSite[]> {
   const config = await getConfig();

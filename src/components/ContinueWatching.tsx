@@ -1,11 +1,11 @@
 /* eslint-disable no-console */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { PlayRecord } from '@/lib/db.client';
 import {
-  clearAllPlayRecords,
+  deletePlayRecord,
   getAllPlayRecords,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
@@ -15,13 +15,43 @@ import VideoCard from '@/components/VideoCard';
 
 interface ContinueWatchingProps {
   className?: string;
+  /** true 只列彩虹频道的片，false 只列一般片：两边的记录互不出现 */
+  adult?: boolean;
 }
 
-export default function ContinueWatching({ className }: ContinueWatchingProps) {
-  const [playRecords, setPlayRecords] = useState<
+export default function ContinueWatching({
+  className,
+  adult = false,
+}: ContinueWatchingProps) {
+  const [records, setPlayRecords] = useState<
     (PlayRecord & { key: string })[]
   >([]);
   const [loading, setLoading] = useState(true);
+  /** 一般片源的 key；还没拿到就不列，免得彩虹频道的片先闪过首页 */
+  const [generalKeys, setGeneralKeys] = useState<Set<string> | null>(null);
+  const [keysLoading, setKeysLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/playrecords/general-sources')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((keys: string[]) => setGeneralKeys(new Set(keys)))
+      .catch((error) => console.error('获取片源分类失败:', error))
+      .finally(() => setKeysLoading(false));
+  }, []);
+
+  const playRecords = useMemo(
+    () =>
+      generalKeys
+        ? records.filter(
+            (r) => generalKeys.has(r.key.split('+')[0]) !== adult
+          )
+        : [],
+    [records, generalKeys, adult]
+  );
+  const isLoading = loading || keysLoading;
 
   // 处理播放记录数据更新的函数
   const updatePlayRecords = (allRecords: Record<string, PlayRecord>) => {
@@ -69,7 +99,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
   }, []);
 
   // 如果没有播放记录，则不渲染组件
-  if (!loading && playRecords.length === 0) {
+  if (!isLoading && playRecords.length === 0) {
     return null;
   }
 
@@ -91,12 +121,15 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
         <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
           继续观看
         </h2>
-        {!loading && playRecords.length > 0 && (
+        {!isLoading && playRecords.length > 0 && (
           <button
             className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
             onClick={async () => {
-              await clearAllPlayRecords();
-              setPlayRecords([]);
+              // 只清这一区的；一笔一笔来，同时删会读到同一份旧资料互相盖掉
+              for (const record of playRecords) {
+                const { source, id } = parseKey(record.key);
+                await deletePlayRecord(source, id);
+              }
             }}
           >
             清空
@@ -104,7 +137,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
         )}
       </div>
       <ScrollableRow>
-        {loading
+        {isLoading
           ? // 加载状态显示灰色占位数据
             Array.from({ length: 6 }).map((_, index) => (
               <div
@@ -138,6 +171,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                     currentEpisode={record.index}
                     query={record.search_title}
                     from='playrecord'
+                    adultSearch={adult}
                     onDelete={() =>
                       setPlayRecords((prev) =>
                         prev.filter((r) => r.key !== record.key)

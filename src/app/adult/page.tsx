@@ -20,6 +20,7 @@ import { takeOverClick } from '@/lib/link-click';
 import { SearchResult } from '@/lib/types';
 
 import ActressesPanel from '@/components/ActressesPanel';
+import ContinueWatching from '@/components/ContinueWatching';
 import PageLayout from '@/components/PageLayout';
 import SourceRankStrip, { type RankItem } from '@/components/SourceRankStrip';
 import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
@@ -391,6 +392,8 @@ function AdultClient() {
         {/* ── Browse tab ── */}
         {tab === 'browse' && (
           <>
+            {unlocked && <ContinueWatching adult />}
+
             {/* Region tabs */}
             <div className='flex flex-wrap gap-2'>
               {REGIONS.filter(
