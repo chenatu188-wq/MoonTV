@@ -471,8 +471,8 @@ function FacebookClient() {
               </button>
             </div>
             {playing.mp4 && !useEmbed ? (
+              // 不加 key：同一个 <video> 换片，全萤幕才不会跳掉
               <video
-                key={playing.id}
                 src={playing.mp4}
                 poster={playing.thumbnail}
                 controls
