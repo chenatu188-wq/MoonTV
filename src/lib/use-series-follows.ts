@@ -207,6 +207,9 @@ export function useSeriesFollows() {
           latest: null,
           checkedAt: 0,
           addedAt: Date.now(),
+          // 在播放器按的，正在看
+          watchedAt: Date.now(),
+          done: false,
         },
         ...list,
       ]);
@@ -239,6 +242,8 @@ export function useSeriesFollows() {
               // 刚在红果查过，不用马上再查
               checkedAt: now,
               addedAt: now - fresh.length,
+              watchedAt: 0,
+              done: false,
               hg: {
                 id: e.hg.seriesId,
                 cover: e.hg.cover,
@@ -256,6 +261,8 @@ export function useSeriesFollows() {
               checkedAt: 0,
               // 照贴上的顺序排
               addedAt: now - fresh.length,
+              watchedAt: 0,
+              done: false,
             };
         const key = followKey(f);
         if (have.has(key)) continue;
@@ -297,9 +304,56 @@ export function useSeriesFollows() {
     [update]
   );
 
+  /** 开始看了（在这里播了这部剧的某一集，或另开红果） */
+  const watched = useCallback(
+    (key: string) => {
+      if (ref.current.some((f) => followKey(f) === key && !f.watchedAt))
+        update((list) =>
+          list.map((f) =>
+            followKey(f) === key ? { ...f, watchedAt: Date.now() } : f
+          )
+        );
+    },
+    [update]
+  );
+
+  /** 播了某一支：片名认得出是哪部追的剧，就算开始看了 */
+  const watchedVideo = useCallback(
+    (name: string, channelId: string | null) => {
+      for (const f of ref.current)
+        if (
+          !f.hg &&
+          f.name === name &&
+          (!f.channelId || !channelId || f.channelId === channelId)
+        )
+          watched(followKey(f));
+    },
+    [watched]
+  );
+
+  /** 按「看完了」／「还没看完」 */
+  const setDone = useCallback(
+    (key: string, done: boolean) =>
+      update((list) =>
+        list.map((f) =>
+          followKey(f) !== key
+            ? f
+            : {
+                ...(done ? markSeen(f) : f),
+                done,
+                watchedAt: f.watchedAt || Date.now(),
+              }
+        )
+      ),
+    [update]
+  );
+
   return {
     follows,
     checking,
+    watched,
+    watchedVideo,
+    setDone,
     isFollowed,
     follow,
     followMany,

@@ -1,18 +1,69 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import {
   type SeriesEpisode,
   type SeriesFollow,
+  type WatchStatus,
   episodeLabel,
   followKey,
   newCount,
   sortFollows,
+  WATCH_STATUS_LABEL,
+  watchStatus,
 } from '@/lib/ai-manju-series-follow';
 import { takeOverClick } from '@/lib/link-click';
 import { aiManjuHref } from '@/lib/video-links';
 
 import HScroll from '@/components/HScroll';
+
+const FILTER_KEY = 'moontv_ai_manju_series_filter';
+const FILTERS: (WatchStatus | 'all')[] = ['all', 'watching', 'unwatched', 'done'];
+
+const STATUS_BADGE: Record<WatchStatus, string> = {
+  watching: 'bg-blue-600',
+  unwatched: 'bg-gray-500',
+  done: 'bg-green-600',
+};
+
+/** 卡片左下角的看过没；按钮切「看完了」 */
+function StatusRow({
+  follow,
+  onDone,
+}: {
+  follow: SeriesFollow;
+  onDone: (key: string, done: boolean) => void;
+}) {
+  const done = watchStatus(follow) === 'done';
+  return (
+    <button
+      onClick={() => onDone(followKey(follow), !done)}
+      className={`rounded-full px-2 py-0.5 ${
+        done
+          ? 'bg-green-600 text-white hover:bg-green-500'
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+      }`}
+      title={done ? '改回还没看完' : '标成看完了，排到最后面'}
+      data-series-done
+    >
+      {done ? '✓ 看完了' : '看完了'}
+    </button>
+  );
+}
+
+function StatusBadge({ follow }: { follow: SeriesFollow }) {
+  const st = watchStatus(follow);
+  return (
+    <span
+      className={`absolute bottom-1 left-1 rounded px-1 py-0.5 text-[10px] text-white ${STATUS_BADGE[st]}`}
+      data-series-status={st}
+    >
+      {WATCH_STATUS_LABEL[st]}
+    </span>
+  );
+}
 
 /**
  * 「追剧」：在播放器按「🔔 追这部剧」的剧。出了新集就标红色的「新」，
@@ -25,6 +76,7 @@ export default function AiManjuSeriesStrip({
   onAll,
   onHongguo,
   onRemove,
+  onDone,
 }: {
   follows: SeriesFollow[];
   /** 正在检查的那部（followKey） */
@@ -34,10 +86,33 @@ export default function AiManjuSeriesStrip({
   /** 红果的剧：点了另开红果官网（电脑播放页、手机剧集页） */
   onHongguo: (follow: SeriesFollow) => void;
   onRemove: (key: string) => void;
+  onDone: (key: string, done: boolean) => void;
 }) {
+  const [filter, setFilter] = useState<WatchStatus | 'all'>('all');
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(FILTER_KEY) as WatchStatus | 'all' | null;
+      if (v && FILTERS.includes(v)) setFilter(v);
+    } catch {
+      // 读不到就看全部
+    }
+  }, []);
+  const choose = (v: WatchStatus | 'all') => {
+    setFilter(v);
+    try {
+      localStorage.setItem(FILTER_KEY, v);
+    } catch {
+      // 无痕模式就只记这一次
+    }
+  };
+
   if (follows.length === 0) return null;
-  const list = sortFollows(follows);
-  const fresh = list.filter((f) => newCount(f) > 0).length;
+  const sorted = sortFollows(follows);
+  const fresh = sorted.filter((f) => newCount(f) > 0).length;
+  const count = (st: WatchStatus) =>
+    sorted.filter((f) => watchStatus(f) === st).length;
+  const list =
+    filter === 'all' ? sorted : sorted.filter((f) => watchStatus(f) === filter);
 
   return (
     <div className='mb-6' data-series-follows>
@@ -54,7 +129,29 @@ export default function AiManjuSeriesStrip({
           出了新集会标「新」· 每次打开这页自动检查（同一部半小时查一次）· 红果的剧点了另开红果官网（部分要登入红果） · 只存在这台装置
         </span>
       </div>
-      <HScroll resetKey={`series:${list.length}`} arrowTop='2.75rem'>
+      <div className='mb-2 flex flex-wrap gap-2' data-series-filters>
+        {FILTERS.map((v) => (
+          <button
+            key={v}
+            onClick={() => choose(v)}
+            className={`rounded-full px-3 py-0.5 text-xs ${
+              filter === v
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
+            data-series-filter={v}
+          >
+            {v === 'all' ? '全部' : WATCH_STATUS_LABEL[v]}（
+            {v === 'all' ? sorted.length : count(v)}）
+          </button>
+        ))}
+      </div>
+      {list.length === 0 && (
+        <div className='py-4 text-sm text-gray-500 dark:text-gray-400'>
+          这一类没有剧
+        </div>
+      )}
+      <HScroll resetKey={`series:${filter}:${list.length}`} arrowTop='2.75rem'>
         {list.map((f) => {
           const key = followKey(f);
           const ep = f.latest;
@@ -88,6 +185,7 @@ export default function AiManjuSeriesStrip({
                     <span className='absolute bottom-1 right-1 rounded bg-red-600 px-1 py-0.5 text-[10px] text-white'>
                       {checking === key ? '检查中…' : '红果'}
                     </span>
+                    <StatusBadge follow={f} />
                   </div>
                   <div className='mt-1 line-clamp-1 text-xs font-bold text-gray-900 dark:text-gray-100'>
                     {f.name}
@@ -96,7 +194,7 @@ export default function AiManjuSeriesStrip({
                     红果 · 共 {hg.total} 集 ↗
                   </div>
                 </button>
-                <div className='mt-1 flex gap-2 text-xs'>
+                <div className='mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 whitespace-nowrap text-xs'>
                   <button
                     onClick={() => onAll(f)}
                     className='rounded-full bg-gray-100 px-2 py-0.5 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -104,6 +202,7 @@ export default function AiManjuSeriesStrip({
                   >
                     YouTube 找
                   </button>
+                  <StatusRow follow={f} onDone={onDone} />
                   <button
                     onClick={() => {
                       if (confirm(`不再追「${f.name}」？`)) onRemove(key);
@@ -148,6 +247,7 @@ export default function AiManjuSeriesStrip({
                       {checking === key ? '检查中…' : '还没找到集数'}
                     </span>
                   )}
+                  <StatusBadge follow={f} />
                 </div>
                 <div className='mt-1 line-clamp-1 text-xs font-bold text-gray-900 dark:text-gray-100'>
                   {f.name}
@@ -160,13 +260,14 @@ export default function AiManjuSeriesStrip({
                     : f.channel}
                 </div>
               </a>
-              <div className='mt-1 flex gap-2 text-xs'>
+              <div className='mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 whitespace-nowrap text-xs'>
                 <button
                   onClick={() => onAll(f)}
                   className='rounded-full bg-gray-100 px-2 py-0.5 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                 >
                   全集
                 </button>
+                <StatusRow follow={f} onDone={onDone} />
                 <button
                   onClick={() => {
                     if (confirm(`不再追「${f.name}」？`)) onRemove(key);

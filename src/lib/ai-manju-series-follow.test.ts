@@ -12,6 +12,7 @@ import {
   pickHongguo,
   sanitizeSeriesFollows,
   sortFollows,
+  watchStatus,
 } from '@/lib/ai-manju-series-follow';
 
 const hit = (
@@ -39,6 +40,8 @@ const base: SeriesFollow = {
   latest: null,
   checkedAt: 0,
   addedAt: 1,
+  watchedAt: 0,
+  done: false,
 };
 
 describe('latestOf', () => {
@@ -103,6 +106,32 @@ describe('sanitizeSeriesFollows / sortFollows', () => {
     const a = { ...base, name: 'A', addedAt: 5 };
     const b = { ...base, name: 'B', addedAt: 1, newIds: ['bxxxxxxxxxx'] };
     expect(sortFollows([a, b]).map((f) => f.name)).toEqual(['B', 'A']);
+  });
+
+  it('看到一半 → 还没看 → 看完了，有新集的仍排最前', () => {
+    const list = [
+      { ...base, name: '看完', addedAt: 9, watchedAt: 1, done: true },
+      { ...base, name: '没看', addedAt: 8 },
+      { ...base, name: '一半', addedAt: 1, watchedAt: 1 },
+      { ...base, name: '看完又出新集', addedAt: 0, done: true, newIds: ['nxxxxxxxxxx'] },
+    ];
+    expect(sortFollows(list).map((f) => f.name)).toEqual([
+      '看完又出新集',
+      '一半',
+      '没看',
+      '看完',
+    ]);
+    expect(list.map(watchStatus)).toEqual(['done', 'unwatched', 'watching', 'watching']);
+  });
+
+  it('旧资料：播放器追的算看过，网友推荐的算还没看', () => {
+    const [mine, rec, hg] = sanitizeSeriesFollows([
+      JSON.parse(JSON.stringify({ ...base, watchedAt: undefined, done: undefined, addedAt: 5 })),
+      JSON.parse(JSON.stringify({ ...base, name: '推荐的剧', channel: '网友推荐', watchedAt: undefined, addedAt: 5 })),
+      JSON.parse(JSON.stringify({ ...base, name: '红果的剧', channel: '红果', watchedAt: undefined, addedAt: 5 })),
+    ]);
+    expect([mine.watchedAt, rec.watchedAt, hg.watchedAt]).toEqual([5, 0, 0]);
+    expect(mine.done).toBe(false);
   });
 
   it('episodeLabel', () => {
