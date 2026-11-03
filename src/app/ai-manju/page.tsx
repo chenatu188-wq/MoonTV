@@ -809,6 +809,11 @@ function AiManjuClient() {
   }, [allVideos, trackTab, priorityKeys]);
   const playingChannelId = playing ? channelIdOf(playing.channelUrl) : null;
   const playingSeries = playing ? seriesNameOf(playing.title) : null;
+  // 播了追的剧的某一集，这部剧就从「还没看」变「看到一半」
+  const watchedVideo = series.watchedVideo;
+  useEffect(() => {
+    if (playingSeries) watchedVideo(playingSeries, playingChannelId);
+  }, [playingSeries, playingChannelId, watchedVideo]);
 
   // ── 播完自动接下一集：同频道、同片名、集数下一个 ──
   const [autoNext, setAutoNext] = useState(true);
@@ -1295,6 +1300,7 @@ function AiManjuClient() {
           onHongguo={(f) => {
             if (!f.hg) return;
             series.seenAll(followKey(f));
+            series.watched(followKey(f));
             // 另开红果官网：很多剧要登入红果才能看，嵌在站内没办法登入。
             // 电脑开播放页；手机网页不能播，开剧集页（上面有「打开 App」）
             const mobile = /Mobi|Android|iPhone|iPod/i.test(
@@ -1309,6 +1315,7 @@ function AiManjuClient() {
             );
           }}
           onRemove={series.unfollow}
+          onDone={series.setDone}
         />
 
         {/* 我的收藏：卡片按 ☆ 或播放器按标记的影片 */}

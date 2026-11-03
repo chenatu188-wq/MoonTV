@@ -37,6 +37,10 @@ export interface SeriesFollow {
    * 集数变多就算有新集。seen 是上次看过时的总集数。
    */
   hg?: HongguoInfo;
+  /** 第一次在这里播这部剧（或另开红果）的时间，0 = 还没看过 */
+  watchedAt: number;
+  /** 按了「看完了」 */
+  done: boolean;
 }
 
 export interface HongguoInfo {
@@ -140,6 +144,13 @@ export function sanitizeSeriesFollow(raw: unknown): SeriesFollow | null {
     latest: sanitizeEpisode(r.latest),
     checkedAt: time(r.checkedAt),
     addedAt: time(r.addedAt),
+    // 以前没记看过没：在播放器按「追这部剧」的是边看边追的，算看过；网友推荐贴上来的算还没看
+    watchedAt:
+      time(r.watchedAt) ||
+      ('watchedAt' in r || ['网友推荐', '红果'].includes(text(r.channel, 80))
+        ? 0
+        : time(r.addedAt)),
+    done: r.done === true,
   };
 }
 
@@ -210,11 +221,32 @@ export function markSeen(f: SeriesFollow, videoIds?: string[]): SeriesFollow {
   };
 }
 
-/** 有新集的排前面，其次最近追的在前 */
+/** 看到一半／还没看／看完了。看完了又出新集就回到看到一半 */
+export type WatchStatus = 'watching' | 'unwatched' | 'done';
+
+export function watchStatus(f: SeriesFollow): WatchStatus {
+  if (f.done && newCount(f) === 0) return 'done';
+  return f.watchedAt || f.done ? 'watching' : 'unwatched';
+}
+
+export const WATCH_STATUS_LABEL: Record<WatchStatus, string> = {
+  watching: '看到一半',
+  unwatched: '还没看',
+  done: '看完了',
+};
+
+const STATUS_ORDER: Record<WatchStatus, number> = {
+  watching: 0,
+  unwatched: 1,
+  done: 2,
+};
+
+/** 有新集的排前面，再来看到一半 → 还没看 → 看完了，同一类最近追的在前 */
 export function sortFollows(list: SeriesFollow[]): SeriesFollow[] {
   return [...list].sort(
     (a, b) =>
       Number(newCount(b) > 0) - Number(newCount(a) > 0) ||
+      STATUS_ORDER[watchStatus(a)] - STATUS_ORDER[watchStatus(b)] ||
       b.addedAt - a.addedAt
   );
 }
