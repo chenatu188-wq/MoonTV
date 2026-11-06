@@ -31,6 +31,7 @@ import { ensureVideoSource } from '@/lib/video-source';
 
 import EpisodeSelector from '@/components/EpisodeSelector';
 import PageLayout from '@/components/PageLayout';
+import StarLaterButton from '@/components/StarLaterButton';
 import VideoCard from '@/components/VideoCard';
 
 // 相關影片（同片商）資料結構，跟 /api/browse 回傳一致
@@ -2385,6 +2386,19 @@ function PlayPageClient() {
                         <div className='absolute top-1 left-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded'>
                           播放中
                         </div>
+                      )}
+                      {isAdultSearch && (
+                        <StarLaterButton
+                          source={r.source}
+                          id={r.id}
+                          title={r.title}
+                          poster={r.poster}
+                          sourceName={r.source_name}
+                          year={r.year}
+                          episodes={r.episodes.length || 1}
+                          query={searchParams.get('stitle') || r.title}
+                          className='right-1 top-1'
+                        />
                       )}
                       {r.episodes.length > 1 && (
                         <div className='absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded'>
