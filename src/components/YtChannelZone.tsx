@@ -488,6 +488,22 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
     }
   };
   const [minimized, setMinimized] = useState(false);
+  // 网页全屏：播放器铺满整个浏览器视窗。跟 YouTube 自己的全萤幕不同，
+  // 按上一支／下一支换片时不会跳回小视窗
+  const [webFull, setWebFull] = useState(false);
+  useEffect(() => {
+    if (!webFull) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setWebFull(false);
+    };
+    window.addEventListener('keydown', onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [webFull]);
   const [favorites, setFavorites] = useState<FavoriteSong[]>([]);
   const [query, setQuery] = useState('');
   const [searchResult, setSearchResult] = useState<{
@@ -794,14 +810,23 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
         {/* 播放器：贴在下方，可以边听边逛 */}
         {queue && current && (
           <div
-            className={`fixed bottom-16 left-2 right-2 z-40 rounded-xl bg-gray-900/95 p-2 text-white shadow-2xl md:bottom-4 md:left-auto md:right-4 ${
-              Z.bigPlayer ? 'md:w-[min(760px,calc(100vw-2rem))]' : 'md:w-[420px]'
-            }`}
+            className={
+              webFull
+                ? 'fixed inset-0 z-[700] flex flex-col bg-black p-2 text-white'
+                : `fixed bottom-16 left-2 right-2 z-40 rounded-xl bg-gray-900/95 p-2 text-white shadow-2xl md:bottom-4 md:left-auto md:right-4 ${
+                    Z.bigPlayer
+                      ? 'md:w-[min(760px,calc(100vw-2rem))]'
+                      : 'md:w-[420px]'
+                  }`
+            }
             data-music-player
+            data-web-full={webFull ? 'on' : 'off'}
           >
             <div
               className={
-                minimized
+                webFull
+                  ? 'min-h-0 flex-1 overflow-hidden rounded-lg bg-black'
+                  : minimized
                   ? 'hidden'
                   : 'aspect-video overflow-hidden rounded-lg bg-black'
               }
@@ -868,14 +893,34 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
                 🔁
               </button>
               <button
-                onClick={() => setMinimized((m) => !m)}
-                className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20'
-                title={minimized ? '显示画面' : '只留控制列'}
+                onClick={() => {
+                  setMinimized(false);
+                  setWebFull((v) => !v);
+                }}
+                className={`rounded-full px-3 py-1.5 text-sm ${
+                  webFull
+                    ? 'bg-green-600 hover:bg-green-500'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+                title={webFull ? '退出网页全屏（Esc）' : '网页全屏'}
+                data-web-full-toggle
               >
-                {minimized ? '▢' : '—'}
+                {webFull ? '⤡' : '⤢'}
               </button>
+              {!webFull && (
+                <button
+                  onClick={() => setMinimized((m) => !m)}
+                  className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20'
+                  title={minimized ? '显示画面' : '只留控制列'}
+                >
+                  {minimized ? '▢' : '—'}
+                </button>
+              )}
               <button
-                onClick={() => setQueue(null)}
+                onClick={() => {
+                  setWebFull(false);
+                  setQueue(null);
+                }}
                 className='rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20'
                 title='关闭'
               >
