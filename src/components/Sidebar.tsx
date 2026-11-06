@@ -10,6 +10,7 @@ import {
   Home,
   Menu,
   Music2,
+  PersonStanding,
   Search,
   Sparkles,
   Star,
@@ -187,6 +188,11 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       icon: Headphones,
       label: '音乐',
       href: '/music',
+    },
+    {
+      icon: PersonStanding,
+      label: '舞蹈',
+      href: '/dance',
     },
     {
       icon: Flame,
