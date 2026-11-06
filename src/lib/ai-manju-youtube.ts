@@ -19,6 +19,8 @@ const CONTEXT = {
 /** 频道「影片」分页 / 频道内搜寻 的固定参数 */
 const PARAMS_VIDEOS = 'EgZ2aWRlb3PyBgQKAjoA';
 const PARAMS_SEARCH = 'EgZzZWFyY2jyBgQKAloA';
+/** 频道「Shorts」分页：只发短影片的频道没有「影片」分页 */
+const PARAMS_SHORTS = 'EgZzaG9ydHPyBgUKA5oBAA==';
 /** YouTube 搜寻的筛选条件：只要影片、本周上传 */
 export const SP_VIDEO_THIS_WEEK = 'EgQIAxAB';
 
@@ -203,6 +205,32 @@ export function parseVideos(
   return out;
 }
 
+/** 频道 Shorts 分页的卡片（shortsLockupViewModel），频道资讯同样靠 fallback */
+export function parseShorts(
+  data: any,
+  fallback: { channel: string; channelId: string }
+): YtVideo[] {
+  const out: YtVideo[] = [];
+  const seen = new Set<string>();
+  for (const v of collect(data, 'shortsLockupViewModel')) {
+    const id = v.onTap?.innertubeCommand?.reelWatchEndpoint?.videoId;
+    if (typeof id !== 'string' || !/^[\w-]{11}$/.test(id) || seen.has(id))
+      continue;
+    seen.add(id);
+    const m = v.overlayMetadata;
+    out.push(
+      make(
+        id,
+        m?.primaryText?.content ?? '',
+        [m?.secondaryText?.content ?? ''],
+        fallback.channel,
+        fallback.channelId
+      )
+    );
+  }
+  return out;
+}
+
 /** 下一页的 token；没有下一页回 null */
 function nextToken(data: any): string | null {
   const items = collect(data, 'continuationItemRenderer');
@@ -232,7 +260,22 @@ export async function listSource(
   );
   const fallback =
     type === 'channel' ? { channel: name, channelId: id } : undefined;
-  return { videos: parseVideos(data, fallback), next: nextToken(data) };
+  const videos = parseVideos(data, fallback);
+  if (fallback) {
+    // 翻页时分不出是哪个分页，影片卡片和 Shorts 卡片都认
+    if (continuation)
+      return {
+        videos: videos.length ? videos : parseShorts(data, fallback),
+        next: nextToken(data),
+      };
+    // 只发 Shorts 的频道没有「影片」分页，改抓 Shorts 分页
+    if (!videos.length) {
+      const shorts = await browse({ browseId: id, params: PARAMS_SHORTS });
+      const list = parseShorts(shorts, fallback);
+      if (list.length) return { videos: list, next: nextToken(shorts) };
+    }
+  }
+  return { videos, next: nextToken(data) };
 }
 
 /**
