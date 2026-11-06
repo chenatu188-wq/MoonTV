@@ -24,6 +24,7 @@ import ContinueWatching from '@/components/ContinueWatching';
 import FavoritesSection from '@/components/FavoritesSection';
 import PageLayout from '@/components/PageLayout';
 import SourceRankStrip, { type RankItem } from '@/components/SourceRankStrip';
+import StarLaterButton from '@/components/StarLaterButton';
 import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
 import VideoCard from '@/components/VideoCard';
 
@@ -427,6 +428,7 @@ function AdultClient() {
               enabled={unlocked}
               latestHint='各來源最近上架的，點了直接播'
               playHref={playRank}
+              starLater
             />
 
             {/* 各片源一列：最新上架／熱門。捲到才載入，先顯示幾個再按鈕展開 */}
@@ -438,6 +440,7 @@ function AdultClient() {
                 enabled={unlocked}
                 latestHint='最近上架的，點了直接播'
                 showSource={false}
+                starLater
                 lazy
                 onMore={() => {
                   setActiveSource(src.key);
@@ -559,6 +562,7 @@ function AdultClient() {
                       items={[toSearchResult(item)]}
                       query={item.title}
                       adultSearch
+                      starLater
                     />
                   </div>
                 ))}
@@ -701,6 +705,14 @@ function AdultClient() {
                               className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
                             />
                           )}
+                          <StarLaterButton
+                            source={p.source}
+                            id={p.id}
+                            title={p.title}
+                            poster={p.poster}
+                            sourceName={p.sourceName}
+                            query={p.title}
+                          />
                         </div>
                         <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
                           {p.title}

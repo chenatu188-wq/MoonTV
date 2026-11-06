@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { takeOverClick } from '@/lib/link-click';
 
 import HScroll from '@/components/HScroll';
+import StarLaterButton from '@/components/StarLaterButton';
 
 export interface RankItem {
   id: string;
@@ -46,6 +47,7 @@ export default function SourceRankStrip({
   portrait = false,
   onMore,
   playHref,
+  starLater = false,
 }: {
   title: string;
   query: string;
@@ -62,6 +64,8 @@ export default function SourceRankStrip({
   onMore?: () => void;
   /** 每格要连到的播放页；做成真的连结，右键才能「在新分页开启」 */
   playHref: (it: RankItem) => string;
+  /** 每格右上角放 ☆，收藏起来日后再看 */
+  starLater?: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<'latest' | 'hot'>('latest');
@@ -185,6 +189,18 @@ export default function SourceRankStrip({
               <span className='absolute left-0 top-0 rounded-br-lg bg-rose-500 px-1.5 py-0.5 text-xs font-bold text-white'>
                 {tab === 'latest' ? shortDate(it.added) : i + 1}
               </span>
+              {starLater && (
+                <StarLaterButton
+                  source={it.source}
+                  id={it.id}
+                  title={it.title}
+                  poster={it.poster}
+                  sourceName={it.source_name}
+                  year={it.year}
+                  query={it.title}
+                  className='right-1 top-1'
+                />
+              )}
             </div>
             <div className='mt-1 line-clamp-2 text-xs font-medium text-gray-900 dark:text-gray-100'>
               {it.title}

@@ -103,6 +103,7 @@ export default function FavoritesSection({
               {...item}
               from='favorite'
               adultSearch={adult}
+              starLater={adult}
               type={item.episodes > 1 ? 'tv' : ''}
             />
           </div>

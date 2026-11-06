@@ -18,6 +18,7 @@ import { SearchResult } from '@/lib/types';
 import { processImageUrl } from '@/lib/utils';
 
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
+import StarLaterButton from '@/components/StarLaterButton';
 
 interface VideoCardProps {
   id?: string;
@@ -354,18 +355,16 @@ export default function VideoCard({
         )}
 
         {starLater && actualSource && actualId && (
-          <button
-            type='button'
-            onClick={handleToggleFavorite}
-            className={`absolute left-1.5 top-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none shadow-md transition-transform hover:scale-110 ${
-              favorited ? 'bg-amber-400 text-white' : 'bg-black/50 text-white'
-            }`}
-            title={favorited ? '已收藏 · 再按取消' : '收藏起来，日后再看'}
-            aria-label={favorited ? '取消收藏' : '收藏起来日后再看'}
-            data-star-later={favorited ? 'on' : 'off'}
-          >
-            {favorited ? '★' : '☆'}
-          </button>
+          <StarLaterButton
+            source={actualSource}
+            id={actualId}
+            title={actualTitle}
+            poster={actualPoster}
+            sourceName={source_name || aggregateData?.first.source_name || ''}
+            year={actualYear || ''}
+            episodes={actualEpisodes ?? 1}
+            query={actualQuery}
+          />
         )}
 
         {/* 徽章 */}

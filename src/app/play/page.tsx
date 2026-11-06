@@ -2549,6 +2549,7 @@ function PlayPageClient() {
                       <VideoCard
                         from='search'
                         adultSearch={isAdultSearch}
+                        starLater={isAdultSearch}
                         reloadOnNavigate
                         items={[
                           {
