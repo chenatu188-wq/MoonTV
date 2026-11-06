@@ -38,6 +38,8 @@ interface VideoCardProps {
   type?: string;
   adultSearch?: boolean;
   reloadOnNavigate?: boolean;
+  /** 左上角一直显示的 ☆：按了收藏起来日后再看（彩虹频道的片会进彩虹频道的收藏夹） */
+  starLater?: boolean;
 }
 
 export default function VideoCard({
@@ -59,6 +61,7 @@ export default function VideoCard({
   type = '',
   adultSearch = false,
   reloadOnNavigate = false,
+  starLater = false,
 }: VideoCardProps) {
   const router = useRouter();
   const [favorited, setFavorited] = useState(false);
@@ -160,11 +163,12 @@ export default function VideoCard({
           // 如果未收藏，添加收藏
           await saveFavorite(actualSource, actualId, {
             title: actualTitle,
-            source_name: source_name || '',
+            source_name: source_name || aggregateData?.first.source_name || '',
             year: actualYear || '',
             cover: actualPoster,
             total_episodes: actualEpisodes ?? 1,
             save_time: Date.now(),
+            search_title: actualQuery || undefined,
           });
           setFavorited(true);
         }
@@ -178,9 +182,11 @@ export default function VideoCard({
       actualId,
       actualTitle,
       source_name,
+      aggregateData,
       actualYear,
       actualPoster,
       actualEpisodes,
+      actualQuery,
       favorited,
     ]
   );
@@ -345,6 +351,21 @@ export default function VideoCard({
               />
             )}
           </div>
+        )}
+
+        {starLater && actualSource && actualId && (
+          <button
+            type='button'
+            onClick={handleToggleFavorite}
+            className={`absolute left-1.5 top-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none shadow-md transition-transform hover:scale-110 ${
+              favorited ? 'bg-amber-400 text-white' : 'bg-black/50 text-white'
+            }`}
+            title={favorited ? '已收藏 · 再按取消' : '收藏起来，日后再看'}
+            aria-label={favorited ? '取消收藏' : '收藏起来日后再看'}
+            data-star-later={favorited ? 'on' : 'off'}
+          >
+            {favorited ? '★' : '☆'}
+          </button>
         )}
 
         {/* 徽章 */}

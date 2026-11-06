@@ -649,6 +649,7 @@ function AdultClient() {
                       items={[item]}
                       query={lastSearchedQuery}
                       adultSearch
+                      starLater
                     />
                   </div>
                 ))}
