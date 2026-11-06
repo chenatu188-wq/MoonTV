@@ -28,11 +28,16 @@ export async function GET(request: NextRequest) {
     let hit = cache.get(key);
     if (!hit || Date.now() - hit.at > FRESH_MS) {
       hit = { page: await listSource(type, id, name, cont), at: Date.now() };
-      cache.set(key, hit);
+      if (hit.page.videos.length || hit.page.next === null) cache.set(key, hit);
       if (cache.size > 500) cache.delete(cache.keys().next().value as string);
     }
+    // 空的结果不要让浏览器留着：可能只是一时抓不到
     return NextResponse.json(hit.page, {
-      headers: { 'Cache-Control': 'private, max-age=600' },
+      headers: {
+        'Cache-Control': hit.page.videos.length
+          ? 'private, max-age=600'
+          : 'no-store',
+      },
     });
   } catch (e) {
     return NextResponse.json(
