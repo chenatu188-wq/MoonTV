@@ -89,7 +89,8 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 const listUrl = (f: Follow, cont?: string | null) =>
-  `/api/ai-manju/channel?type=${f.type}&id=${f.id}&name=${encodeURIComponent(
+  // v=2：让浏览器里修好 Shorts 前留下的「没有影片」快取失效
+  `/api/ai-manju/channel?v=2&type=${f.type}&id=${f.id}&name=${encodeURIComponent(
     f.name
   )}${cont ? `&cont=${encodeURIComponent(cont)}` : ''}`;
 
