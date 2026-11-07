@@ -66,10 +66,14 @@ export default function DouyinDramas() {
     index: number;
   } | null>(null);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  // 网页全屏：播放器铺满整个浏览器视窗，换上一集／下一集也维持
+  const [webFull, setWebFull] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/tiktok-manju/douyin', { cache: 'no-store' });
+      const res = await fetch('/api/tiktok-manju/douyin', {
+        cache: 'no-store',
+      });
       if (res.ok) setState(await res.json());
     } catch {
       // 下一轮再试
@@ -150,6 +154,7 @@ export default function DouyinDramas() {
     douyinHref(d.id, d.episodes[i].id);
 
   const close = useCallback(() => {
+    setWebFull(false);
     setPlaying(null);
     clearVideoParams(['dy', 'ep']);
   }, []);
@@ -168,10 +173,15 @@ export default function DouyinDramas() {
   }, [state, deepLinked]);
   useEffect(() => {
     if (!playing) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    // 网页全屏时按 Esc 先退出全屏，再按一次才关掉播放器
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (webFull) setWebFull(false);
+      else close();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [playing, close]);
+  }, [playing, close, webFull]);
 
   const adding = state?.pending.filter((p) => p.op === 'add') ?? [];
   const episode: DouyinEpisode | undefined =
@@ -224,7 +234,8 @@ export default function DouyinDramas() {
 
       {adding.length > 0 && (
         <p className='mb-2 text-xs text-gray-500 dark:text-gray-400'>
-          处理中 {adding.length} 部：站长的 Mac 抓完集数后会自动出现（Mac 关机时要等开机）
+          处理中 {adding.length} 部：站长的 Mac 抓完集数后会自动出现（Mac
+          关机时要等开机）
         </p>
       )}
 
@@ -345,8 +356,14 @@ export default function DouyinDramas() {
       {/* 播放器：抖音官方嵌入播放器 */}
       {playing && episode && (
         <div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4'
-          onClick={close}
+          className={
+            webFull
+              ? 'fixed inset-0 z-[700] flex items-center justify-center bg-black p-2'
+              : 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4'
+          }
+          onClick={webFull ? undefined : close}
+          data-douyin-modal
+          data-web-full={webFull ? 'on' : 'off'}
         >
           <div
             className='flex max-h-full flex-col'
@@ -354,10 +371,19 @@ export default function DouyinDramas() {
           >
             <div
               className='relative overflow-hidden rounded-lg bg-black'
-              style={{
-                height: 'min(78vh, calc((100vw - 2rem) * 16 / 9))',
-                aspectRatio: '9 / 16',
-              }}
+              // 网页全屏时整个视窗都给播放器：抖音的嵌入播放器只有画框比较宽时才会把影片放大，
+              // 直式画框会缩成中间一小块
+              style={
+                webFull
+                  ? {
+                      width: 'calc(100vw - 1rem)',
+                      height: 'calc(100dvh - 4.5rem)',
+                    }
+                  : {
+                      height: 'min(78vh, calc((100vw - 2rem) * 16 / 9))',
+                      aspectRatio: '9 / 16',
+                    }
+              }
             >
               <iframe
                 key={episode.id}
@@ -374,7 +400,7 @@ export default function DouyinDramas() {
               <span className='min-w-0 truncate text-sm text-gray-300'>
                 {playing.drama.name} · 第 {episode.ep || playing.index + 1} 集
               </span>
-              <div className='flex gap-2'>
+              <div className='flex flex-wrap justify-center gap-2'>
                 <button
                   disabled={playing.index === 0}
                   onClick={() => play(playing.drama, playing.index - 1)}
@@ -389,6 +415,18 @@ export default function DouyinDramas() {
                   data-douyin-next
                 >
                   下一集
+                </button>
+                <button
+                  onClick={() => setWebFull((v) => !v)}
+                  className={
+                    webFull
+                      ? `${button} !bg-green-600 hover:!bg-green-500`
+                      : button
+                  }
+                  title={webFull ? '退出网页全屏（Esc）' : '网页全屏'}
+                  data-web-full-toggle
+                >
+                  {webFull ? '⤡ 退出全屏' : '⤢ 网页全屏'}
                 </button>
                 <button onClick={close} className={button}>
                   关闭
