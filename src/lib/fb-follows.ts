@@ -13,7 +13,7 @@ export interface PendingFbFollow {
   at: number;
 }
 
-export const MAX_FB_PAGES = 30;
+export const MAX_FB_PAGES = 60;
 export const MAX_FB_PENDING = 30;
 export const FB_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 
