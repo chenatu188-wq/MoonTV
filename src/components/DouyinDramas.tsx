@@ -445,7 +445,11 @@ export default function DouyinDramas() {
               }
             >
               <iframe
-                key={episode.id}
+                // 抖音播放器只在载入那一刻依画框大小决定版面，之后放大不会重排：
+                // 切换网页全屏（或转向）时要重新载入，才会换成大的横式版面
+                key={`${episode.id}:${
+                  webFull ? (fullFrame ? 'full' : 'wait') : 'win'
+                }:${turned ? 'r' : ''}`}
                 src={douyinEmbedUrl(episode.id)}
                 title={episode.title || playing.drama.name}
                 allow='autoplay; fullscreen; encrypted-media; picture-in-picture'
