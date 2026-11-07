@@ -23,6 +23,7 @@ import ActressesPanel from '@/components/ActressesPanel';
 import ContinueWatching from '@/components/ContinueWatching';
 import FavoritesSection from '@/components/FavoritesSection';
 import PageLayout from '@/components/PageLayout';
+import { SiteMigrateButton } from '@/components/SiteMigrate';
 import SourceRankStrip, { type RankItem } from '@/components/SourceRankStrip';
 import StarLaterButton from '@/components/StarLaterButton';
 import StudioQuickSearchPanel from '@/components/StudioQuickSearchPanel';
@@ -360,6 +361,7 @@ function AdultClient() {
     <PageLayout>
       {!unlocked && <PasswordGate onUnlock={() => setUnlocked(true)} />}
       <div className='p-4 space-y-4'>
+        {unlocked && <SiteMigrateButton />}
         <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
           🌈 彩虹頻道
         </h1>
