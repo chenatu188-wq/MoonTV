@@ -149,6 +149,8 @@ function TiktokManjuClient() {
   const [data, setData] = useState<TiktokManjuData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState<TiktokManjuVideo | null>(null);
+  // 网页全屏：播放器铺满整个浏览器视窗（换下一支也维持）
+  const [webFull, setWebFull] = useState(false);
   const [query, setQuery] = useState('');
   // 搜寻框贴上 TikTok 连结时，查出是哪支影片／哪个帐号
   const [linkResult, setLinkResult] = useState<{
@@ -338,14 +340,25 @@ function TiktokManjuClient() {
   useEffect(() => {
     const v = tiktokFromSearch(window.location.search);
     if (v)
-      setPlaying({ ...v, published: 0, thumbnail: '', views: null, duration: null });
+      setPlaying({
+        ...v,
+        published: 0,
+        thumbnail: '',
+        views: null,
+        duration: null,
+      });
   }, []);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    // 网页全屏时按 Esc 先退出全屏，再按一次才关掉播放器
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (webFull) setWebFull(false);
+      else close();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [close]);
+  }, [close, webFull]);
 
   // 搜寻只搜已经抓下来的影片（每个帐号最新 60 支），可用空白隔开多个关键字
   // 搜寻框贴的是 TikTok 连结时不当关键字，改成「找这支影片／这个帐号」
@@ -895,8 +908,14 @@ function TiktokManjuClient() {
       {/* 播放器：TikTok 官方嵌入播放器，直式影片 */}
       {playing && (
         <div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4'
-          onClick={close}
+          className={
+            webFull
+              ? 'fixed inset-0 z-[700] flex items-center justify-center bg-black p-2'
+              : 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4'
+          }
+          onClick={webFull ? undefined : close}
+          data-tiktok-player
+          data-web-full={webFull ? 'on' : 'off'}
         >
           <div
             className='flex max-h-full flex-col'
@@ -905,7 +924,9 @@ function TiktokManjuClient() {
             <div
               className='relative overflow-hidden rounded-lg bg-black'
               style={{
-                height: 'min(78vh, calc((100vw - 2rem) * 16 / 9))',
+                height: webFull
+                  ? 'min(calc(100dvh - 4.5rem), calc((100vw - 1rem) * 16 / 9))'
+                  : 'min(78vh, calc((100vw - 2rem) * 16 / 9))',
                 aspectRatio: '9 / 16',
               }}
             >
@@ -918,7 +939,7 @@ function TiktokManjuClient() {
                 className='h-full w-full'
               />
             </div>
-            <div className='mt-3 flex items-center justify-between gap-3'>
+            <div className='mt-3 flex flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:justify-between sm:gap-3'>
               <a
                 href={`https://www.tiktok.com/@${playing.handle}/video/${playing.id}`}
                 target='_blank'
@@ -981,7 +1002,22 @@ function TiktokManjuClient() {
                 </button>
               )}
               <button
-                onClick={close}
+                onClick={() => setWebFull((v) => !v)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm text-white ${
+                  webFull
+                    ? 'bg-green-600 hover:bg-green-500'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+                title={webFull ? '退出网页全屏（Esc）' : '网页全屏'}
+                data-web-full-toggle
+              >
+                {webFull ? '⤡ 退出全屏' : '⤢ 网页全屏'}
+              </button>
+              <button
+                onClick={() => {
+                  setWebFull(false);
+                  close();
+                }}
                 className='shrink-0 rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20'
               >
                 关闭
