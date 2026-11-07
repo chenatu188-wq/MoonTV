@@ -49,6 +49,9 @@ function saveProgress(p: Record<string, number>) {
 const formatDuration = (s: number) =>
   s > 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '';
 
+/** 抖音嵌入播放器画框至少这么宽才会用横式版面 */
+const DY_WIDE = 768;
+
 const button =
   'shrink-0 rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 disabled:opacity-40';
 
@@ -68,6 +71,43 @@ export default function DouyinDramas() {
   const [progress, setProgress] = useState<Record<string, number>>({});
   // 网页全屏：播放器铺满整个浏览器视窗，换上一集／下一集也维持
   const [webFull, setWebFull] = useState(false);
+  // 手机直拿时，网页全屏把画面转成横向：抖音嵌入播放器在直式画框里宽度固定（约 324px），
+  // 横式影片只会是中间一小条；转成横向画框它才会把影片放大
+  const [portrait, setPortrait] = useState(false);
+  const [rotate, setRotate] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: portrait)');
+    const update = () => setPortrait(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const turned = webFull && portrait && rotate;
+  // 视窗大小：网页全屏时算播放器画框要多大
+  const [view, setView] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    if (!webFull) return;
+    const update = () =>
+      setView({ w: window.innerWidth, h: window.innerHeight });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [webFull]);
+  // 抖音播放器的版面：影片宽 × 9/16，底下再加约 50px 的进度条。
+  // 画框比这个扁的话影片会被裁、进度条被挤出去，所以照这个比例算刚好塞得下的大小
+  const fullFrame = (() => {
+    const W = (turned ? view.h : view.w) - 16;
+    const H = (turned ? view.w : view.h) - 16 - 56; // 56：下面那排按钮
+    if (W <= 0 || H <= 0) return undefined;
+    const BAR = 50;
+    const w = Math.min(W, ((H - BAR) * 16) / 9);
+    const width = Math.round(w);
+    const height = Math.round(Math.min(H, (w * 9) / 16 + BAR));
+    // 画框不到 768px 宽时播放器会换成直式版面（影片缩成一小条）：
+    // 这时让播放器以 768px 宽排版，再整个等比例缩小塞进画框
+    const scale = width < DY_WIDE ? width / DY_WIDE : 1;
+    return { width, height, scale };
+  })();
 
   const refresh = useCallback(async () => {
     try {
@@ -366,19 +406,38 @@ export default function DouyinDramas() {
           data-web-full={webFull ? 'on' : 'off'}
         >
           <div
-            className='flex max-h-full flex-col'
+            className={
+              webFull
+                ? 'flex h-full w-full flex-col'
+                : 'flex max-h-full flex-col'
+            }
+            style={
+              turned
+                ? {
+                    position: 'fixed',
+                    top: 0,
+                    left: '100vw',
+                    width: '100dvh',
+                    height: '100vw',
+                    padding: '0.5rem',
+                    transform: 'rotate(90deg)',
+                    transformOrigin: 'top left',
+                  }
+                : undefined
+            }
             onClick={(e) => e.stopPropagation()}
+            data-douyin-turned={turned ? 'on' : 'off'}
           >
             <div
-              className='relative overflow-hidden rounded-lg bg-black'
-              // 网页全屏时整个视窗都给播放器：抖音的嵌入播放器只有画框比较宽时才会把影片放大，
-              // 直式画框会缩成中间一小块
-              style={
+              className={
                 webFull
-                  ? {
-                      width: 'calc(100vw - 1rem)',
-                      height: 'calc(100dvh - 4.5rem)',
-                    }
+                  ? 'relative mx-auto my-auto overflow-hidden rounded-lg bg-black'
+                  : 'relative overflow-hidden rounded-lg bg-black'
+              }
+              // 网页全屏时整个视窗都给播放器：抖音的嵌入播放器只有画框比较宽时才会把影片放大
+              style={
+                webFull && fullFrame
+                  ? { width: fullFrame.width, height: fullFrame.height }
                   : {
                       height: 'min(78vh, calc((100vw - 2rem) * 16 / 9))',
                       aspectRatio: '9 / 16',
@@ -392,7 +451,21 @@ export default function DouyinDramas() {
                 allow='autoplay; fullscreen; encrypted-media; picture-in-picture'
                 allowFullScreen
                 referrerPolicy='no-referrer'
-                className='h-full w-full'
+                className={
+                  webFull && fullFrame && fullFrame.scale < 1
+                    ? 'absolute left-0 top-0'
+                    : 'h-full w-full'
+                }
+                style={
+                  webFull && fullFrame && fullFrame.scale < 1
+                    ? {
+                        width: DY_WIDE,
+                        height: fullFrame.height / fullFrame.scale,
+                        transform: `scale(${fullFrame.scale})`,
+                        transformOrigin: 'top left',
+                      }
+                    : undefined
+                }
                 data-douyin-player
               />
             </div>
@@ -428,6 +501,16 @@ export default function DouyinDramas() {
                 >
                   {webFull ? '⤡ 退出全屏' : '⤢ 网页全屏'}
                 </button>
+                {webFull && portrait && (
+                  <button
+                    onClick={() => setRotate((v) => !v)}
+                    className={button}
+                    title='横式影片用横向，直式影片用直向'
+                    data-douyin-rotate
+                  >
+                    {rotate ? '↺ 直向' : '↻ 横向'}
+                  </button>
+                )}
                 <button onClick={close} className={button}>
                   关闭
                 </button>
