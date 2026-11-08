@@ -6,6 +6,7 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 
 import { getConfig } from '@/lib/config';
 
+import { SiteMigrateReceiver } from '../components/SiteMigrate';
 import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
 
@@ -116,6 +117,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SiteProvider siteName={siteName} announcement={announcement}>
+            <SiteMigrateReceiver />
             {children}
           </SiteProvider>
         </ThemeProvider>
