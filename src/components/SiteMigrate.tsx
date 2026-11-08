@@ -32,37 +32,45 @@ export function SiteMigrateReceiver() {
     }
 
     if (!location.hash.includes(MIGRATE_HASH)) return;
-    const payload = decodePayload(location.hash);
+    const hash = location.hash;
     // 不管成不成功，先把一大串资料从网址拿掉
     history.replaceState(null, '', location.pathname + location.search);
-    if (!payload) {
-      setMsg('搬家資料讀不出來（網址可能被截斷），請回舊站再按一次');
-      return;
-    }
-    const n = { favorites: Object.keys(payload.favorites).length };
-    if (!n.favorites) {
-      setMsg('舊站沒有收藏可以搬');
-      return;
-    }
-    if (
-      !window.confirm(
-        `要把舊站的收藏夾（${n.favorites} 部）搬進這裡嗎？\n（這裡原本有的不會被蓋掉）`
-      )
-    )
-      return;
-    try {
-      const r = mergePayload(readLocal(), payload);
-      writeLocal(r);
-      const text = `搬家完成：收藏夾新增 ${r.added.favorites} 部`;
-      try {
-        sessionStorage.setItem(MIGRATE_DONE_KEY, text);
-      } catch {
-        // ignore
+    decodePayload(hash).then((payload) => {
+      if (!payload) {
+        setMsg('搬家資料讀不出來（網址可能被截斷），請回舊站再按一次');
+        return;
       }
-      location.reload();
-    } catch {
-      setMsg('寫入失敗：瀏覽器儲存空間滿了或被封鎖（無痕模式？）');
-    }
+      const n = {
+        favorites: Object.keys(payload.favorites).length,
+        aiMarks: payload.aiMarks.length,
+        seriesFollows: payload.seriesFollows.length,
+        aiPins: payload.aiPins.length,
+      };
+      if (!n.favorites && !n.aiMarks && !n.seriesFollows && !n.aiPins) {
+        setMsg('舊站沒有資料可以搬');
+        return;
+      }
+      if (
+        !window.confirm(
+          `要把舊站的資料搬進這裡嗎？\n收藏夾 ${n.favorites} 部\nAI 漫劇：我的收藏 ${n.aiMarks} 支、追劇 ${n.seriesFollows} 部、置頂頻道 ${n.aiPins} 個\n（這裡原本有的不會被蓋掉）`
+        )
+      )
+        return;
+      try {
+        const r = mergePayload(readLocal(), payload);
+        writeLocal(r);
+        const a = r.added;
+        const text = `搬家完成：收藏夾新增 ${a.favorites} 部；AI 漫劇我的收藏新增 ${a.aiMarks} 支、追劇新增 ${a.seriesFollows} 部、置頂新增 ${a.aiPins} 個`;
+        try {
+          sessionStorage.setItem(MIGRATE_DONE_KEY, text);
+        } catch {
+          // ignore
+        }
+        location.reload();
+      } catch {
+        setMsg('寫入失敗：瀏覽器儲存空間滿了或被封鎖（無痕模式？）');
+      }
+    });
   }, []);
 
   if (!msg) return null;
@@ -87,10 +95,10 @@ export function SiteMigrateButton({ path = '/' }: { path?: string }) {
   useEffect(() => setTarget(newSiteOrigin(location.host)), []);
   if (!target) return null;
 
-  const go = () => {
-    const payload = readLocal();
-    const url = `${target}${path}#${MIGRATE_HASH}${encodePayload(payload)}`;
-    window.open(url, '_blank', 'noopener');
+  // 压缩是非同步的，之后再 window.open 会被当成弹窗挡掉，所以直接在这一页换过去
+  const go = async () => {
+    const data = await encodePayload(readLocal());
+    location.href = `${target}${path}#${MIGRATE_HASH}${data}`;
   };
 
   return (
@@ -109,7 +117,7 @@ export function SiteMigrateButton({ path = '/' }: { path?: string }) {
         data-migrate-go
         className='rounded-lg bg-amber-600 px-3 py-1.5 font-medium text-white hover:bg-amber-700'
       >
-        把收藏夾搬過去
+        把收藏夾和 AI 漫劇紀錄搬過去
       </button>
     </div>
   );
