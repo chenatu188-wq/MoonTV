@@ -1463,13 +1463,6 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     id: 'UCFV8ClUjvNyt4GPVq1g7Dpw',
   },
   {
-    key: 'UC8uJ06m16IGaSbl7yxOT-Ig',
-    name: 'onitas toon',
-    type: 'channel',
-    group: 'mine',
-    id: 'UC8uJ06m16IGaSbl7yxOT-Ig',
-  },
-  {
     key: 'UC-MaqjZG6-WHp6gaXC87RxA',
     name: 'Mee Drame',
     type: 'channel',
