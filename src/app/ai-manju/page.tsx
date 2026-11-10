@@ -21,6 +21,7 @@ import {
 import { dailyChannelKeys, taipeiDay } from '@/lib/ai-manju-rotation';
 import { episodeOf, seasonOf, seriesNameOf } from '@/lib/ai-manju-series';
 import { type SearchHit, followKey } from '@/lib/ai-manju-series-follow';
+import { pickRandom, SHUFFLE_RECENT, swipeOf } from '@/lib/ai-manju-shuffle';
 import { AI_MANJU_SOURCES, MAX_CUSTOM_SOURCES } from '@/lib/ai-manju-sources';
 import type { HongguoSearchItem } from '@/lib/hongguo-search';
 import { takeOverClick } from '@/lib/link-click';
@@ -894,6 +895,83 @@ function AiManjuClient() {
     return () => window.removeEventListener('message', onMessage);
   }, [autoNext, upNext, playNext]);
 
+  // ── 像滑抖音：往上滑随机换一部，往下滑回上一部 ──
+  // 候选：目前清单 + 全部来源的最新影片；最近滑过的先跳过
+  const shuffleHistory = useRef<AiManjuVideo[]>([]);
+  const swipeTo = useCallback(
+    (dir: 'next' | 'prev') => {
+      if (!playing) return;
+      let target: AiManjuVideo | null = null;
+      if (dir === 'prev') {
+        target = shuffleHistory.current.pop() ?? null;
+      } else {
+        const pool = new Map<string, AiManjuVideo>();
+        for (const v of [...videos, ...(data?.videos ?? [])])
+          if (!pool.has(v.videoId)) pool.set(v.videoId, v);
+        target = pickRandom(
+          Array.from(pool.values()),
+          shuffleHistory.current.map((v) => v.videoId),
+          playing.videoId
+        );
+        if (target) {
+          shuffleHistory.current.push(playing);
+          if (shuffleHistory.current.length > SHUFFLE_RECENT)
+            shuffleHistory.current.shift();
+        }
+      }
+      if (!target) return;
+      if (marksRef.current.some((m) => m.id === playing.videoId)) {
+        saveMark(playing);
+      }
+      setPlaying(target);
+    },
+    [playing, videos, data, saveMark]
+  );
+  // 影片本身是 YouTube iframe，手指在影片上滑会被它吃掉；在影片上下的空白、标题列滑才算
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const justSwiped = useRef(false);
+  const onSwipeStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const onSwipeEnd = (e: React.TouchEvent) => {
+    const s = touchStart.current;
+    const t = e.changedTouches[0];
+    touchStart.current = null;
+    if (!s || !t) return;
+    const dir = swipeOf(t.clientX - s.x, t.clientY - s.y);
+    if (!dir) return;
+    // 滑完不要被当成「点背景关闭」
+    justSwiped.current = true;
+    setTimeout(() => (justSwiped.current = false), 400);
+    swipeTo(dir);
+  };
+  // 电脑：滚轮往下 / 方向键 ↓ 换一部，↑ 回上一部
+  const lastWheel = useRef(0);
+  const onSwipeWheel = (e: React.WheelEvent) => {
+    if (Math.abs(e.deltaY) < 30) return;
+    // 播放器区块比视窗高（可以卷动）时滚轮留给卷动
+    const box = e.currentTarget;
+    if (box.scrollHeight > box.clientHeight + 4) return;
+    const now = Date.now();
+    if (now - lastWheel.current < 800) return;
+    lastWheel.current = now;
+    swipeTo(e.deltaY > 0 ? 'next' : 'prev');
+  };
+  useEffect(() => {
+    if (!playing) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && /INPUT|TEXTAREA|SELECT/.test(el.tagName)) return;
+      if (e.key === 'ArrowDown') swipeTo('next');
+      else if (e.key === 'ArrowUp') swipeTo('prev');
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [playing, swipeTo]);
+
   // 影片清单（含搜寻某部剧的标题列）：搜寻时放在红果榜下面，平常放在最底
   const listBlock = (
     <div id='ai-manju-list' className='scroll-mt-4'>
@@ -1562,7 +1640,11 @@ function AiManjuClient() {
         <div
           // 手机底下有导览列（约 4rem），播放器要让开，按钮才不会被盖住
           className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 pb-[calc(1rem+var(--nav))] [--nav:4rem] md:[--nav:0rem]'
-          onClick={close}
+          onClick={() => !justSwiped.current && close()}
+          onTouchStart={onSwipeStart}
+          onTouchEnd={onSwipeEnd}
+          onWheel={onSwipeWheel}
+          data-swipe-area
         >
           {/* 播放器大小放在影片上方一行（放左边直立在手机上会挡掉一整条） */}
           <div
@@ -1650,6 +1732,12 @@ function AiManjuClient() {
                       </button>
                     )}
                     <button
+                      onClick={() => swipeTo('next')}
+                      className='shrink-0 rounded-full bg-white/10 px-3 py-1 hover:bg-white/20'
+                    >
+                      🔀 换一部
+                    </button>
+                    <button
                       onClick={() => setWebFull(false)}
                       className='shrink-0 rounded-full bg-green-600 px-4 py-1 font-medium hover:bg-green-500'
                       data-web-full-exit
@@ -1682,6 +1770,14 @@ function AiManjuClient() {
                     data-web-full
                   >
                     ⛶ 网页全屏
+                  </button>
+                  <button
+                    onClick={() => swipeTo('next')}
+                    className='rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20'
+                    title='随机换一部（手机在影片上下空白处往上滑，电脑按 ↓ 或滚轮）'
+                    data-shuffle-next
+                  >
+                    🔀 换一部
                   </button>
                   {playingSeries && (
                     <>
