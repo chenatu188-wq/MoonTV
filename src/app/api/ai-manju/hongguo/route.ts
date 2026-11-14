@@ -152,21 +152,46 @@ function refreshNew(): Promise<void> {
   return newInflight;
 }
 
+/** 官网每页 20 部；前几名几乎天天一样，抓到第 50 名才看得出变化 */
+const RANK_PAGES = 3;
+const RANK_MAX = 50;
+
+async function fetchRankPage(path: string, page: number) {
+  try {
+    const res = await fetch(
+      `https://hongguoduanju.com${path}${page > 1 ? `?page=${page}` : ''}`,
+      {
+        headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
+        cache: 'no-store',
+      }
+    );
+    return res.ok ? parseRank(await res.text()) : [];
+  } catch {
+    return [];
+  }
+}
+
 async function load(): Promise<HongguoRankList[]> {
-  // 各榜分开抓：其中一个抓不到不影响其他榜
+  // 各榜分开抓：其中一个抓不到不影响其他榜；后面的页抓不到就只显示前面的
   const results = await Promise.all(
     LISTS.map(async (l) => {
-      try {
-        const res = await fetch(`https://hongguoduanju.com${l.path}`, {
-          headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
-          cache: 'no-store',
-        });
-        if (!res.ok) return null;
-        const items = parseRank(await res.text());
-        return items.length ? { key: l.key, name: l.name, items } : null;
-      } catch {
-        return null;
+      const pages = await Promise.all(
+        Array.from({ length: RANK_PAGES }, (_, i) =>
+          fetchRankPage(l.path, i + 1)
+        )
+      );
+      const seen = new Set<string>();
+      const items: HongguoRankItem[] = [];
+      for (const page of pages) {
+        // 第 1 页抓不到时名次会错位，宁可整个榜不显示
+        if (page === pages[0] && page.length === 0) return null;
+        for (const it of page) {
+          if (seen.has(it.seriesId) || items.length >= RANK_MAX) continue;
+          seen.add(it.seriesId);
+          items.push({ ...it, rank: items.length + 1 });
+        }
       }
+      return items.length ? { key: l.key, name: l.name, items } : null;
     })
   );
   const lists = results.filter((l): l is HongguoRankList => l !== null);
