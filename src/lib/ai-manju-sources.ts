@@ -1469,6 +1469,42 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     group: 'mine',
     id: 'UC-MaqjZG6-WHp6gaXC87RxA',
   },
+  // 2026-11-15 每週自動收進：使用者在網頁「管理追蹤」加的頻道（promote_ai.py）
+  {
+    key: 'UCvvdLHc2Rmpa5OtDCe_cIaw',
+    name: '滿滿劇場',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCvvdLHc2Rmpa5OtDCe_cIaw',
+  },
+  {
+    key: 'UCjAF-6l5mcGkFmJb0QyoKdQ',
+    name: '剑鸣动漫社',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCjAF-6l5mcGkFmJb0QyoKdQ',
+  },
+  {
+    key: 'UCxhcQY9CAB6gfqRMkv12V3Q',
+    name: '小黄鸭剧场',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCxhcQY9CAB6gfqRMkv12V3Q',
+  },
+  {
+    key: 'UCXVb9seZjQOaiVqTGH-V8qw',
+    name: 'A劇熱播榜. A Drama Picks',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCXVb9seZjQOaiVqTGH-V8qw',
+  },
+  {
+    key: 'UCFW-4C5wc1F2bpIsODn8xDw',
+    name: '小离渊',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCFW-4C5wc1F2bpIsODn8xDw',
+  },
 ];
 
 export function feedUrl(source: AiManjuSource): string {
