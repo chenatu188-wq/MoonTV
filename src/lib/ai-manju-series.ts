@@ -146,6 +146,16 @@ export function seriesNameOf(title: string): string | null {
     }
   }
 
+  // 「冒名权臣243~249」「冒名权臣  241-245集」「剧名 第21-25集」：剧名直接接集数范围
+  const range =
+    /^([\u4e00-\u9fffA-Za-z0-9]{2,24}?)\s*第?\s*\d{1,4}\s*[~～\-—]\s*\d{1,4}\s*[集话話]?(?!\d)/.exec(
+      stripLead(title)
+    );
+  if (range && cjkCount(range[1]) >= 2 && !TAG_RE.test(range[1])) {
+    const name = stripSeason(range[1]);
+    if (name.length >= 2) return name;
+  }
+
   // 「剧名｜说明」「剧名（第1-300集）」「剧名「一句话简介」」：开头一小段就是剧名
   const lead = stripLead(title);
   const cut = lead.search(/[|｜丨「『（(]/);

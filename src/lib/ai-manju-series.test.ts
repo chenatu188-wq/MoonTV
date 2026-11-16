@@ -24,6 +24,11 @@ describe('seriesNameOf', () => {
 
   it('认「剧名第N集」', () => {
     expect(seriesNameOf('雲上雙花第8集')).toBe('雲上雙花');
+    expect(seriesNameOf('冒名权臣243~249')).toBe('冒名权臣');
+    expect(seriesNameOf('冒名權臣243~249')).toBe('冒名權臣');
+    expect(seriesNameOf('冒名权臣  241-245集')).toBe('冒名权臣');
+    expect(seriesNameOf('冒名权臣   346-350 集')).toBe('冒名权臣');
+    expect(seriesNameOf('冒名权臣  321-335集   超前看')).toBe('冒名权臣');
     expect(seriesNameOf('云上双花 第十二集 #ai短剧')).toBe('云上双花');
     expect(seriesNameOf('【归墟】新ai短剧 第一季 - 第17集 神药')).toBe('归墟');
     expect(seriesNameOf('兽世小人类 EP109 #动漫')).toBe('兽世小人类');
