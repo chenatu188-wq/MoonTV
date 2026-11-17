@@ -29,8 +29,9 @@ export function musicEmbedUrl(
     rel: '0',
     playsinline: '1',
   });
-  // playlist 参数：第一首（网址路径那首）播完后依序播这些
-  const playlist = (loop ? [first, ...rest] : rest).slice(0, MAX_QUEUE);
+  // playlist 参数一定要把第一首放进去：YouTube 现在只照 playlist 播，
+  // 不再先播网址路径那首，漏掉的话一开播就是下一首
+  const playlist = [first, ...rest].slice(0, MAX_QUEUE);
   if (playlist.length) q.set('playlist', playlist.join(','));
   if (loop) q.set('loop', '1');
   return `https://www.youtube.com/embed/${first}?${q}`;
