@@ -4,16 +4,16 @@ const ids = ['aaaaaaaaaaa', 'bbbbbbbbbbb', 'ccccccccccc', 'ddddddddddd'];
 const q = (url: string) => new URL(url).searchParams;
 
 describe('musicEmbedUrl', () => {
-  it('从点的那首开始，后面的交给 playlist 接着播', () => {
+  it('从点的那首开始；playlist 第一首就是点的那首（YouTube 只照 playlist 播）', () => {
     const url = musicEmbedUrl(ids, 1, false);
     expect(url.startsWith('https://www.youtube.com/embed/bbbbbbbbbbb?')).toBe(true);
-    expect(q(url).get('playlist')).toBe('ccccccccccc,ddddddddddd');
+    expect(q(url).get('playlist')).toBe('bbbbbbbbbbb,ccccccccccc,ddddddddddd');
     expect(q(url).get('enablejsapi')).toBe('1');
     expect(q(url).get('loop')).toBeNull();
   });
 
-  it('最后一首没有 playlist', () => {
-    expect(q(musicEmbedUrl(ids, 3, false)).get('playlist')).toBeNull();
+  it('点最后一首：playlist 只有它自己', () => {
+    expect(q(musicEmbedUrl(ids, 3, false)).get('playlist')).toBe('ddddddddddd');
   });
 
   it('循环：前面的歌接在后面，整份播完再从头', () => {
