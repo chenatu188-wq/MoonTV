@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
+import { ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
@@ -360,14 +361,32 @@ function AdultClient() {
   return (
     <PageLayout>
       {!unlocked && <PasswordGate onUnlock={() => setUnlocked(true)} />}
-      <div className='p-4 space-y-4'>
+      <div className='mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6'>
         {unlocked && <SiteMigrateButton />}
-        <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
-          🌈 彩虹頻道
-        </h1>
+        <div className='flex items-center justify-between gap-3'>
+          <div>
+            <h1 className='text-xl font-bold text-gray-800 dark:text-white'>
+              🌈 彩虹頻道
+            </h1>
+            <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+              最新、熱門與分類片單
+            </p>
+          </div>
+          {unlocked && (
+            <a
+              href='https://jable.tv/'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-300 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/30'
+            >
+              Jable 原站
+              <ExternalLink className='h-3.5 w-3.5' />
+            </a>
+          )}
+        </div>
 
         {/* Tab switcher */}
-        <div className='flex gap-2'>
+        <div className='flex gap-2 overflow-x-auto pb-1 scrollbar-hide'>
           {(
             [
               { key: 'browse', label: '瀏覽' },
@@ -383,7 +402,7 @@ function AdultClient() {
                 setTab(t.key);
                 window.scrollTo({ top: 0 });
               }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 tab === t.key
                   ? 'bg-rose-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-rose-100 dark:hover:bg-rose-900/30'
@@ -400,7 +419,7 @@ function AdultClient() {
             {unlocked && <ContinueWatching adult />}
 
             {/* Region tabs */}
-            <div className='flex flex-wrap gap-2'>
+            <div className='flex gap-2 overflow-x-auto pb-1 scrollbar-hide'>
               {REGIONS.filter(
                 (r) =>
                   r.key === 'all' || adultSources.some((s) => s.group === r.key)
@@ -412,7 +431,7 @@ function AdultClient() {
                     setFilterQuery('');
                     window.scrollTo({ top: 0 });
                   }}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                     activeRegion === r.key
                       ? 'bg-rose-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-rose-100 dark:hover:bg-rose-900/30'
@@ -464,7 +483,7 @@ function AdultClient() {
             <div ref={browseRef} className='scroll-mt-20' />
             {/* Source tabs */}
             {regionedSources.length > 0 && (
-              <div className='flex flex-wrap gap-2'>
+              <div className='flex gap-2 overflow-x-auto pb-1 scrollbar-hide'>
                 {regionedSources.map((s) => (
                   <button
                     key={s.key}
@@ -484,7 +503,7 @@ function AdultClient() {
             )}
 
             {/* Year filter */}
-            <div className='flex flex-wrap gap-2'>
+            <div className='flex gap-2 overflow-x-auto pb-1 scrollbar-hide'>
               <button
                 onClick={() => {
                   setActiveYear('');
@@ -556,7 +575,7 @@ function AdultClient() {
                 {filterQuery ? '無符合結果' : '暫無內容'}
               </div>
             ) : (
-              <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
+              <div className='grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
                 {filteredBrowse.map((item) => (
                   <div key={`${item.source}-${item.id}`} className='w-full'>
                     <VideoCard
@@ -565,6 +584,7 @@ function AdultClient() {
                       query={item.title}
                       adultSearch
                       starLater
+                      adultLayout
                     />
                   </div>
                 ))}
@@ -647,7 +667,7 @@ function AdultClient() {
                 無結果
               </div>
             ) : (
-              <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>
+              <div className='grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
                 {searchResults.map((item) => (
                   <div key={`${item.source}-${item.id}`} className='w-full'>
                     <VideoCard
@@ -656,6 +676,7 @@ function AdultClient() {
                       query={lastSearchedQuery}
                       adultSearch
                       starLater
+                      adultLayout
                     />
                   </div>
                 ))}
@@ -756,7 +777,9 @@ function AdultClient() {
                   setPasteMsg('');
                 }}
                 rows={4}
-                placeholder={'例如：\nSSIS-413 河北\nmidv108 小野六花\nFC2-PPV-1234567'}
+                placeholder={
+                  '例如：\nSSIS-413 河北\nmidv108 小野六花\nFC2-PPV-1234567'
+                }
                 className='w-full rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100'
                 data-code-paste-input
               />
@@ -772,7 +795,10 @@ function AdultClient() {
                     : '沒有找到番號'}
                 </button>
                 {pasteMsg && (
-                  <span className='text-sm text-green-600 dark:text-green-400' data-code-paste-msg>
+                  <span
+                    className='text-sm text-green-600 dark:text-green-400'
+                    data-code-paste-msg
+                  >
                     {pasteMsg}
                   </span>
                 )}
@@ -798,7 +824,8 @@ function AdultClient() {
                 <h2 className='mb-2 text-base font-bold text-gray-800 dark:text-white'>
                   我貼上的番號
                   <span className='ml-2 text-xs font-normal text-gray-500 dark:text-gray-400'>
-                    {codePicks.length} 部 · 點了用番號到各片源搜尋 · 只存在這台裝置
+                    {codePicks.length} 部 · 點了用番號到各片源搜尋 ·
+                    只存在這台裝置
                   </span>
                 </h2>
                 <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'>

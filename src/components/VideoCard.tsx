@@ -41,6 +41,7 @@ interface VideoCardProps {
   reloadOnNavigate?: boolean;
   /** 左上角一直显示的 ☆：按了收藏起来日后再看（彩虹频道的片会进彩虹频道的收藏夹） */
   starLater?: boolean;
+  adultLayout?: boolean;
 }
 
 export default function VideoCard({
@@ -63,6 +64,7 @@ export default function VideoCard({
   adultSearch = false,
   reloadOnNavigate = false,
   starLater = false,
+  adultLayout = false,
 }: VideoCardProps) {
   const router = useRouter();
   const [favorited, setFavorited] = useState(false);
@@ -108,6 +110,8 @@ export default function VideoCard({
   const actualTitle = aggregateData?.first.title ?? title;
   const actualPoster = aggregateData?.first.poster ?? poster;
   const actualSource = aggregateData?.first.source ?? source;
+  const actualSourceName =
+    source_name || aggregateData?.first.source_name || '';
   const actualId = aggregateData?.first.id ?? id;
   const actualDoubanId = String(
     aggregateData?.mostFrequentDoubanId ?? douban_id
@@ -299,19 +303,29 @@ export default function VideoCard({
   return (
     <a
       href={playUrl || undefined}
-      className='group relative block w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-[500]'
+      className={`group relative block w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:z-[500] ${
+        adultLayout ? 'hover:-translate-y-1' : 'hover:scale-[1.05]'
+      }`}
       onClick={handleClick}
     >
       {/* 海报容器 */}
-      <div className='relative aspect-[4/3] overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800'>
+      <div
+        className={`relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 ${
+          adultLayout ? 'aspect-video' : 'aspect-[4/3]'
+        }`}
+      >
         {/* 骨架屏 */}
-        {!isLoading && <ImagePlaceholder aspectRatio='aspect-[4/3]' />}
+        {!isLoading && (
+          <ImagePlaceholder
+            aspectRatio={adultLayout ? 'aspect-video' : 'aspect-[4/3]'}
+          />
+        )}
         {/* 图片 */}
         <Image
           src={processImageUrl(actualPoster)}
           alt={actualTitle}
           fill
-          className='object-contain'
+          className={adultLayout ? 'object-cover' : 'object-contain'}
           referrerPolicy='no-referrer'
           onLoadingComplete={() => setIsLoading(true)}
         />
@@ -360,7 +374,7 @@ export default function VideoCard({
             id={actualId}
             title={actualTitle}
             poster={actualPoster}
-            sourceName={source_name || aggregateData?.first.source_name || ''}
+            sourceName={actualSourceName}
             year={actualYear || ''}
             episodes={actualEpisodes ?? 1}
             query={actualQuery}
@@ -417,9 +431,13 @@ export default function VideoCard({
       )}
 
       {/* 标题与来源 */}
-      <div className='mt-2 text-center'>
+      <div className={`mt-2 ${adultLayout ? 'text-left' : 'text-center'}`}>
         <div className='relative'>
-          <span className='block text-sm font-semibold truncate text-gray-900 dark:text-gray-100 transition-colors duration-300 ease-in-out group-hover:text-green-600 dark:group-hover:text-green-400 peer'>
+          <span
+            className={`block text-sm font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-300 ease-in-out group-hover:text-rose-600 dark:group-hover:text-rose-400 peer ${
+              adultLayout ? 'line-clamp-2 min-h-10' : 'truncate'
+            }`}
+          >
             {actualTitle}
           </span>
           {/* 自定义 tooltip */}
@@ -428,11 +446,17 @@ export default function VideoCard({
             <div className='absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800'></div>
           </div>
         </div>
-        {config.showSourceName && source_name && (
+        {config.showSourceName && actualSourceName && !adultLayout && (
           <span className='block text-xs text-gray-500 dark:text-gray-400 mt-1'>
             <span className='inline-block border rounded px-2 py-0.5 border-gray-500/60 dark:border-gray-400/60 transition-all duration-300 ease-in-out group-hover:border-green-500/60 group-hover:text-green-600 dark:group-hover:text-green-400'>
-              {source_name}
+              {actualSourceName}
             </span>
+          </span>
+        )}
+        {adultLayout && actualSourceName && (
+          <span className='mt-1 block truncate text-xs text-gray-500 dark:text-gray-400'>
+            {actualSourceName}
+            {actualYear ? ` · ${actualYear}` : ''}
           </span>
         )}
       </div>
