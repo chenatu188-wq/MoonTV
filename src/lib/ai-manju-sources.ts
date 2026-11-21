@@ -1505,6 +1505,35 @@ export const AI_MANJU_SOURCES: AiManjuSource[] = [
     group: 'mine',
     id: 'UCFW-4C5wc1F2bpIsODn8xDw',
   },
+  // 2026-11-22 每週自動收進：使用者在網頁「管理追蹤」加的頻道（promote_ai.py）
+  {
+    key: 'UCc3gYrCuBdpHhTjJhfq1Vbw',
+    name: '一页漫剧',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCc3gYrCuBdpHhTjJhfq1Vbw',
+  },
+  {
+    key: 'UCR8kbE4RT723quTog78jRbg',
+    name: 'Mini Drama777',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCR8kbE4RT723quTog78jRbg',
+  },
+  {
+    key: 'UCEbXD2-o26-l4wBcF6vv2Gg',
+    name: '打脸剧场',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCEbXD2-o26-l4wBcF6vv2Gg',
+  },
+  {
+    key: 'UCYz8ms3GNw4lzFytkxV331A',
+    name: '劇爽影視',
+    type: 'channel',
+    group: 'mine',
+    id: 'UCYz8ms3GNw4lzFytkxV331A',
+  },
 ];
 
 export function feedUrl(source: AiManjuSource): string {
