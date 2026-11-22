@@ -34,6 +34,7 @@ import {
   clearVideoParams,
 } from '@/lib/video-links';
 import { resumeFrom } from '@/lib/watch-marks';
+import { youtubePasteOf } from '@/lib/youtube-paste';
 
 import AiManjuChannelTop from '@/components/AiManjuChannelTop';
 import AiManjuRecommendPaste from '@/components/AiManjuRecommendPaste';
@@ -526,6 +527,83 @@ function AiManjuClient() {
       setAdding(false);
     }
   }, [input, adding, addFollow]);
+
+  // ── 搜寻栏贴 YouTube 网址：影片直接播、频道直接追踪 ──
+  const [pasteMsg, setPasteMsg] = useState<{ ok: boolean; text: string } | null>(
+    null
+  );
+  const openPastedVideo = useCallback((videoId: string) => {
+    setPasteMsg(null);
+    setPlaying({
+      videoId,
+      title: '读取影片资料中…',
+      channel: '',
+      channelUrl: '',
+      published: '',
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      description: '',
+      views: null,
+      sourceKey: '',
+      sourceName: '',
+    });
+    // 标题与频道只是补资料，查不到照样能播（只是没有「追踪此频道」按钮）
+    fetch(`/api/ai-manju/video?v=${videoId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) =>
+        setPlaying((p) =>
+          p && p.videoId === videoId
+            ? {
+                ...p,
+                title: d?.title || 'YouTube 影片',
+                channel: d?.channel || '',
+                sourceName: d?.channel || '',
+                channelUrl: d?.channelId
+                  ? `https://www.youtube.com/channel/${d.channelId}`
+                  : '',
+                published: d?.published || '',
+                views: typeof d?.views === 'number' ? d.views : null,
+              }
+            : p
+        )
+      )
+      .catch(() =>
+        setPlaying((p) =>
+          p && p.videoId === videoId ? { ...p, title: 'YouTube 影片' } : p
+        )
+      );
+  }, []);
+  const followPasted = useCallback(
+    async (raw: string) => {
+      setPasteMsg({ ok: true, text: '正在查这个频道…' });
+      try {
+        const r = await fetch(`/api/ai-manju/resolve?q=${encodeURIComponent(raw)}`);
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+        const err = addFollow({ type: body.type, id: body.id, name: body.name });
+        if (err) throw new Error(err);
+        setQuery('');
+        setPasteMsg({
+          ok: true,
+          text: body.pending
+            ? `已追踪「${body.name}」，YouTube 暂时没回应，影片稍后才会出现`
+            : `已追踪「${body.name}」${
+                body.videoCount > 0 ? `，抓到 ${body.videoCount} 支影片` : ''
+              }`,
+        });
+      } catch (e) {
+        const msg = (e as Error).message;
+        setPasteMsg({
+          ok: false,
+          // 频道名称不一定等于 @帐号，打错最常见
+          text:
+            raw.startsWith('@') && msg.includes('404')
+              ? `找不到 ${raw} 这个帐号（频道名称不一定是 @帐号），改贴频道网址或它任一支影片的网址`
+              : msg,
+        });
+      }
+    },
+    [addFollow]
+  );
 
   // 打开播放器时锁背景滚动
   useEffect(() => {
@@ -1166,14 +1244,24 @@ function AiManjuClient() {
           onSubmit={(e) => {
             e.preventDefault();
             const q = query.trim();
-            if (q) searchTitle(q.slice(0, 80));
+            if (!q) return;
+            const paste = youtubePasteOf(q);
+            if (paste?.kind === 'video') {
+              setQuery('');
+              openPastedVideo(paste.videoId);
+            } else if (paste?.kind === 'channel') {
+              followPasted(paste.input);
+            } else {
+              setPasteMsg(null);
+              searchTitle(q.slice(0, 80));
+            }
           }}
         >
           <div className='relative min-w-0 flex-1'>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder='输入剧名，在 YouTube 找完整版（繁简皆可）'
+              placeholder='输入剧名找完整版，或贴 YouTube 影片／频道网址'
               className='w-full rounded-full border border-gray-300 bg-white py-2 pl-4 pr-10 text-sm text-gray-900 outline-none focus:border-green-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
             />
             {query && (
@@ -1183,6 +1271,7 @@ function AiManjuClient() {
                 onClick={() => {
                   setQuery('');
                   setSearch(null);
+                  setPasteMsg(null);
                 }}
                 className='absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 text-lg leading-none text-gray-500 hover:text-gray-900 dark:hover:text-white'
               >
@@ -1195,9 +1284,23 @@ function AiManjuClient() {
             disabled={!query.trim()}
             className='shrink-0 rounded-full bg-green-600 px-5 py-2 text-sm text-white hover:bg-green-500 disabled:opacity-50'
           >
-            搜寻
+            {youtubePasteOf(query)?.kind === 'video'
+              ? '播放'
+              : youtubePasteOf(query)?.kind === 'channel'
+              ? '追踪'
+              : '搜寻'}
           </button>
         </form>
+        {pasteMsg && (
+          <p
+            className={`-mt-4 mb-6 text-sm ${
+              pasteMsg.ok ? 'text-green-600' : 'text-red-500'
+            }`}
+            data-paste-msg
+          >
+            {pasteMsg.text}
+          </p>
+        )}
 
         {/* 红果热播榜：横向卷动，点片名去 YouTube 找那部剧 */}
         {rankList && ranks && (
