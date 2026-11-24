@@ -18,6 +18,7 @@ import {
   toggleFavorite,
 } from '@/lib/music-favorites';
 import { musicEmbedUrl, parseYtMessage } from '@/lib/music-player';
+import { youtubePasteOf } from '@/lib/youtube-paste';
 
 import HScroll from '@/components/HScroll';
 import PageLayout from '@/components/PageLayout';
@@ -514,9 +515,87 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
     error: string;
   } | null>(null);
 
+  const [pasteMsg, setPasteMsg] = useState<{
+    text: string;
+    error: boolean;
+    /** 贴影片时附上它的频道，给「＋ 追踪此频道」用 */
+    channelUrl?: string;
+    channel?: string;
+  } | null>(null);
+  const pasted = youtubePasteOf(query);
+
+  const playPasted = async (videoId: string) => {
+    const v: YtVideo = {
+      videoId,
+      title: '载入中…',
+      channel: '',
+      channelUrl: '',
+      channelId: '',
+      published: '',
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+      description: '',
+      views: null,
+      sourceKey: 'paste',
+      sourceName: '贴上的网址',
+      seconds: 0,
+    };
+    play([v], 0, '贴上的网址');
+    setPasteMsg(null);
+    try {
+      const d = await fetchJson<{
+        title?: string;
+        channel?: string;
+        channelId?: string;
+        views?: number | null;
+        published?: string;
+      }>(`/api/ai-manju/video?v=${videoId}`);
+      const channelUrl = d.channelId
+        ? `https://www.youtube.com/channel/${d.channelId}`
+        : '';
+      const filled: YtVideo = {
+        ...v,
+        title: d.title || videoId,
+        channel: d.channel || '',
+        channelId: d.channelId || '',
+        channelUrl,
+        views: d.views ?? null,
+        published: d.published || '',
+      };
+      setQueue((q) =>
+        q && q.videos.length === 1 && q.videos[0].videoId === videoId
+          ? { ...q, from: d.channel || q.from, videos: [filled] }
+          : q
+      );
+      if (channelUrl && !follows?.some((f) => f.id === d.channelId))
+        setPasteMsg({
+          text: `正在播放「${filled.title}」`,
+          error: false,
+          channelUrl,
+          channel: d.channel,
+        });
+    } catch {
+      setQueue((q) =>
+        q && q.videos.length === 1 && q.videos[0].videoId === videoId
+          ? { ...q, videos: [{ ...v, title: videoId }] }
+          : q
+      );
+    }
+  };
+
+  const followPasted = async (raw: string) => {
+    setPasteMsg(null);
+    const r = await followRaw(raw);
+    setPasteMsg({ text: r.text, error: r.error });
+    if (r.ok) setQuery('');
+  };
+
   const search = async () => {
     const q = query.trim();
     if (!q) return;
+    const p = youtubePasteOf(q);
+    if (p?.kind === 'video') return void playPasted(p.videoId);
+    if (p?.kind === 'channel') return void followPasted(p.input);
+    setPasteMsg(null);
     setOpened(null);
     setSearchResult({ q, videos: [], loading: true, error: '' });
     try {
@@ -585,9 +664,10 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
     }
   };
 
-  const addFollow = async () => {
-    const raw = input.trim();
-    if (!raw) return;
+  /** 频道网址、@帐号、播放列表或影片网址 → 加进追踪；回传要给使用者看的讯息 */
+  const followRaw = async (
+    raw: string
+  ): Promise<{ text: string; error: boolean; ok: boolean }> => {
     setBusy(true);
     setMsg(null);
     let found: Follow & { pending?: boolean };
@@ -597,13 +677,20 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
       );
     } catch (e) {
       setBusy(false);
-      setMsg({ text: (e as Error).message, error: true });
-      return;
+      const m = (e as Error).message;
+      const handle = /^@[\w.-]+$/.test(raw);
+      return {
+        text:
+          handle && /404|找不到/.test(m)
+            ? `找不到 ${raw} 这个帐号（频道名称不一定是 @帐号），改贴频道网址或它任一${Z.unit}影片的网址`
+            : m,
+        error: true,
+        ok: false,
+      };
     }
     if (follows?.some((f) => f.id === found.id)) {
       setBusy(false);
-      setMsg({ text: `「${found.name}」已经追踪了`, error: false });
-      return;
+      return { text: `「${found.name}」已经追踪了`, error: false, ok: true };
     }
     if (
       await post({
@@ -613,12 +700,21 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
         name: found.name,
       })
     ) {
-      setInput('');
-      setMsg({
+      return {
         text: `已加入「${found.name}」。所有装置约 5～10 分钟后都会看到（要等站长的 Mac 同步）`,
         error: false,
-      });
+        ok: true,
+      };
     }
+    return { text: '追踪失败，请稍后再试', error: true, ok: false };
+  };
+
+  const addFollow = async () => {
+    const raw = input.trim();
+    if (!raw) return;
+    const r = await followRaw(raw);
+    if (r.ok) setInput('');
+    setMsg({ text: r.text, error: r.error });
   };
 
   const updateFavorites = (fn: (list: FavoriteSong[]) => FavoriteSong[]) =>
@@ -747,18 +843,45 @@ export default function YtChannelZone({ zone: Z }: { zone: ZoneConfig }) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={Z.searchPlaceholder}
+              placeholder={`${Z.searchPlaceholder}，或贴 YouTube 影片／频道网址`}
               className='min-w-0 flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
               data-music-search
             />
             <button
               type='submit'
-              disabled={!query.trim()}
+              disabled={!query.trim() || busy}
               className='shrink-0 rounded-full bg-green-600 px-5 py-2 text-sm text-white hover:bg-green-500 disabled:opacity-50'
             >
-              搜寻
+              {pasted?.kind === 'video'
+                ? '播放'
+                : pasted?.kind === 'channel'
+                ? '追踪'
+                : '搜寻'}
             </button>
           </form>
+          {pasteMsg && (
+            <p
+              className={`-mt-4 mb-6 flex flex-wrap items-center gap-2 text-sm ${
+                pasteMsg.error
+                  ? 'text-red-500'
+                  : 'text-gray-600 dark:text-gray-300'
+              }`}
+              data-paste-msg
+            >
+              <span>{pasteMsg.text}</span>
+              {pasteMsg.channelUrl && (
+                <button
+                  type='button'
+                  disabled={busy}
+                  onClick={() => followPasted(pasteMsg.channelUrl as string)}
+                  className='rounded-full bg-gray-900 px-3 py-0.5 text-xs text-white hover:bg-gray-700 disabled:opacity-50 dark:bg-white dark:text-gray-900'
+                  data-paste-follow
+                >
+                  ＋ 追踪「{pasteMsg.channel || '此频道'}」
+                </button>
+              )}
+            </p>
+          )}
 
           {error && <div className='text-red-500'>载入失败：{error}</div>}
 
