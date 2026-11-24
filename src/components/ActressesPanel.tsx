@@ -169,6 +169,44 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
     handleSearch(target);
   };
 
+  const handleBulkFind = () => {
+    const input = window.prompt(
+      '輸入多位演員姓名（可用逗號、頓號、空格或換行分隔）'
+    );
+    if (!input) return;
+
+    const names = Array.from(
+      new Set(
+        input
+          .split(/[,，、\n\r\s]+/)
+          .map((name) => name.trim())
+          .filter(Boolean)
+      )
+    );
+    const poolNames = new Set(pool.map((entry) => entry?.[0]));
+    const found: string[] = [];
+    const missing: string[] = [];
+
+    for (const name of names) {
+      const canonicalName = canonicalActressName(name);
+      if (poolNames.has(canonicalName)) found.push(canonicalName);
+      else missing.push(name);
+    }
+
+    if (found.length > 0) {
+      const next = new Set(favorites);
+      found.forEach((name) => next.add(name));
+      setFavorites(next);
+      saveFavorites(next);
+      setFilter('');
+      setShowFavOnly(true);
+    }
+
+    const message = [`找到並收藏 ${found.length} 位`];
+    if (missing.length > 0) message.push(`找不到：${missing.join('、')}`);
+    window.alert(message.join('\n'));
+  };
+
   return (
     <div className='px-0 sm:px-6 py-2 mb-10'>
       {/* 標題 */}
@@ -186,8 +224,8 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
       </div>
 
       {/* 過濾框 + 只看收藏 */}
-      <div className='mb-4 flex gap-3 items-center max-w-xl'>
-        <div className='relative flex-1'>
+      <div className='mb-4 flex flex-wrap gap-3 items-center max-w-2xl'>
+        <div className='relative flex-1 min-w-[14rem]'>
           <SearchIcon className='absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500' />
           <input
             type='text'
@@ -212,6 +250,12 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
             </button>
           )}
         </div>
+        <button
+          onClick={handleBulkFind}
+          className='shrink-0 px-4 h-10 rounded-lg text-sm font-medium bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:hover:bg-pink-900/50 transition-colors'
+        >
+          批量找尋
+        </button>
         {favorites.size > 0 && (
           <button
             onClick={() => setShowFavOnly((v) => !v)}
