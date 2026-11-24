@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { isPigavSite, pigavBrowse } from '@/lib/adapters/pigav';
+import { repairAdultPoster } from '@/lib/adult-poster';
 import {
   ANIME_3D_KEYWORDS,
   ANIME_3D_REGION_KEYWORDS,
@@ -79,7 +80,11 @@ function mapItems(list: RawItem[], siteKey: string, siteName: string) {
     return {
       id: item.vod_id?.toString(),
       title: item.vod_name?.trim(),
-      poster: item.vod_pic,
+      poster: repairAdultPoster(
+        siteKey,
+        item.vod_name?.trim() || '',
+        item.vod_pic || ''
+      ),
       year: item.vod_year?.match(/\d{4}/)?.[0] || '',
       remarks: item.vod_remarks || '',
       score: ds > 0 ? ds : ss > 0 ? ss : undefined,

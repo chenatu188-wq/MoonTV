@@ -2,6 +2,8 @@
  * 分区的「最新上架榜」：把各来源最近更新的片合起来，按上架时间排。纯函数，方便测试。
  */
 
+import { repairAdultPoster } from '@/lib/adult-poster';
+
 export interface LatestRaw {
   vod_id?: unknown;
   vod_name?: string;
@@ -77,7 +79,7 @@ export function mergeLatest(
       byTitle.set(key, {
         id,
         title,
-        poster: raw.vod_pic || '',
+        poster: repairAdultPoster(b.source, title, raw.vod_pic || ''),
         year: raw.vod_year?.match(/\d{4}/)?.[0] || '',
         remarks: raw.vod_remarks || '',
         source: b.source,
@@ -137,7 +139,7 @@ export function mergeHot(
       byTitle.set(key, {
         id,
         title,
-        poster: raw.vod_pic || '',
+        poster: repairAdultPoster(b.source, title, raw.vod_pic || ''),
         year: raw.vod_year?.match(/\d{4}/)?.[0] || '',
         remarks: raw.vod_remarks || '',
         source: b.source,

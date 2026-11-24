@@ -1,4 +1,5 @@
 import { isPigavSite, pigavDetail, pigavSearch } from '@/lib/adapters/pigav';
+import { repairAdultPoster } from '@/lib/adult-poster';
 import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
@@ -85,7 +86,11 @@ export async function searchFromApi(
       return {
         id: item.vod_id.toString(),
         title: item.vod_name.trim().replace(/\s+/g, ' '),
-        poster: item.vod_pic,
+        poster: repairAdultPoster(
+          apiSite.key,
+          item.vod_name.trim(),
+          item.vod_pic || ''
+        ),
         episodes,
         source: apiSite.key,
         source_name: apiName,
@@ -163,7 +168,11 @@ export async function searchFromApi(
               return {
                 id: item.vod_id.toString(),
                 title: item.vod_name.trim().replace(/\s+/g, ' '),
-                poster: item.vod_pic,
+                poster: repairAdultPoster(
+                  apiSite.key,
+                  item.vod_name.trim(),
+                  item.vod_pic || ''
+                ),
                 episodes,
                 source: apiSite.key,
                 source_name: apiName,
@@ -294,7 +303,11 @@ async function getJsonDetailFromApi(
   return {
     id: id.toString(),
     title: videoDetail.vod_name,
-    poster: videoDetail.vod_pic,
+    poster: repairAdultPoster(
+      apiSite.key,
+      videoDetail.vod_name || '',
+      videoDetail.vod_pic || ''
+    ),
     episodes,
     source: apiSite.key,
     source_name: apiSite.name,
