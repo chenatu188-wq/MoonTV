@@ -6,6 +6,13 @@ import { useEffect, useMemo, useState } from 'react';
 
 const ACTRESSES_KEY = 'moontv_actresses_v1';
 
+const ACTRESS_ALIASES: Record<string, string> = {
+  工藤由梨: '工藤ゆら',
+};
+
+const canonicalActressName = (name: string) =>
+  ACTRESS_ALIASES[name.trim()] ?? name.trim();
+
 const loadFavorites = (): Set<string> => {
   if (typeof window === 'undefined') return new Set();
   try {
@@ -69,7 +76,11 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
       matched = f
         ? base.filter((entry) => {
             const name = entry?.[0];
-            return typeof name === 'string' && name.includes(f);
+            const canonicalFilter = canonicalActressName(f);
+            return (
+              typeof name === 'string' &&
+              (name.includes(f) || name.includes(canonicalFilter))
+            );
           })
         : base;
       if (!showFavOnly && favorites.size > 0) {
@@ -129,10 +140,11 @@ export default function ActressesPanel({ onSearch }: ActressesPanelProps = {}) {
   const handleFilterEnter = () => {
     const target = filter.trim();
     if (!target) return;
-    const exact = pool.find((entry) => entry?.[0] === target);
-    if (exact && !favorites.has(target)) {
+    const canonicalTarget = canonicalActressName(target);
+    const exact = pool.find((entry) => entry?.[0] === canonicalTarget);
+    if (exact && !favorites.has(canonicalTarget)) {
       const next = new Set(favorites);
-      next.add(target);
+      next.add(canonicalTarget);
       setFavorites(next);
       saveFavorites(next);
     }
